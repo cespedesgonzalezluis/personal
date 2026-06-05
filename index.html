@@ -106,7 +106,7 @@ tbody tr:hover td{background:rgba(99,77,210,.025)}
 
 /* DIST BAR */
 .dist-bar{display:flex;height:44px;border-radius:10px;overflow:hidden;gap:2px;margin-bottom:14px}
-.dist-seg{display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-weight:800;padding:0 8px;min-width:32px;transition:filter .15s;cursor:default}
+.dist-seg{display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-weight:800;padding:0 8px;min-width:32px;transition:filter .15s;cursor:default;overflow:hidden}
 .dist-seg:hover{filter:brightness(1.1)}
 .dist-seg-name{font-size:9px;font-weight:800;white-space:nowrap}
 .dist-seg-val{font-size:8px;font-weight:700;opacity:.8}
@@ -227,6 +227,15 @@ const GASTO_TIPOS = ['ahorro','casa','mamá','mama','transporte','deuda','tarjet
 /* STATE */
 let rawData = [], tcData = [], months = [], selMonth = '', evoRange = 12, charts = {};
 
+/* TOOLTIP MOUSE TRACKING — listener único persistente */
+const tip = document.getElementById('chartTooltip');
+document.addEventListener('mousemove', e => {
+  if (tip.style.display !== 'block') return;
+  const w = tip.offsetWidth, x0 = e.clientX + 16;
+  tip.style.left = (x0 + w > window.innerWidth - 8 ? e.clientX - w - 16 : x0) + 'px';
+  tip.style.top  = (e.clientY - tip.offsetHeight / 2) + 'px';
+}, { passive: true });
+
 /* UTILS */
 function parseMonto(v) {
   if (v == null) return 0;
@@ -256,8 +265,9 @@ function monthKey(m) {
 }
 
 function nextMonth(m) {
-  const [mes, año] = String(m).split('-');
-  const mi = MESES.indexOf(mes?.toLowerCase());
+  const [mes, año] = String(m || '').split('-');
+  const mi = MESES.indexOf((mes || '').toLowerCase());
+  if (mi === -1 || !año) return '';
   return `${MESES[(mi+1)%12]}-${mi===11?parseInt(año)+1:parseInt(año)}`;
 }
 
@@ -300,6 +310,7 @@ function fmtMesCorto(mes) {
 /* FETCH */
 async function fetchSheet(sheet) {
   const r = await fetch(`${BASE}&sheet=${encodeURIComponent(sheet)}`);
+  if (!r.ok) throw new Error(`HTTP ${r.status} al cargar hoja "${sheet}"`);
   const txt = await r.text();
   const json = JSON.parse(txt.replace(/^[^{]+/,'').replace(/[^}]+$/,''));
   return json.table.rows || [];
@@ -378,6 +389,7 @@ function onMonthChange() { selMonth = document.getElementById('month-select').va
 
 /* RENDER PAGE */
 function renderPage() {
+  tip.style.display = 'none';
   const s = sumsFor(selMonth);
   const selIdx = months.indexOf(selMonth);
   const prevMes = months.includes(selMonth)
@@ -485,7 +497,6 @@ function renderEvoChart() {
   const ingresos = slice.map(m => sumsFor(m).ing);
   const gastos   = slice.map(m => sumsFor(m).gasto);
   const tcs      = slice.map(m => sumsFor(m).tc);
-  const tip      = document.getElementById('chartTooltip');
 
   const externalTooltip = ctx => {
     const t = ctx.tooltip;
@@ -499,13 +510,6 @@ function renderEvoChart() {
     ].map(r=>`<div class="ct-row"><div class="ct-label"><span class="ct-dot" style="background:${r.color}"></span>${r.label}</div><div class="ct-val">${r.val}</div></div>`).join('');
     tip.style.display='block';
   };
-
-  document.addEventListener('mousemove', e => {
-    if (tip.style.display!=='block') return;
-    const w=tip.offsetWidth, x0=e.clientX+16;
-    tip.style.left = (x0+w>window.innerWidth-8 ? e.clientX-w-16 : x0)+'px';
-    tip.style.top  = (e.clientY-tip.offsetHeight/2)+'px';
-  }, {passive:true});
 
   if (charts.evo) charts.evo.destroy();
   const ds = (label,data,color,dash) => ({
@@ -581,7 +585,7 @@ function renderDist() {
   document.getElementById('dist-bar-wrap').innerHTML = `<div class="dist-bar">${
     sorted.map(c => {
       const pct = pctOfIng(c).toFixed(1)+'%';
-      return `<div class="dist-seg" style="background:${c.color};flex:${c.amt};min-width:fit-content" title="${c.label}: ${fmtM(c.amt,true)} (${pct} del ingreso)"><div class="dist-seg-name">${c.label}</div><div class="dist-seg-val">${pct}</div></div>`;
+      return `<div class="dist-seg" style="background:${c.color};flex:${c.amt}" title="${c.label}: ${fmtM(c.amt,true)} (${pct} del ingreso)"><div class="dist-seg-name">${c.label}</div><div class="dist-seg-val">${pct}</div></div>`;
     }).join('')
   }</div>`;
 
@@ -597,8 +601,8 @@ function renderDist() {
 
 /* TARJETA CRÉDITO */
 function renderTC() {
+  tip.style.display = 'none';
   const pending = tcData.filter(r => r.estado==='pendiente');
-  const deudaTotal = pending.reduce((a,r) => a+r.valorCuota, 0);
   const mesesPend = [...new Set(pending.map(r=>r.mes))].sort((a,b)=>monthKey(a)-monthKey(b));
   const mesActual = mesesPend[0] || '';
   const mesFin    = mesesPend[mesesPend.length-1] || '—';
@@ -625,6 +629,9 @@ function renderTC() {
   const movsPend = Object.values(movsMap)
     .filter(m=>m.pendientesCount>0)
     .sort((a,b) => { const df=new Date(a.fecha)-new Date(b.fecha); return df!==0?df:a.movimiento.localeCompare(b.movimiento,'es'); });
+
+  // Total consistente con la tabla (suma de pendientesMonto por movimiento)
+  const deudaTotal = movsPend.reduce((a,m) => a+m.pendientesMonto, 0);
 
   const thStyle = 'class="tc-th"';
   const tdStyle = 'class="tc-td"';
@@ -708,8 +715,7 @@ function renderTC() {
     if (charts.tc) { charts.tc.destroy(); delete charts.tc; }
 
     // Gradientes por barra
-    const canvas = ctx;
-    const chartCtx = canvas.getContext('2d');
+    const chartCtx = ctx.getContext('2d');
     const makeGrad = (colorTop, colorBot) => {
       const g = chartCtx.createLinearGradient(0, 0, 0, 280);
       g.addColorStop(0, colorTop);
@@ -742,7 +748,6 @@ function renderTC() {
             enabled:false,
             external(context) {
               const t = context.tooltip;
-              const tip = document.getElementById('chartTooltip');
               if (t.opacity===0) { tip.style.display='none'; return; }
               const i = t.dataPoints[0].dataIndex;
               const [mes] = proyMeses[i];
@@ -791,6 +796,12 @@ function setTab(tab, btn) {
   closeSidebar();
   if (tab==='tc') renderTC();
   else if (tab==='mensual') renderPage();
+  else {
+    // Tabs "Pronto" — ocultar tooltip y mostrar placeholder
+    tip.style.display = 'none';
+    document.getElementById('page-content').innerHTML =
+      `<div class="loading-state"><div class="loading-text">Próximamente…</div></div>`;
+  }
 }
 
 loadData();
