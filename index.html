@@ -547,7 +547,7 @@ function deltaKpi(a, b, invert = false) {
   const good = invert ? diff < 0 : diff > 0;
   const cls  = good ? 'delta-up' : 'delta-down';
   const arrow = diff > 0 ? '↑' : '↓';
-  return `<span class="${cls}">${arrow} ${fmtM(Math.abs(diff), true)} vs ant.</span>`;
+  return `<span class="${cls}">${arrow} $${Math.round(Math.abs(diff)).toLocaleString('es-CL')} vs ant.</span>`;
 }
 
 /* ════════════════════════════════════════
@@ -855,8 +855,8 @@ function renderDetalle(prevMes) {
     if (prv && prv.monto > 0) {
       const diff = row.monto - prv.monto;
       if (Math.abs(diff) < 1)    badge = `<span class="badge badge-gray" style="font-size:10px;padding:2px 8px">≈ igual</span>`;
-      else if (diff > 0)         badge = `<span class="badge badge-red" style="font-size:10px;padding:2px 8px">↑ ${fmtM(Math.abs(diff),true)}</span>`;
-      else                       badge = `<span class="badge badge-green" style="font-size:10px;padding:2px 8px">↓ ${fmtM(Math.abs(diff),true)}</span>`;
+      else if (diff > 0)         badge = `<span class="badge badge-red" style="font-size:10px;padding:2px 8px">↑ $${Math.round(Math.abs(diff)).toLocaleString('es-CL')}</span>`;
+      else                       badge = `<span class="badge badge-green" style="font-size:10px;padding:2px 8px">↓ $${Math.round(Math.abs(diff)).toLocaleString('es-CL')}</span>`;
     }
     return `<tr>
       <td style="font-size:13px">${row.detalle}</td>
@@ -872,6 +872,10 @@ function renderDetalle(prevMes) {
 function renderDist() {
   const rows  = gastoRows(selMonth);
   const total = rows.reduce((a,r) => a + r.monto, 0);
+
+  // Ingreso del mes para calcular % relativo al ingreso
+  const s = sumsFor(selMonth);
+  const ing = s.ing;
 
   const catDef = [
     { key:'ahorro',    label:'Ahorro',      color:'#059669', match:r=>r.tipo==='ahorro' },
@@ -900,13 +904,20 @@ function renderDist() {
     .filter(c => c.amt > 0)
     .sort((a,b) => b.amt - a.amt);
 
+  // % relativo al ingreso para la barra proporcional
+  const pctOfIng = c => ing > 0 ? (c.amt / ing * 100) : 0;
+
   document.getElementById('dist-bar-wrap').innerHTML = `
     <div class="dist-bar">
-      ${sorted.map(c => `
-        <div class="dist-seg" style="background:${c.color};flex:${c.amt}" title="${c.label}: ${fmtM(c.amt,true)}">
+      ${sorted.map(c => {
+        const pct = pctOfIng(c);
+        const pctLabel = pct.toFixed(1) + '%';
+        return `
+        <div class="dist-seg" style="background:${c.color};flex:${c.amt};min-width:fit-content" title="${c.label}: ${fmtM(c.amt,true)} (${pctLabel} del ingreso)">
           <div class="dist-seg-name">${c.label}</div>
-          <div class="dist-seg-val">${total>0?(c.amt/total*100).toFixed(0):0}%</div>
-        </div>`).join('')}
+          <div class="dist-seg-val">${pctLabel}</div>
+        </div>`;
+      }).join('')}
     </div>`;
 
   const maxAmt = sorted[0]?.amt || 1;
@@ -918,7 +929,7 @@ function renderDist() {
           ${c.label}
         </div>
         <div class="bar-right">
-          <span class="bar-pct">${total>0?(c.amt/total*100).toFixed(1):0}%</span>
+          <span class="bar-pct">${pctOfIng(c).toFixed(1)}% ing.</span>
           <span class="bar-amt">${fmtM(c.amt,true)}</span>
         </div>
       </div>
