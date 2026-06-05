@@ -735,17 +735,11 @@ function renderPage() {
   </div>
 </div>
 
-<!-- INSIGHTS -->
-<div class="sec-label">Insights del mes</div>
-<div class="card" style="margin-bottom:8px">
-  <div id="insights-list"></div>
-</div>
 `;
 
   renderEvoChart();
   renderDetalle(prevMes);
   renderDist();
-  renderInsights(s, prev);
 }
 
 /* ════════════════════════════════════════
@@ -847,7 +841,7 @@ function renderDetalle(prevMes) {
     ? rawData.filter(r => r.mes === prevMes && GASTO_TIPOS.includes(r.tipo))
     : [];
 
-  const rows = gastoRows(selMonth).sort((a,b) => b.monto - a.monto);
+  const rows = gastoRows(selMonth).sort((a,b) => a.detalle.localeCompare(b.detalle, 'es'));
 
   document.getElementById('tbody-detalle').innerHTML = rows.map(row => {
     const prv = prevRows.find(p => p.detalle === row.detalle);
