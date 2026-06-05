@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mi Portal</title>
 
-<!-- Favicon SVG — L estilizada -->
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231B0088'/%3E%3Ctext x='7' y='24' font-family='Georgia,serif' font-size='22' font-weight='700' fill='%2300e5c8'%3EL%3C/text%3E%3C/svg%3E">
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Sofia+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -71,19 +69,6 @@ body {
   gap: 12px;
 }
 
-/* L estilizada en el sidebar */
-.logo-mark {
-  width: 36px; height: 36px;
-  background: linear-gradient(135deg, #1B0088, #4257E8);
-  border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  font-family: Georgia, serif;
-  font-size: 22px; font-weight: 700;
-  color: #00e5c8;
-  flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(0,0,0,.3);
-  letter-spacing: -1px;
-}
 
 .sidebar-logo-title {
   font-size: 17px; font-weight: 800; color: #fff;
@@ -170,16 +155,7 @@ body {
 .topbar-brand {
   display: flex; align-items: center; gap: 10px;
 }
-.topbar-logo-mark {
-  width: 28px; height: 28px;
-  background: linear-gradient(135deg, #1B0088, #4257E8);
-  border-radius: 7px;
-  display: flex; align-items: center; justify-content: center;
-  font-family: Georgia, serif;
-  font-size: 17px; font-weight: 700;
-  color: #00e5c8;
-  flex-shrink: 0;
-}
+
 .topbar-name {
   font-size: 15px; font-weight: 800; color: var(--text);
 }
@@ -440,7 +416,6 @@ tbody tr:hover td { background:rgba(99,77,210,.025); }
   <aside class="sidebar" id="sidebar">
 
     <div class="sidebar-logo">
-      <div class="logo-mark">L</div>
       <div class="sidebar-logo-title">Mi Portal</div>
     </div>
 
@@ -491,7 +466,6 @@ tbody tr:hover td { background:rgba(99,77,210,.025); }
           <span></span><span></span><span></span>
         </button>
         <div class="topbar-brand">
-          <div class="topbar-logo-mark">L</div>
           <div class="topbar-name">Mi Portal</div>
           <div style="width:1px;height:16px;background:var(--border);margin:0 6px"></div>
           <div class="topbar-section" id="topbar-section">Mensual</div>
@@ -654,23 +628,24 @@ function sumsFor(mes) {
   const searchMes = months.includes(mes) ? mes : months[months.length - 1];
   const rows = rawData.filter(r => r.mes === searchMes);
 
+  const GASTO_TIPOS = ['ahorro','casa','mamá','mama','transporte','deuda'];
+
   const ing    = rows.filter(r => r.tipo === 'ingreso').reduce((a,r) => a + r.monto, 0);
-  const gasto  = rows.filter(r => r.tipo === 'gasto').reduce((a,r) => a + r.monto, 0);
-  const tc     = rows.filter(r => r.tipo === 'tc').reduce((a,r) => a + r.monto, 0);
-  // Ahorro: filas con tipo=gasto cuyo detalle contenga "Ahorro" (case insensitive)
-  const ahorro = rows.filter(r => r.detalle.toLowerCase().includes('ahorro'))
+  const gasto  = rows.filter(r => GASTO_TIPOS.includes(r.tipo)).reduce((a,r) => a + r.monto, 0);
+  const tc     = rows.filter(r => r.tipo === 'tarjeta credito').reduce((a,r) => a + r.monto, 0);
+  const ahorro = rows.filter(r => r.tipo === 'ahorro').reduce((a,r) => a + r.monto, 0);
+  const hip    = rows.filter(r => r.tipo === 'deuda' && r.detalle.toLowerCase().includes('hipotecario'))
                      .reduce((a,r) => a + r.monto, 0);
-  const hip    = rows.filter(r => r.detalle.toLowerCase().includes('hipotecario'))
-                     .reduce((a,r) => a + r.monto, 0);
-  const cons   = rows.filter(r => r.detalle.toLowerCase().includes('consumo'))
+  const cons   = rows.filter(r => r.tipo === 'deuda' && r.detalle.toLowerCase().includes('consumo'))
                      .reduce((a,r) => a + r.monto, 0);
   return { ing, gasto, tc, ahorro, hip, cons, rows };
 }
 
 // Devuelve las filas de gasto del mes (para detalle y distribución)
 function gastoRows(mes) {
+  const GASTO_TIPOS = ['ahorro','casa','mamá','mama','transporte','deuda'];
   const searchMes = months.includes(mes) ? mes : months[months.length - 1];
-  return rawData.filter(r => r.mes === searchMes && r.tipo === 'gasto');
+  return rawData.filter(r => r.mes === searchMes && GASTO_TIPOS.includes(r.tipo));
 }
 
 /* ════════════════════════════════════════
@@ -888,8 +863,9 @@ function renderEvoChart() {
    DETALLE TABLE
 ════════════════════════════════════════ */
 function renderDetalle(prevMes) {
+  const GASTO_TIPOS = ['ahorro','casa','mamá','mama','transporte','deuda'];
   const prevRows = prevMes
-    ? rawData.filter(r => r.mes === prevMes && r.tipo === 'gasto')
+    ? rawData.filter(r => r.mes === prevMes && GASTO_TIPOS.includes(r.tipo))
     : [];
 
   const rows = gastoRows(selMonth).sort((a,b) => b.monto - a.monto);
@@ -919,25 +895,23 @@ function renderDist() {
   const total = rows.reduce((a,r) => a + r.monto, 0);
 
   const catDef = [
-    { key:'ahorro',  label:'Ahorro',      color:'#059669', match:d=>d.includes('ahorro') },
-    { key:'hip',     label:'Hipotecario', color:'#1B0088', match:d=>d.includes('hipotecario') },
-    { key:'cons',    label:'Consumo',     color:'#7000AB', match:d=>d.includes('consumo') },
-    { key:'tc',      label:'TC',          color:'#f59e0b', match:d=>d.includes('tarjeta credito') },
-    { key:'casa',    label:'Casa',        color:'#4257E8', match:d=>d.includes('casa')&&!d.includes('mama')&&!d.includes('mamá') },
-    { key:'mama',    label:'Mamá',        color:'#ED1650', match:d=>d.includes('mamá')||d.includes('mama') },
-    { key:'auto',    label:'Autopistas',  color:'#00b89e', match:d=>d.includes('autopista') },
-    { key:'seg',     label:'Seguros',     color:'#634dd2', match:d=>d.includes('seguro') },
-    { key:'mant',    label:'Mantención',  color:'#9CA3AF', match:d=>d.includes('mant') },
-    { key:'otros',   label:'Otros',       color:'#c4c0e0', match:()=>false }
+    { key:'ahorro',    label:'Ahorro',      color:'#059669', match:r=>r.tipo==='ahorro' },
+    { key:'hip',       label:'Hipotecario', color:'#1B0088', match:r=>r.tipo==='deuda'&&r.detalle.toLowerCase().includes('hipotecario') },
+    { key:'cons',      label:'Consumo',     color:'#7000AB', match:r=>r.tipo==='deuda'&&r.detalle.toLowerCase().includes('consumo') },
+    { key:'tc',        label:'TC',          color:'#f59e0b', match:r=>r.tipo==='tarjeta credito' },
+    { key:'casa',      label:'Casa',        color:'#4257E8', match:r=>r.tipo==='casa' },
+    { key:'mama',      label:'Mamá',        color:'#ED1650', match:r=>r.tipo==='mamá'||r.tipo==='mama' },
+    { key:'trans',     label:'Transporte',  color:'#00b89e', match:r=>r.tipo==='transporte' },
+    { key:'deuda',     label:'Deuda',       color:'#634dd2', match:r=>r.tipo==='deuda' },
+    { key:'otros',     label:'Otros',       color:'#c4c0e0', match:()=>false }
   ];
 
   const bkt = Object.fromEntries(catDef.map(c=>[c.key,0]));
   rows.forEach(r => {
-    const d = r.detalle.toLowerCase();
     let matched = false;
     for (const c of catDef) {
       if (c.key === 'otros') continue;
-      if (c.match(d)) { bkt[c.key] += r.monto; matched = true; break; }
+      if (c.match(r)) { bkt[c.key] += r.monto; matched = true; break; }
     }
     if (!matched) bkt['otros'] += r.monto;
   });
