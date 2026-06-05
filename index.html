@@ -142,30 +142,17 @@ body {
 /* ── MAIN ── */
 .main { margin-left: var(--sidebar); flex: 1; display: flex; flex-direction: column; min-width: 0; }
 
-/* ── TOPBAR ── */
-.topbar {
-  position: sticky; top: 0; z-index: 100;
-  background: rgba(240,239,248,.92);
-  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--border);
-  padding: 0 24px;
-  display: flex; align-items: center; justify-content: space-between;
-  height: 52px; gap: 16px;
+/* ── CONTENT ── */
+.content { padding: 24px; flex: 1; }
+.hamburger {
+  display: none;
+  position: fixed; top: 14px; left: 14px; z-index: 300;
+  flex-direction: column; gap: 5px;
+  background: #fff; border: 1px solid var(--border);
+  border-radius: 10px; cursor: pointer;
+  padding: 8px 10px;
+  box-shadow: var(--shadow);
 }
-.topbar-brand {
-  display: flex; align-items: center; gap: 10px;
-}
-
-.topbar-name {
-  font-size: 15px; font-weight: 800; color: var(--text);
-}
-.topbar-section {
-  font-size: 13px; font-weight: 600; color: var(--muted);
-  opacity: .6;
-}
-
-/* hamburger */
-.hamburger { display:none; flex-direction:column; gap:5px; background:none; border:none; cursor:pointer; padding:4px; margin-right: 4px; }
 .hamburger span { display:block; width:20px; height:2px; background:var(--text); border-radius:2px; }
 .overlay { display:none; position:fixed; inset:0; background:rgba(15,0,79,.5); z-index:150; }
 
@@ -262,7 +249,7 @@ body {
 /* ═══════════════════════════════════════════
    GRIDS
 ═══════════════════════════════════════════ */
-.grid-main { display: grid; grid-template-columns: 3fr 2fr; gap: var(--gap); }
+.grid-main { display: grid; grid-template-columns: 3fr 7fr; gap: var(--gap); }
 
 /* ═══════════════════════════════════════════
    BADGES
@@ -409,6 +396,9 @@ tbody tr:hover td { background:rgba(99,77,210,.025); }
 </div>
 
 <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+<button class="hamburger" id="hamburger" onclick="openSidebar()">
+  <span></span><span></span><span></span>
+</button>
 
 <div class="app">
 
@@ -459,19 +449,6 @@ tbody tr:hover td { background:rgba(99,77,210,.025); }
   <!-- ══ MAIN ══ -->
   <div class="main">
 
-    <!-- TOPBAR -->
-    <div class="topbar">
-      <div style="display:flex;align-items:center;gap:10px">
-        <button class="hamburger" id="hamburger" onclick="openSidebar()">
-          <span></span><span></span><span></span>
-        </button>
-        <div class="topbar-brand">
-          <div class="topbar-name">Mi Portal</div>
-          <div style="width:1px;height:16px;background:var(--border);margin:0 6px"></div>
-          <div class="topbar-section" id="topbar-section">Mensual</div>
-        </div>
-      </div>
-    </div>
 
     <!-- CONTENT -->
     <div class="content" id="page-content">
@@ -563,12 +540,14 @@ function dPct(a, b) {
   return ((a - b) / b) * 100;
 }
 
-function deltaKpi(pct, invert = false) {
-  if (pct === null) return '<span class="delta-flat">—</span>';
-  const good = invert ? pct < 0 : pct > 0;
-  const cls  = Math.abs(pct) < 0.5 ? 'delta-flat' : good ? 'delta-up' : 'delta-down';
-  const arrow = pct > 0 ? '↑' : '↓';
-  return `<span class="${cls}">${arrow} ${Math.abs(pct).toFixed(1)}% vs ant.</span>`;
+function deltaKpi(a, b, invert = false) {
+  if (b === undefined || b === null || b === 0) return '<span class="delta-flat">—</span>';
+  const diff = a - b;
+  if (Math.abs(diff) < 1) return '<span class="delta-flat">≈ igual</span>';
+  const good = invert ? diff < 0 : diff > 0;
+  const cls  = good ? 'delta-up' : 'delta-down';
+  const arrow = diff > 0 ? '↑' : '↓';
+  return `<span class="${cls}">${arrow} ${fmtM(Math.abs(diff), true)} vs ant.</span>`;
 }
 
 /* ════════════════════════════════════════
@@ -688,17 +667,17 @@ function renderPage() {
   <div class="kpi-card" style="--kpi-stripe:#059669">
     <div class="kpi-label">Ingreso</div>
     <div class="kpi-val">${fmtM(s.ing)}</div>
-    <div class="kpi-delta">${deltaKpi(dPct(s.ing, prev?.ing))}</div>
+    <div class="kpi-delta">${deltaKpi(s.ing, prev?.ing)}</div>
   </div>
   <div class="kpi-card" style="--kpi-stripe:#ED1650">
     <div class="kpi-label">Gasto</div>
     <div class="kpi-val">${fmtM(s.gasto)}</div>
-    <div class="kpi-delta">${deltaKpi(dPct(s.gasto, prev?.gasto), true)}</div>
+    <div class="kpi-delta">${deltaKpi(s.gasto, prev?.gasto, true)}</div>
   </div>
   <div class="kpi-card" style="--kpi-stripe:#f59e0b">
     <div class="kpi-label">Tarjeta Crédito</div>
     <div class="kpi-val">${fmtM(s.tc)}</div>
-    <div class="kpi-delta">${deltaKpi(dPct(s.tc, prev?.tc), true)}</div>
+    <div class="kpi-delta">${deltaKpi(s.tc, prev?.tc, true)}</div>
   </div>
   <div class="kpi-card" style="--kpi-stripe:#7000AB">
     <div class="kpi-label">Crédito Consumo</div>
@@ -826,17 +805,17 @@ function renderEvoChart() {
       datasets: [
         { label:'Ingreso', data:ingresos,
           borderColor:'#059669', borderWidth:2.5,
-          pointRadius:2, pointHoverRadius:5, pointBackgroundColor:'#059669',
-          pointBorderColor:'#fff', pointBorderWidth:1.5,
+          pointRadius:4, pointHoverRadius:7, pointBackgroundColor:'#059669',
+          pointBorderColor:'#fff', pointBorderWidth:2,
           fill:false, tension:.35 },
         { label:'Gasto', data:gastos,
           borderColor:'#ED1650', borderWidth:2.5,
-          pointRadius:2, pointHoverRadius:5, pointBackgroundColor:'#ED1650',
-          pointBorderColor:'#fff', pointBorderWidth:1.5,
+          pointRadius:4, pointHoverRadius:7, pointBackgroundColor:'#ED1650',
+          pointBorderColor:'#fff', pointBorderWidth:2,
           fill:false, tension:.35 },
         { label:'Tarjeta Crédito', data:tcs,
           borderColor:'#f59e0b', borderWidth:2, borderDash:[6,4],
-          pointRadius:2, pointHoverRadius:5, pointBackgroundColor:'#f59e0b',
+          pointRadius:4, pointHoverRadius:7, pointBackgroundColor:'#f59e0b',
           pointBorderColor:'#fff', pointBorderWidth:1.5,
           fill:false, tension:.35 }
       ]
@@ -874,10 +853,10 @@ function renderDetalle(prevMes) {
     const prv = prevRows.find(p => p.detalle === row.detalle);
     let badge = '<span style="color:#9CA3AF;font-size:11px;font-weight:700">—</span>';
     if (prv && prv.monto > 0) {
-      const p = ((row.monto - prv.monto) / prv.monto) * 100;
-      if (Math.abs(p) < 1)    badge = `<span class="badge badge-gray" style="font-size:10px;padding:2px 8px">≈ igual</span>`;
-      else if (p > 0)          badge = `<span class="badge badge-red" style="font-size:10px;padding:2px 8px">↑ ${p.toFixed(0)}%</span>`;
-      else                     badge = `<span class="badge badge-green" style="font-size:10px;padding:2px 8px">↓ ${Math.abs(p).toFixed(0)}%</span>`;
+      const diff = row.monto - prv.monto;
+      if (Math.abs(diff) < 1)    badge = `<span class="badge badge-gray" style="font-size:10px;padding:2px 8px">≈ igual</span>`;
+      else if (diff > 0)         badge = `<span class="badge badge-red" style="font-size:10px;padding:2px 8px">↑ ${fmtM(Math.abs(diff),true)}</span>`;
+      else                       badge = `<span class="badge badge-green" style="font-size:10px;padding:2px 8px">↓ ${fmtM(Math.abs(diff),true)}</span>`;
     }
     return `<tr>
       <td style="font-size:13px">${row.detalle}</td>
@@ -1037,7 +1016,6 @@ function closeSidebar() { document.getElementById('sidebar').classList.remove('o
 function setTab(tab, btn) {
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  document.getElementById('topbar-section').textContent = btn.textContent.trim().replace('Pronto','').trim();
   closeSidebar();
 }
 
