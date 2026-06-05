@@ -2,161 +2,232 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Finance · Luis</title>
-<link href="https://fonts.googleapis.com/css2?family=Sofia+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finance Personal — Luis</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Sofia+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-/* ══════════════════════════════════════════════
-   TOKENS
-══════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════
+   TOKENS — idénticos al Finance Portal
+═══════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 :root {
-  --bg:        #f4f1ec;
-  --bg2:       #ece9e2;
-  --surface:   #ffffff;
-  --surface2:  #faf9f6;
-  --border:    #e2ddd5;
-  --border2:   #cdc8be;
-
-  --text:      #1a1714;
-  --text2:     #4a4540;
-  --muted:     #9a9088;
-
-  --ink:       #1a1714;
-  --gold:      #b8860b;
-  --gold-lt:   #f5ecd0;
-  --gold-mid:  #d4a832;
-
-  --green:     #2d7a4f;
-  --green-lt:  #e6f4ec;
-  --red:       #b83232;
-  --red-lt:    #faeaea;
-  --blue:      #1e4f8c;
-  --blue-lt:   #e8eef8;
-  --orange:    #c45e1a;
-  --orange-lt: #fdf0e6;
-  --purple:    #6b3fa0;
-  --purple-lt: #f2ecfa;
-
-  --radius:    14px;
-  --radius-sm: 8px;
-  --shadow:    0 2px 12px rgba(26,23,20,0.07);
-  --shadow-lg: 0 8px 32px rgba(26,23,20,0.12);
+  --bg:        #f0eff8;
+  --card:      #ffffff;
+  --border:    #e2e0f0;
+  --text:      #0F004F;
+  --muted:     #1B0088;
+  --accent:    #634dd2;
+  --cyan:      #00b89e;
+  --pink:      #ff4e8b;
+  --green:     #22c55e;
+  --green-dk:  #059669;
+  --red:       #ED1650;
+  --amber:     #f59e0b;
+  --shadow:    0 2px 12px rgba(0,0,0,.06);
+  --shadow-lg: 0 8px 30px rgba(74,44,168,.15);
+  --radius:    16px;
+  --gap:       16px;
+  --sidebar:   220px;
 }
 
-/* ══════════════════════════════════════════════
-   RESET
-══════════════════════════════════════════════ */
-*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-html { scroll-behavior: smooth; }
+html, body { height: 100%; }
 
 body {
   font-family: 'Sofia Sans', sans-serif;
   background: var(--bg);
   color: var(--text);
-  font-size: 15px;
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-thumb { background: #c4c0e0; border-radius: 999px; }
+
+/* ═══════════════════════════════════════════════
+   LAYOUT — sidebar + main
+═══════════════════════════════════════════════ */
+.app {
+  display: flex;
+  flex: 1;
   min-height: 100vh;
 }
 
-/* ══════════════════════════════════════════════
-   LAYOUT
-══════════════════════════════════════════════ */
-.page { max-width: 1200px; margin: 0 auto; padding: 0 16px 80px; }
+/* ── SIDEBAR ── */
+.sidebar {
+  width: var(--sidebar);
+  background: #0F004F;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  z-index: 200;
+  transition: transform .25s ease;
+}
 
-/* ══════════════════════════════════════════════
-   NAV / TOPBAR
-══════════════════════════════════════════════ */
+.sidebar-logo {
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+.sidebar-logo-title {
+  font-size: 18px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: -.3px;
+  line-height: 1.1;
+}
+
+.sidebar-logo-sub {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255,255,255,.4);
+  margin-top: 2px;
+  letter-spacing: .04em;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nav-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: rgba(255,255,255,.3);
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  padding: 8px 8px 4px;
+  margin-top: 8px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(255,255,255,.55);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  font-family: 'Sofia Sans', sans-serif;
+  text-align: left;
+  width: 100%;
+  transition: all .15s;
+  position: relative;
+}
+
+.nav-item:hover {
+  background: rgba(255,255,255,.07);
+  color: rgba(255,255,255,.85);
+}
+
+.nav-item.active {
+  background: linear-gradient(135deg, rgba(0,184,158,.25), rgba(0,184,158,.12));
+  color: #00e5c8;
+  border: 1px solid rgba(0,184,158,.25);
+}
+
+.nav-item.active .nav-icon { color: #00e5c8; }
+
+.nav-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  opacity: .8;
+}
+
+.nav-soon {
+  font-size: 9px;
+  font-weight: 800;
+  background: rgba(255,255,255,.1);
+  color: rgba(255,255,255,.4);
+  padding: 2px 7px;
+  border-radius: 20px;
+  margin-left: auto;
+  letter-spacing: .04em;
+}
+
+.sidebar-footer {
+  padding: 16px 20px;
+  border-top: 1px solid rgba(255,255,255,.08);
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255,255,255,.25);
+}
+
+/* ── MAIN ── */
+.main {
+  margin-left: var(--sidebar);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* ── TOPBAR ── */
 .topbar {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(244,241,236,0.92);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(240,239,248,.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
-  padding: 0 16px;
-}
-
-.topbar-inner {
-  max-width: 1200px;
-  margin: 0 auto;
+  padding: 0 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   height: 56px;
-  gap: 12px;
+  gap: 16px;
 }
 
-.logo {
-  font-size: 20px;
+.topbar-title {
+  font-size: 15px;
   font-weight: 800;
-  letter-spacing: -0.5px;
-  color: var(--ink);
+  color: var(--text);
   display: flex;
   align-items: center;
   gap: 8px;
-  white-space: nowrap;
 }
 
-.logo-dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--gold-mid);
-}
-
-.nav-tabs {
+.topbar-right {
   display: flex;
-  gap: 2px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-.nav-tabs::-webkit-scrollbar { display: none; }
-
-.nav-tab {
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--muted);
-  cursor: pointer;
-  border: none;
-  background: transparent;
-  white-space: nowrap;
-  transition: all 0.15s;
-  font-family: 'Sofia Sans', sans-serif;
+  align-items: center;
+  gap: 10px;
 }
 
-.nav-tab:hover { color: var(--text); background: var(--bg2); }
-
-.nav-tab.active {
-  background: var(--ink);
-  color: #fff;
-}
-
-.month-select-wrap {
+/* Month selector */
+.month-sel-wrap {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--surface);
+  background: var(--card);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 6px 12px;
-  min-width: 0;
-  flex-shrink: 0;
+  padding: 7px 12px;
+  box-shadow: var(--shadow);
 }
 
-.month-select-wrap select {
+.month-sel-wrap select {
   background: transparent;
   border: none;
   font-family: 'Sofia Sans', sans-serif;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text);
   cursor: pointer;
   outline: none;
-  max-width: 130px;
+  max-width: 150px;
 }
 
 .live-dot {
@@ -164,926 +235,500 @@ body {
   border-radius: 50%;
   background: var(--green);
   flex-shrink: 0;
-  animation: blink 2s ease-in-out infinite;
+  animation: pulse 2s ease-in-out infinite;
 }
 
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-/* ══════════════════════════════════════════════
-   HERO / RESUMEN HEADER
-══════════════════════════════════════════════ */
+/* ── PAGE CONTENT ── */
+.content {
+  padding: 24px;
+  flex: 1;
+}
+
+/* ═══════════════════════════════════════════════
+   HERO — igual al Finance Portal
+═══════════════════════════════════════════════ */
 .hero {
-  padding: 32px 0 24px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 28px;
+  background: linear-gradient(135deg, #0F004F 0%, #1B0088 45%, #2d1a6e 100%);
+  border-radius: 20px;
+  padding: 28px 34px 30px;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 24px;
+  box-shadow: 0 16px 40px rgba(15,10,46,.15);
 }
 
-.hero-top {
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.orb-1 { top:-60px; right:-60px; width:280px; height:280px; background:radial-gradient(circle,rgba(168,85,247,.3) 0%,transparent 70%); }
+.orb-2 { bottom:-40px; left:30%; width:200px; height:200px; background:radial-gradient(circle,rgba(0,229,200,.12) 0%,transparent 70%); }
+
+.hero-inner {
+  position: relative;
+  z-index: 1;
   display: flex;
-  align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
+  align-items: flex-start;
+  gap: 20px;
   flex-wrap: wrap;
-  margin-bottom: 28px;
-}
-
-.hero-greeting {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--muted);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  margin-bottom: 4px;
 }
 
 .hero-title {
-  font-size: clamp(28px, 5vw, 44px);
+  font-size: 28px;
   font-weight: 800;
-  letter-spacing: -1px;
-  line-height: 1.05;
-  color: var(--ink);
+  color: #fff;
+  line-height: 1.15;
+  margin-bottom: 6px;
 }
 
-.hero-title span { color: var(--gold); }
+.hero-title span {
+  background: linear-gradient(90deg, #00e5c8, #a855f7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
 
-.hero-meta {
+.hero-sub {
   font-size: 13px;
-  color: var(--muted);
-  margin-top: 6px;
-  font-weight: 400;
+  color: rgba(255,255,255,.45);
+  line-height: 1.5;
+  max-width: 500px;
 }
 
-.hero-balance {
-  text-align: right;
+.hero-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
-.hero-balance-label {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--muted);
+.hero-chips {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+/* stat chip — exacto del portal */
+.stat-chip {
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 10px;
+  padding: 10px 16px;
+  min-width: 120px;
+  backdrop-filter: blur(6px);
+}
+.stat-chip-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-bottom: 4px;
+  color: rgba(255,255,255,.45);
+  margin-bottom: 3px;
 }
-
-.hero-balance-value {
-  font-size: clamp(24px, 4vw, 36px);
+.stat-chip-value {
+  font-size: 22px;
   font-weight: 800;
-  letter-spacing: -1px;
-  color: var(--ink);
+  color: #fff;
+  line-height: 1;
 }
+.stat-chip-delta {
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 3px;
+}
+.chip-up   { color: #86efac; }
+.chip-down { color: #fca5a5; }
+.chip-flat { color: rgba(255,255,255,.4); }
 
-.hero-balance-value.pos { color: var(--green); }
-.hero-balance-value.neg { color: var(--red); }
+/* lu-badge */
+.lu-badge { display:inline-flex;align-items:center;gap:6px;border:1px solid;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;backdrop-filter:blur(6px); }
+.lu-fresh { background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.3);color:#86efac; }
+.lu-dot { width:6px;height:6px;border-radius:50%;flex-shrink:0; }
+.lu-fresh .lu-dot { background:#22c55e; }
 
-/* ══════════════════════════════════════════════
-   KPI STRIP
-══════════════════════════════════════════════ */
+/* period toggle hero */
+.period-toggle { display:inline-flex;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:3px;gap:3px; }
+.period-btn { border:none;background:transparent;color:rgba(255,255,255,.55);font-family:'Sofia Sans',sans-serif;font-size:12px;font-weight:700;padding:5px 14px;border-radius:6px;cursor:pointer; }
+.period-btn.active { background:#fff;color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.15); }
+
+/* ═══════════════════════════════════════════════
+   KPI STRIP — stat-chip-dark style
+═══════════════════════════════════════════════ */
 .kpi-strip {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 10px;
+  gap: var(--gap);
+  margin-bottom: 24px;
 }
 
-.kpi {
-  background: var(--surface);
+.kpi-card {
+  background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 16px;
+  padding: 18px 20px;
+  box-shadow: var(--shadow);
   position: relative;
   overflow: hidden;
-  transition: box-shadow 0.2s, transform 0.2s;
+  transition: box-shadow .2s, transform .2s;
 }
 
-.kpi:hover {
-  box-shadow: var(--shadow);
-  transform: translateY(-1px);
+.kpi-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
 }
 
-.kpi::after {
+.kpi-card::before {
   content: '';
   position: absolute;
-  bottom: 0; left: 0; right: 0;
+  top: 0; left: 0; right: 0;
   height: 3px;
-  background: var(--kpi-color, var(--gold-mid));
-  border-radius: 0 0 2px 2px;
+  background: var(--kpi-stripe, #1B0088);
+  border-radius: 3px 3px 0 0;
 }
 
 .kpi-label {
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 10px;
+  font-weight: 800;
   color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: .08em;
   margin-bottom: 8px;
 }
 
 .kpi-val {
-  font-size: clamp(16px, 2.5vw, 22px);
+  font-size: 22px;
   font-weight: 800;
-  letter-spacing: -0.5px;
-  color: var(--ink);
-  margin-bottom: 6px;
+  color: var(--text);
   line-height: 1;
+  margin-bottom: 6px;
 }
 
 .kpi-delta {
-  font-size: 11px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 3px;
-}
-
-.kpi-delta.up   { color: var(--green); }
-.kpi-delta.down { color: var(--red); }
-.kpi-delta.flat { color: var(--muted); }
-
-/* ══════════════════════════════════════════════
-   SECTION
-══════════════════════════════════════════════ */
-.section { margin-bottom: 28px; }
-
-.section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 14px;
-}
-
-.section-title {
-  font-size: 17px;
-  font-weight: 800;
-  letter-spacing: -0.3px;
-  color: var(--ink);
-}
-
-.section-sub {
   font-size: 12px;
-  font-weight: 500;
-  color: var(--muted);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-/* ══════════════════════════════════════════════
-   CARD BASE
-══════════════════════════════════════════════ */
+.delta-up   { color: var(--green-dk); }
+.delta-down { color: var(--red); }
+.delta-flat { color: var(--muted); opacity: .6; }
+
+/* ═══════════════════════════════════════════════
+   CARDS / SECTIONS
+═══════════════════════════════════════════════ */
+.sec-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.sec-label::after { content:'';flex:1;height:1px;background:var(--border); }
+
 .card {
-  background: var(--surface);
+  background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 20px;
+  padding: 20px 22px;
   box-shadow: var(--shadow);
 }
 
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
 .card-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
-  color: var(--ink);
-  margin-bottom: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.badge {
-  font-size: 10px;
-  font-weight: 700;
-  padding: 3px 9px;
-  border-radius: 20px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.badge-gold   { background: var(--gold-lt);   color: var(--gold); }
-.badge-green  { background: var(--green-lt);  color: var(--green); }
-.badge-red    { background: var(--red-lt);    color: var(--red); }
-.badge-blue   { background: var(--blue-lt);   color: var(--blue); }
-.badge-orange { background: var(--orange-lt); color: var(--orange); }
-.badge-purple { background: var(--purple-lt); color: var(--purple); }
-.badge-muted  { background: var(--bg2);       color: var(--muted); }
-
-/* ══════════════════════════════════════════════
-   GRIDS
-══════════════════════════════════════════════ */
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
-.grid-main { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; }
-
-/* ══════════════════════════════════════════════
-   CHART CANVAS
-══════════════════════════════════════════════ */
-.chart-box { position: relative; }
-.chart-box canvas { display: block; width: 100% !important; }
-
-.chart-legend {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-top: 12px;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text2);
-}
-
-.legend-dot {
-  width: 10px; height: 10px;
-  border-radius: 3px;
-  flex-shrink: 0;
-}
-
-/* ══════════════════════════════════════════════
-   TABLE
-══════════════════════════════════════════════ */
-.tbl-wrap {
-  overflow-x: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border2) transparent;
-}
-
-.tbl-scroll-y {
-  max-height: 320px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border2) transparent;
-}
-
-table.data {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-table.data thead th {
-  padding: 0 10px 10px 0;
-  text-align: left;
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  border-bottom: 2px solid var(--border);
-  white-space: nowrap;
-}
-
-table.data thead th:last-child { text-align: right; padding-right: 0; }
-
-table.data tbody td {
-  padding: 9px 10px 9px 0;
-  border-bottom: 1px solid var(--bg2);
-  vertical-align: middle;
-  color: var(--text2);
-}
-
-table.data tbody td:last-child { text-align: right; padding-right: 0; font-weight: 700; color: var(--ink); }
-
-table.data tbody tr:last-child td { border-bottom: none; }
-table.data tbody tr:hover td { background: var(--surface2); }
-
-/* ══════════════════════════════════════════════
-   PILLS / TAGS
-══════════════════════════════════════════════ */
-.pill {
-  display: inline-block;
-  font-size: 9px;
-  font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 20px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-left: 5px;
-  vertical-align: middle;
-}
-
-.pill-casa   { background: var(--blue-lt);   color: var(--blue); }
-.pill-auto   { background: var(--orange-lt); color: var(--orange); }
-.pill-mama   { background: #fce7f3;          color: #9d174d; }
-.pill-cred   { background: var(--purple-lt); color: var(--purple); }
-.pill-ahorro { background: var(--green-lt);  color: var(--green); }
-.pill-tc     { background: var(--orange-lt); color: var(--orange); }
-.pill-seg    { background: var(--bg2);       color: var(--muted); }
-
-/* ══════════════════════════════════════════════
-   BAR ROWS
-══════════════════════════════════════════════ */
-.bar-row { margin-bottom: 13px; }
-.bar-row:last-child { margin-bottom: 0; }
-
-.bar-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 5px;
-}
-
-.bar-name {
-  font-size: 13px;
-  font-weight: 600;
   color: var(--text);
+}
+
+/* ═══════════════════════════════════════════════
+   GRIDS
+═══════════════════════════════════════════════ */
+.grid-2     { display: grid; grid-template-columns: 1fr 1fr;   gap: var(--gap); }
+.grid-3     { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--gap); }
+.grid-main  { display: grid; grid-template-columns: 3fr 2fr;   gap: var(--gap); }
+.grid-dist  { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: var(--gap); }
+
+/* ═══════════════════════════════════════════════
+   BADGES
+═══════════════════════════════════════════════ */
+.badge { display:inline-flex;align-items:center;padding:3px 10px;border-radius:8px;font-size:11px;font-weight:800;white-space:nowrap; }
+.badge-navy   { background:rgba(27,0,136,.09);  color:#1B0088; }
+.badge-green  { background:rgba(22,101,52,.10); color:#166534; }
+.badge-red    { background:rgba(237,22,80,.10); color:#ED1650; }
+.badge-amber  { background:rgba(245,158,11,.12);color:#92400e; }
+.badge-purple { background:rgba(112,0,171,.09); color:#7000AB; }
+.badge-teal   { background:rgba(0,184,158,.10); color:#007a72; }
+.badge-orange { background:rgba(249,115,22,.10);color:#c2410c; }
+.badge-gray   { background:rgba(156,163,175,.12);color:#6b7280; }
+
+/* ═══════════════════════════════════════════════
+   TABLE
+═══════════════════════════════════════════════ */
+.tbl-scroll { overflow-y: auto; max-height: 300px; scrollbar-width: thin; scrollbar-color: #c4c0e0 transparent; }
+
+table { width:100%;border-collapse:separate;border-spacing:0; }
+thead th { padding:10px 12px;font-size:11px;font-weight:800;color:var(--accent);text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;position:sticky;top:0;background:var(--card);z-index:1; }
+thead th:last-child { text-align:right; }
+tbody td { padding:10px 12px;font-size:13px;color:var(--text);border-bottom:1px solid rgba(0,0,0,.04);vertical-align:middle; }
+tbody td:last-child { text-align:right;font-weight:800; }
+tbody tr:last-child td { border-bottom:none; }
+tbody tr:hover td { background:rgba(99,77,210,.025); }
+
+/* ═══════════════════════════════════════════════
+   BAR ROWS
+═══════════════════════════════════════════════ */
+.bar-row { margin-bottom: 12px; }
+.bar-row:last-child { margin-bottom: 0; }
+.bar-meta { display:flex;justify-content:space-between;align-items:center;margin-bottom:5px; }
+.bar-name { font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px; }
+.bar-amt  { font-size:12px;font-weight:800;color:var(--text); }
+.bar-pct  { font-size:11px;color:var(--muted);font-weight:600; }
+.bar-track { height:6px;background:rgba(27,0,136,.07);border-radius:3px;overflow:hidden; }
+.bar-fill  { height:100%;border-radius:3px;transition:width .8s cubic-bezier(.4,0,.2,1); }
+
+/* ═══════════════════════════════════════════════
+   RING / DONUT
+═══════════════════════════════════════════════ */
+.ring-wrap { position:relative;width:140px;height:140px;margin:0 auto 16px; }
+.ring-label { position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none; }
+.ring-pct { font-size:28px;font-weight:800;color:var(--text);line-height:1; }
+.ring-sub { font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase; }
+
+/* ═══════════════════════════════════════════════
+   RECOMENDACIONES
+═══════════════════════════════════════════════ */
+.rec-item {
   display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.bar-amt {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--ink);
-}
-
-.bar-pct {
-  font-size: 10px;
-  color: var(--muted);
-  font-weight: 500;
-}
-
-.bar-track {
-  height: 6px;
-  background: var(--bg2);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.bar-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.8s cubic-bezier(.4,0,.2,1);
-}
-
-/* ══════════════════════════════════════════════
-   AHORRO RING
-══════════════════════════════════════════════ */
-.ahorro-center {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 8px 0 20px;
-}
-
-.ring-wrap {
-  position: relative;
-  width: 130px;
-  height: 130px;
-  margin-bottom: 16px;
-}
-
-.ring-wrap canvas {
-  display: block;
-}
-
-.ring-label {
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
-  pointer-events: none;
-}
-
-.ring-pct {
-  font-size: 26px;
-  font-weight: 800;
-  color: var(--ink);
-  letter-spacing: -1px;
-  line-height: 1;
-}
-
-.ring-sub {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--muted);
-  text-transform: uppercase;
-}
-
-.ahorro-row {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-  margin-bottom: 16px;
-  padding: 12px 16px;
-  background: var(--surface2);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-}
-
-.ahorro-stat { text-align: center; }
-.ahorro-stat-label { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; }
-.ahorro-stat-val { font-size: 16px; font-weight: 800; color: var(--ink); }
-
-/* ══════════════════════════════════════════════
-   DEUDA CARDS
-══════════════════════════════════════════════ */
-.deuda-item {
-  display: flex;
-  align-items: center;
   gap: 14px;
   padding: 14px 0;
-  border-bottom: 1px solid var(--bg2);
+  border-bottom: 1px solid rgba(27,0,136,.06);
 }
+.rec-item:last-child { border-bottom: none; padding-bottom: 0; }
 
-.deuda-item:last-child { border-bottom: none; }
-
-.deuda-icon {
+.rec-icon {
   width: 40px; height: 40px;
   border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 20px;
   flex-shrink: 0;
 }
 
-.deuda-info { flex: 1; min-width: 0; }
+.rec-body { flex: 1; min-width: 0; }
+.rec-title { font-size: 13px; font-weight: 800; color: var(--text); margin-bottom: 3px; }
+.rec-desc  { font-size: 12px; font-weight: 500; color: var(--muted); line-height: 1.45; }
+.rec-tag   { display:inline-block;margin-top:6px;font-size:10px;font-weight:800;padding:2px 9px;border-radius:6px; }
 
-.deuda-name {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--ink);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.deuda-detail {
-  font-size: 11px;
-  color: var(--muted);
-  font-weight: 500;
-}
-
-.deuda-cuota {
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--ink);
-  text-align: right;
-  flex-shrink: 0;
-}
-
-.deuda-progress {
-  height: 4px;
-  background: var(--bg2);
-  border-radius: 2px;
-  margin-top: 6px;
-  overflow: hidden;
-}
-
-.deuda-progress-fill {
-  height: 100%;
-  border-radius: 2px;
-  background: linear-gradient(90deg, var(--blue), #3b82f6);
-}
-
-/* ══════════════════════════════════════════════
-   EVOLUCIÓN TABLE (TC detail)
-══════════════════════════════════════════════ */
-.evo-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--bg2);
-}
-
-.evo-item:last-child { border-bottom: none; }
-
-.evo-month {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--muted);
-  text-transform: uppercase;
-  min-width: 56px;
-}
-
-.evo-bar-track {
-  flex: 1;
-  height: 8px;
-  background: var(--bg2);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.evo-bar-fill {
-  height: 100%;
-  border-radius: 4px;
-}
-
-.evo-val {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--ink);
-  min-width: 64px;
-  text-align: right;
-}
-
-/* ══════════════════════════════════════════════
+/* ═══════════════════════════════════════════════
    LOADING / ERROR
-══════════════════════════════════════════════ */
-.loading-state {
-  display: flex;
+═══════════════════════════════════════════════ */
+.loading-state { display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:14px; }
+.spinner { width:32px;height:32px;border:3px solid var(--border);border-top-color:#1B0088;border-radius:50%;animation:spin .7s linear infinite; }
+@keyframes spin { to{transform:rotate(360deg)} }
+.loading-text { font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em; }
+.error-box { background:rgba(237,22,80,.07);border:1px solid rgba(237,22,80,.2);border-radius:12px;padding:20px;text-align:center;font-size:13px;color:var(--red);font-weight:600; }
+
+/* ═══════════════════════════════════════════════
+   DIST BAR (tipo Finance Portal)
+═══════════════════════════════════════════════ */
+.dist-bar { display:flex;height:44px;border-radius:10px;overflow:hidden;gap:2px;margin-bottom:12px; }
+.dist-seg { display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:800;padding:0 10px;min-width:max-content;transition:filter .15s;cursor:default; }
+.dist-seg:hover { filter:brightness(1.1); }
+.dist-seg-name { font-size:9px;font-weight:800;white-space:nowrap; }
+.dist-seg-val  { font-size:8px;font-weight:700;opacity:.8; }
+
+/* ═══════════════════════════════════════════════
+   MOBILE — hamburger + overlay
+═══════════════════════════════════════════════ */
+.hamburger {
+  display: none;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 60px 20px;
-  gap: 14px;
+  gap: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+}
+.hamburger span {
+  display: block;
+  width: 22px; height: 2px;
+  background: var(--text);
+  border-radius: 2px;
+  transition: all .2s;
 }
 
-.spinner {
-  width: 32px; height: 32px;
-  border: 3px solid var(--border2);
-  border-top-color: var(--gold-mid);
-  border-radius: 50%;
-  animation: spin .7s linear infinite;
+.overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15,0,79,.5);
+  z-index: 150;
 }
 
-@keyframes spin { to { transform: rotate(360deg); } }
-
-.loading-text {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+/* ── RESPONSIVE ── */
+@media (max-width: 1100px) {
+  .kpi-strip { grid-template-columns: repeat(3,1fr); }
+  .grid-dist { grid-template-columns: 1fr 1fr; }
 }
 
-.error-state {
-  background: var(--red-lt);
-  border: 1px solid #fca5a5;
-  border-radius: var(--radius);
-  padding: 20px;
-  text-align: center;
-  font-size: 13px;
-  color: var(--red);
-  font-weight: 500;
-}
-
-/* ══════════════════════════════════════════════
-   PANEL TABS (for content switching)
-══════════════════════════════════════════════ */
-.panel { display: none; }
-.panel.active { display: block; }
-
-/* ══════════════════════════════════════════════
-   FOOTER
-══════════════════════════════════════════════ */
-.footer {
-  text-align: center;
-  padding: 24px 0 0;
-  font-size: 11px;
-  color: var(--muted);
-  font-weight: 500;
-  border-top: 1px solid var(--border);
-  margin-top: 40px;
-}
-
-/* ══════════════════════════════════════════════
-   RESPONSIVE — TABLET
-══════════════════════════════════════════════ */
 @media (max-width: 900px) {
-  .kpi-strip { grid-template-columns: repeat(3, 1fr); }
+  :root { --sidebar: 0px; }
+  .sidebar { transform: translateX(-220px); width: 220px; }
+  .sidebar.open { transform: translateX(0); }
+  .main { margin-left: 0; }
+  .hamburger { display: flex; }
+  .overlay.active { display: block; }
+  .kpi-strip { grid-template-columns: repeat(2,1fr); }
   .grid-main { grid-template-columns: 1fr; }
+  .grid-2    { grid-template-columns: 1fr; }
   .grid-3    { grid-template-columns: 1fr 1fr; }
+  .grid-dist { grid-template-columns: 1fr; }
 }
 
-/* ══════════════════════════════════════════════
-   RESPONSIVE — MOBILE
-══════════════════════════════════════════════ */
-@media (max-width: 600px) {
-  .topbar-inner { height: 52px; }
-  .logo         { font-size: 17px; }
-  .nav-tabs     { gap: 1px; }
-  .nav-tab      { padding: 5px 10px; font-size: 12px; }
-  .month-select-wrap select { max-width: 90px; }
-
-  .kpi-strip    { grid-template-columns: 1fr 1fr; }
-  .grid-2       { grid-template-columns: 1fr; }
-  .grid-3       { grid-template-columns: 1fr; }
-  .grid-main    { grid-template-columns: 1fr; }
-
-  .hero-top     { flex-direction: column; }
-  .hero-balance { text-align: left; }
-
-  .card { padding: 16px; }
-  .kpi  { padding: 12px; }
+@media (max-width: 560px) {
+  .content { padding: 16px; }
+  .hero { padding: 20px; }
+  .hero-title { font-size: 22px; }
+  .hero-chips { gap: 8px; }
+  .stat-chip { min-width: 100px; padding: 8px 12px; }
+  .stat-chip-value { font-size: 18px; }
+  .kpi-strip { grid-template-columns: 1fr 1fr; }
+  .grid-3    { grid-template-columns: 1fr; }
 }
 
-@media (max-width: 360px) {
+@media (max-width: 380px) {
   .kpi-strip { grid-template-columns: 1fr; }
 }
 </style>
 </head>
 <body>
 
-<!-- ══════ TOPBAR ══════ -->
-<nav class="topbar">
-  <div class="topbar-inner">
-    <div class="logo">
-      <div class="logo-dot"></div>
-      Finance
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<div class="app">
+
+  <!-- ══════════ SIDEBAR ══════════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-title">Finance<br>Personal</div>
+      <div class="sidebar-logo-sub">Luis · 2019–2026</div>
     </div>
 
-    <div class="nav-tabs" id="nav-tabs">
-      <button class="nav-tab active" onclick="switchTab('mensual',this)">Mensual</button>
-      <button class="nav-tab" onclick="switchTab('tc',this)">Tarjeta</button>
-      <button class="nav-tab" onclick="switchTab('creditos',this)">Créditos</button>
-      <button class="nav-tab" onclick="switchTab('mama',this)">Mamá</button>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Vistas</div>
+
+      <button class="nav-item active" onclick="setTab('mensual',this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Mensual
+      </button>
+
+      <button class="nav-item" onclick="setTab('tc',this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        Tarjeta Crédito
+        <span class="nav-soon">Pronto</span>
+      </button>
+
+      <button class="nav-item" onclick="setTab('creditos',this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        Créditos
+        <span class="nav-soon">Pronto</span>
+      </button>
+
+      <button class="nav-item" onclick="setTab('mama',this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        Mamá
+        <span class="nav-soon">Pronto</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-footer" id="sidebar-ts">Actualizado —</div>
+  </aside>
+
+  <!-- ══════════ MAIN ══════════ -->
+  <div class="main">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="hamburger" id="hamburger" onclick="openSidebar()">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="topbar-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1B0088" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Mensual
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="month-sel-wrap">
+          <div class="live-dot"></div>
+          <select id="month-select" onchange="onMonthChange()">
+            <option>Cargando…</option>
+          </select>
+        </div>
+      </div>
     </div>
 
-    <div class="month-select-wrap">
-      <div class="live-dot"></div>
-      <select id="month-select" onchange="onMonthChange()">
-        <option>Cargando…</option>
-      </select>
-    </div>
-  </div>
-</nav>
-
-<!-- ══════ PAGE ══════ -->
-<div class="page">
-
-  <!-- LOADING INICIAL -->
-  <div id="loading-init" class="loading-state" style="height:60vh">
-    <div class="spinner"></div>
-    <div class="loading-text">Cargando datos financieros…</div>
-  </div>
-
-  <!-- CONTENIDO PRINCIPAL (oculto hasta cargar) -->
-  <div id="main-content" style="display:none">
-
-    <!-- ── HERO ── -->
-    <div class="hero">
-      <div class="hero-top">
-        <div>
-          <div class="hero-greeting">Resumen financiero</div>
-          <div class="hero-title" id="hero-title">Mayo <span>2026</span></div>
-          <div class="hero-meta" id="hero-meta">Cargando…</div>
-        </div>
-        <div class="hero-balance">
-          <div class="hero-balance-label">Balance neto</div>
-          <div class="hero-balance-value" id="hero-balance">—</div>
-        </div>
-      </div>
-
-      <!-- KPI STRIP -->
-      <div class="kpi-strip" id="kpi-strip">
-        <!-- filled by JS -->
+    <!-- CONTENT -->
+    <div class="content" id="page-content">
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <div class="loading-text">Conectando con Google Sheets…</div>
       </div>
     </div>
 
-    <!-- ══════ TAB: MENSUAL ══════ -->
-    <div class="panel active" id="panel-mensual">
-
-      <!-- FLUJO + DETALLE -->
-      <div class="section">
-        <div class="section-header">
-          <div class="section-title">Flujo mensual</div>
-          <div class="section-sub" id="flujo-sub">últimos 12 meses</div>
-        </div>
-        <div class="grid-main">
-          <div class="card">
-            <div class="card-title">
-              Ingresos vs Gastos
-              <span class="badge badge-muted" id="chart-period-label">12M</span>
-            </div>
-            <div class="chart-box" style="height:220px">
-              <canvas id="flowChart"></canvas>
-            </div>
-            <div class="chart-legend">
-              <span class="legend-item"><span class="legend-dot" style="background:#1e4f8c"></span>Ingreso</span>
-              <span class="legend-item"><span class="legend-dot" style="background:#b83232"></span>Gasto</span>
-              <span class="legend-item"><span class="legend-dot" style="background:#b8860b"></span>Delta</span>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="card-title">
-              Detalle del mes
-              <span class="badge badge-gold" id="detail-badge">—</span>
-            </div>
-            <div class="tbl-scroll-y">
-              <table class="data" id="detail-table">
-                <thead>
-                  <tr>
-                    <th>Concepto</th>
-                    <th>Δ</th>
-                    <th style="text-align:right">Monto</th>
-                  </tr>
-                </thead>
-                <tbody id="detail-tbody"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- TOP GASTOS + AHORRO + DISTRIBUCIÓN -->
-      <div class="section">
-        <div class="section-header">
-          <div class="section-title">Análisis del mes</div>
-          <span class="badge badge-muted" id="analysis-month">—</span>
-        </div>
-        <div class="grid-3">
-
-          <!-- TOP GASTOS -->
-          <div class="card">
-            <div class="card-title">Mayores gastos</div>
-            <div id="spending-bars"></div>
-          </div>
-
-          <!-- AHORRO -->
-          <div class="card">
-            <div class="card-title">Tasa de ahorro</div>
-            <div class="ahorro-center">
-              <div class="ring-wrap">
-                <canvas id="ahorroRing" width="130" height="130"></canvas>
-                <div class="ring-label">
-                  <div class="ring-pct" id="ring-pct">—</div>
-                  <div class="ring-sub">ahorro</div>
-                </div>
-              </div>
-              <div class="ahorro-row">
-                <div class="ahorro-stat">
-                  <div class="ahorro-stat-label">Ahorro</div>
-                  <div class="ahorro-stat-val" id="ahorro-val">—</div>
-                </div>
-                <div class="ahorro-stat">
-                  <div class="ahorro-stat-label">Ingreso</div>
-                  <div class="ahorro-stat-val" id="ingreso-val">—</div>
-                </div>
-                <div class="ahorro-stat">
-                  <div class="ahorro-stat-label">Líquido</div>
-                  <div class="ahorro-stat-val" id="liquido-val">—</div>
-                </div>
-              </div>
-              <div style="width:100%">
-                <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">Histórico anual</div>
-                <div class="chart-box" style="height:70px">
-                  <canvas id="ahorroTrend"></canvas>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- DISTRIBUCIÓN -->
-          <div class="card">
-            <div class="card-title">Distribución</div>
-            <div id="dist-bars"></div>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- EVOLUCIÓN HISTÓRICA -->
-      <div class="section">
-        <div class="section-header">
-          <div class="section-title">Evolución histórica</div>
-          <div class="section-sub">desde 2019</div>
-        </div>
-        <div class="card">
-          <div class="chart-box" style="height:200px">
-            <canvas id="historicChart"></canvas>
-          </div>
-        </div>
-      </div>
-
-    </div><!-- /panel-mensual -->
-
-    <!-- ══════ TAB: TARJETA CRÉDITO ══════ -->
-    <div class="panel" id="panel-tc">
-      <div class="section">
-        <div class="section-header">
-          <div class="section-title">Tarjeta de Crédito</div>
-          <span class="badge badge-orange" id="tc-badge">—</span>
-        </div>
-        <div class="grid-2">
-          <div class="card">
-            <div class="card-title">Evolución últimos 12 meses</div>
-            <div class="chart-box" style="height:200px">
-              <canvas id="tcChart"></canvas>
-            </div>
-          </div>
-          <div class="card">
-            <div class="card-title">Cuotas pendientes (top)</div>
-            <div class="tbl-scroll-y">
-              <table class="data" id="tc-table">
-                <thead>
-                  <tr>
-                    <th>Movimiento</th>
-                    <th style="text-align:right">Cuota/mes</th>
-                    <th style="text-align:right">Restan</th>
-                  </tr>
-                </thead>
-                <tbody id="tc-tbody"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-        <div class="section" style="margin-top:20px">
-          <div class="card">
-            <div class="card-title">Resumen mes a mes (TC)</div>
-            <div id="tc-evo-list"></div>
-          </div>
-        </div>
-      </div>
-    </div><!-- /panel-tc -->
-
-    <!-- ══════ TAB: CRÉDITOS ══════ -->
-    <div class="panel" id="panel-creditos">
-      <div class="section">
-        <div class="section-header">
-          <div class="section-title">Créditos</div>
-          <span class="badge badge-purple">en curso</span>
-        </div>
-        <div class="grid-2">
-          <div class="card">
-            <div class="card-title">Créditos activos</div>
-            <div id="creditos-list"></div>
-          </div>
-          <div class="card">
-            <div class="card-title">Carga mensual de deuda</div>
-            <div class="chart-box" style="height:220px">
-              <canvas id="cargaChart"></canvas>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div><!-- /panel-creditos -->
-
-    <!-- ══════ TAB: MAMÁ ══════ -->
-    <div class="panel" id="panel-mama">
-      <div class="section">
-        <div class="section-header">
-          <div class="section-title">Mamá</div>
-          <span class="badge" style="background:#fce7f3;color:#9d174d">cuenta familiar</span>
-        </div>
-        <div class="grid-2">
-          <div class="card">
-            <div class="card-title">Balance acumulado</div>
-            <div class="chart-box" style="height:200px">
-              <canvas id="mamaChart"></canvas>
-            </div>
-          </div>
-          <div class="card">
-            <div class="card-title">Movimientos recientes</div>
-            <div class="tbl-scroll-y">
-              <table class="data" id="mama-table">
-                <thead>
-                  <tr>
-                    <th>Fecha</th>
-                    <th>Detalle</th>
-                    <th style="text-align:right">Monto</th>
-                  </tr>
-                </thead>
-                <tbody id="mama-tbody"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div><!-- /panel-mama -->
-
-  </div><!-- /main-content -->
-
-  <div class="footer" id="footer-ts">Finance Personal · Luis · actualizado —</div>
-
-</div><!-- /page -->
+  </div><!-- /main -->
+</div><!-- /app -->
 
 <script>
-// ═══════════════════════════════════════
-//  CONFIG
-// ═══════════════════════════════════════
-const SID = '1nkQ4lsPoGXXzic_GLgkXR9qHlfcEe4j4q6XxheR2U3I';
+/* ════════════════════════════════════════════
+   CONFIG
+════════════════════════════════════════════ */
+const SID  = '1nkQ4lsPoGXXzic_GLgkXR9qHlfcEe4j4q6XxheR2U3I';
 const BASE = `https://docs.google.com/spreadsheets/d/${SID}/gviz/tq?tqx=out:json`;
 
-// ═══════════════════════════════════════
-//  STATE
-// ═══════════════════════════════════════
-let data = { mensual:[], tc:[], creditos:[], mama:[] };
-let months = [];
+/* ════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════ */
+let rawData = [];
+let months  = [];
 let selMonth = '';
-let activeTab = 'mensual';
-let charts = {};
-
-// ═══════════════════════════════════════
-//  UTILS
-// ═══════════════════════════════════════
+let charts  = {};
 const MESES = ['enero','febrero','marzo','abril','mayo','junio',
                'julio','agosto','septiembre','octubre','noviembre','diciembre'];
 
+/* ════════════════════════════════════════════
+   UTILS
+════════════════════════════════════════════ */
 function parseMonto(s) {
   if (!s) return 0;
   return parseFloat(String(s).replace(/[$. ]/g,'').replace(',','.')) || 0;
 }
-
 function monthKey(m) {
   const [mes, año] = String(m).split('-');
   const mi = MESES.indexOf(mes?.toLowerCase());
   return parseInt(año)*12 + (mi >= 0 ? mi : 0);
 }
-
-function fmt(n, short=false) {
+function capFirst(s) { return s ? s.charAt(0).toUpperCase()+s.slice(1) : ''; }
+function fmtM(n, short=false) {
   const abs = Math.abs(n);
   if (short) {
     if (abs >= 1e6) return `$${(n/1e6).toFixed(1)}M`;
@@ -1091,137 +736,76 @@ function fmt(n, short=false) {
   }
   return `$${Math.round(abs).toLocaleString('es-CL')}`;
 }
-
-function capFirst(s) { return s ? s.charAt(0).toUpperCase()+s.slice(1) : s; }
-
 function getCat(d) {
   const s = d.toLowerCase();
   if (s.includes('ahorro')) return 'ahorro';
-  if (s.includes('casa')) return 'casa';
-  if (s.includes('autopista') || s.includes('ruta')) return 'auto';
-  if (s.includes('tarjeta credito')) return 'tc';
+  if (s.includes('casa') && !s.includes('mama') && !s.includes('mamá')) return 'casa';
+  if (s.includes('autopista')) return 'auto';
   if (s.includes('hipotecario') || s.includes('consumo') || s.startsWith('credito')) return 'cred';
   if (s.includes('mamá') || s.includes('mama')) return 'mama';
   if (s.includes('seguro')) return 'seg';
+  if (s.includes('mantención') || s.includes('mantencion')) return 'mant';
   return '';
 }
+const CAT_COLORS = {
+  ahorro:'#059669', casa:'#4257E8', auto:'#f59e0b',
+  cred:'#7000AB',   mama:'#ED1650', seg:'#00b89e',
+  mant:'#634dd2',   '':'#9CA3AF'
+};
+const CAT_LABELS = {
+  ahorro:'Ahorro', casa:'Casa', auto:'Autopistas',
+  cred:'Crédito',  mama:'Mamá', seg:'Seguro',
+  mant:'Mantención', '':'Otros'
+};
 
-function pillHtml(cat) {
-  if (!cat) return '';
-  const labels = {casa:'Casa',auto:'Auto',tc:'TC',cred:'Créd.',mama:'Mamá',ahorro:'Ahorro',seg:'Seguro'};
-  return `<span class="pill pill-${cat}">${labels[cat]||cat}</span>`;
+function badgeHtml(cls, txt) {
+  return `<span class="badge badge-${cls}">${txt}</span>`;
 }
 
-function deltaHtml(pct) {
-  if (pct === null) return '<span style="color:var(--muted);font-size:11px">—</span>';
-  const cls = Math.abs(pct) < 2 ? 'flat' : (pct > 0 ? 'down' : 'up');
-  const arrow = pct > 0 ? '↑' : '↓';
-  const color = cls==='up' ? 'var(--green)' : cls==='down' ? 'var(--red)' : 'var(--muted)';
-  return `<span style="font-size:11px;font-weight:700;color:${color}">${arrow}${Math.abs(pct).toFixed(0)}%</span>`;
-}
-
-// ═══════════════════════════════════════
-//  FETCH
-// ═══════════════════════════════════════
+/* ════════════════════════════════════════════
+   FETCH
+════════════════════════════════════════════ */
 async function fetchSheet(sheet) {
-  const r = await fetch(`${BASE}&sheet=${encodeURIComponent(sheet)}`);
+  const r   = await fetch(`${BASE}&sheet=${encodeURIComponent(sheet)}`);
   const txt = await r.text();
   const json = JSON.parse(txt.replace(/^[^{]+/,'').replace(/[^}]+$/,''));
   return json.table.rows || [];
 }
 
-async function loadAll() {
+async function loadData() {
   try {
-    // MENSUAL
-    const mr = await fetchSheet('mensual');
-    data.mensual = mr.map(r => ({
+    const rows = await fetchSheet('mensual');
+    rawData = rows.map(r => ({
       detalle: r.c[0]?.v || '',
-      tipo:    (r.c[1]?.v || '').toLowerCase().trim(),
+      tipo:    (r.c[1]?.v||'').toLowerCase().trim(),
       mes:     r.c[2]?.v || '',
       monto:   parseMonto(r.c[3]?.v)
     })).filter(r => r.mes && r.monto);
 
-    months = [...new Set(data.mensual.map(r=>r.mes))]
-      .sort((a,b) => monthKey(a)-monthKey(b));
-
+    months   = [...new Set(rawData.map(r=>r.mes))].sort((a,b)=>monthKey(a)-monthKey(b));
     selMonth = months[months.length-1];
 
-    // Selector
     const sel = document.getElementById('month-select');
     sel.innerHTML = months.map(m =>
       `<option value="${m}"${m===selMonth?' selected':''}>${capFirst(m)}</option>`
     ).join('');
 
-    // TC
-    const tr = await fetchSheet('tarjeta_credito');
-    data.tc = tr.map(r => ({
-      movimiento:  r.c[0]?.v || '',
-      fecha:       r.c[1]?.v || '',
-      total:       parseMonto(r.c[2]?.v),
-      cuotas:      parseInt(r.c[3]?.v)||1,
-      cuota_num:   parseInt(r.c[4]?.v)||1,
-      mes:         r.c[5]?.v || '',
-      valor_cuota: parseMonto(r.c[6]?.v),
-      estado:      r.c[7]?.v || ''
-    })).filter(r => r.mes);
-
-    // CRÉDITOS
-    const cr = await fetchSheet('creditos');
-    data.creditos = cr.map(r => ({
-      detalle:    r.c[0]?.v || '',
-      fecha:      r.c[1]?.v || '',
-      cuotas:     parseInt(r.c[2]?.v)||1,
-      mes:        r.c[3]?.v || '',
-      cuota_num:  parseInt(r.c[4]?.v)||1,
-      valor:      parseMonto(r.c[5]?.v),
-      estado:     r.c[6]?.v || ''
-    })).filter(r => r.mes);
-
-    // MAMÁ
-    const mamr = await fetchSheet('mama');
-    data.mama = mamr.map(r => ({
-      fecha:   r.c[0]?.v || '',
-      tipo:    (r.c[1]?.v||'').toLowerCase(),
-      detalle: r.c[2]?.v || '',
-      monto:   parseMonto(r.c[3]?.v)
-    })).filter(r => r.fecha);
-
-    document.getElementById('loading-init').style.display = 'none';
-    document.getElementById('main-content').style.display = 'block';
-
     const now = new Date();
-    document.getElementById('footer-ts').textContent =
-      `Finance Personal · Luis · actualizado ${now.toLocaleDateString('es-CL',{day:'2-digit',month:'long',year:'numeric'})}`;
+    const ts  = now.toLocaleDateString('es-CL',{day:'2-digit',month:'long',year:'numeric'});
+    document.getElementById('sidebar-ts').textContent = `Actualizado ${ts}`;
 
-    renderAll();
+    renderPage();
   } catch(e) {
-    document.getElementById('loading-init').innerHTML =
-      `<div class="error-state">Error al cargar datos.<br><small>${e.message}</small></div>`;
+    document.getElementById('page-content').innerHTML =
+      `<div class="error-box">Error al cargar datos desde Google Sheets.<br><small style="opacity:.7">${e.message}</small></div>`;
   }
 }
 
-// ═══════════════════════════════════════
-//  TAB SWITCH
-// ═══════════════════════════════════════
-function switchTab(tab, btn) {
-  activeTab = tab;
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
-  document.getElementById(`panel-${tab}`).classList.add('active');
-  btn.classList.add('active');
-  renderTab(tab);
-}
-
-function onMonthChange() {
-  selMonth = document.getElementById('month-select').value;
-  renderAll();
-}
-
-// ═══════════════════════════════════════
-//  SUMS
-// ═══════════════════════════════════════
+/* ════════════════════════════════════════════
+   SUMS
+════════════════════════════════════════════ */
 function sumsFor(mes) {
-  const rows = data.mensual.filter(r => r.mes === mes);
+  const rows  = rawData.filter(r=>r.mes===mes);
   const ing   = rows.filter(r=>r.tipo==='ingreso').reduce((a,r)=>a+r.monto,0);
   const gasto = rows.filter(r=>r.tipo==='gasto').reduce((a,r)=>a+r.monto,0);
   const tc    = rows.filter(r=>r.tipo==='tc').reduce((a,r)=>a+r.monto,0);
@@ -1231,607 +815,579 @@ function sumsFor(mes) {
   return { ing, gasto, tc, ahorro, hip, cons, total: gasto+tc };
 }
 
-// ═══════════════════════════════════════
-//  RENDER ALL
-// ═══════════════════════════════════════
-function renderAll() {
-  renderHero();
-  renderKPIs();
-  renderTab(activeTab);
+/* ════════════════════════════════════════════
+   RENDER PAGE
+════════════════════════════════════════════ */
+function onMonthChange() {
+  selMonth = document.getElementById('month-select').value;
+  renderPage();
 }
 
-function renderTab(tab) {
-  if (tab === 'mensual') {
-    renderFlow();
-    renderDetail();
-    renderSpending();
-    renderAhorro();
-    renderDist();
-    renderHistoric();
-  } else if (tab === 'tc') {
-    renderTC();
-  } else if (tab === 'creditos') {
-    renderCreditos();
-  } else if (tab === 'mama') {
-    renderMama();
-  }
-}
+function renderPage() {
+  const s    = sumsFor(selMonth);
+  const pi   = months.indexOf(selMonth)-1;
+  const prev = pi>=0 ? sumsFor(months[pi]) : null;
+  const bal  = s.ing - s.total;
+  const pctAhorro = s.ing > 0 ? (s.ahorro/s.ing*100) : 0;
 
-// ═══════════════════════════════════════
-//  HERO
-// ═══════════════════════════════════════
-function renderHero() {
-  const [mes, año] = selMonth.split('-');
-  document.getElementById('hero-title').innerHTML =
-    `${capFirst(mes)} <span>${año}</span>`;
-
-  const s = sumsFor(selMonth);
-  const balance = s.ing - s.total;
-  const el = document.getElementById('hero-balance');
-  el.textContent = fmt(balance);
-  el.className = 'hero-balance-value ' + (balance >= 0 ? 'pos' : 'neg');
-
-  const pct = s.ing > 0 ? ((s.ahorro/s.ing)*100).toFixed(1) : 0;
-  document.getElementById('hero-meta').textContent =
-    `Tasa de ahorro ${pct}% · Gasto total ${fmt(s.total,true)} · TC ${fmt(s.tc,true)}`;
-}
-
-// ═══════════════════════════════════════
-//  KPIs
-// ═══════════════════════════════════════
-function renderKPIs() {
-  const s = sumsFor(selMonth);
-  const pi = months.indexOf(selMonth)-1;
-  const prev = pi >= 0 ? sumsFor(months[pi]) : null;
-
-  function d(cur,prv,key) {
+  function dPct(cur, prv, key) {
     if (!prv||prv[key]===0) return null;
     return ((cur[key]-prv[key])/prv[key])*100;
   }
-
-  function deltaSpan(pct, invert=false) {
-    if (pct===null) return '<span class="kpi-delta flat">—</span>';
-    const good = invert ? pct < 0 : pct > 0;
-    const cls = Math.abs(pct)<1?'flat':good?'up':'down';
-    return `<span class="kpi-delta ${cls}">${pct>0?'↑':'↓'} ${Math.abs(pct).toFixed(1)}%</span>`;
+  function deltaSpan(pct, invert=false, light=false) {
+    if (pct===null) return light
+      ? '<span class="chip-flat">—</span>'
+      : '<span class="delta-flat">—</span>';
+    const good = invert ? pct<0 : pct>0;
+    const clsL = good ? 'chip-up' : 'chip-down';
+    const clsD = good ? 'delta-up' : 'delta-down';
+    const cls  = light ? clsL : clsD;
+    const arrow= pct>0 ? '↑' : '↓';
+    return `<span class="${cls}">${arrow} ${Math.abs(pct).toFixed(1)}%</span>`;
   }
 
-  const liquido = s.ing - s.total;
-  const liquPrev = prev ? prev.ing - prev.total : null;
-  const dLiq = prev && prev.ing-prev.total !== 0
-    ? ((liquido-(prev.ing-prev.total))/(prev.ing-prev.total))*100 : null;
+  const [mes, año] = selMonth.split('-');
 
-  const cards = [
-    { label:'Ingreso',       val: fmt(s.ing),    delta: deltaSpan(d(s,prev,'ing')),        color:'#1e4f8c', kpi:'ing' },
-    { label:'Gastos + TC',   val: fmt(s.total),  delta: deltaSpan(d(s,prev,'total'),true), color:'#b83232', kpi:'total' },
-    { label:'Tarjeta créd.', val: fmt(s.tc),     delta: deltaSpan(d(s,prev,'tc'),true),    color:'#c45e1a', kpi:'tc' },
-    { label:'Ahorro',        val: fmt(s.ahorro),
-      delta: s.ing>0
-        ? `<span class="kpi-delta up">${((s.ahorro/s.ing)*100).toFixed(1)}% ing.</span>`
-        : '<span class="kpi-delta flat">—</span>',
-      color:'#2d7a4f', kpi:'ahorro' },
-    { label:'Neto líquido',  val: fmt(Math.abs(liquido)),
-      delta: deltaSpan(dLiq, true),
-      color: liquido>=0?'#2d7a4f':'#b83232', kpi:'liq' },
-  ];
+  document.getElementById('page-content').innerHTML = `
 
-  document.getElementById('kpi-strip').innerHTML = cards.map(c => `
-    <div class="kpi" style="--kpi-color:${c.color}">
-      <div class="kpi-label">${c.label}</div>
-      <div class="kpi-val">${c.val}</div>
-      ${c.delta}
+<!-- ══ HERO ══ -->
+<div class="hero" style="margin-bottom:24px">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="hero-inner">
+    <div>
+      <div class="hero-title">${capFirst(mes)} <span>${año}</span></div>
+      <div class="hero-sub">Balance neto del mes · ingreso menos todos los gastos y compromisos financieros.</div>
+      <div style="margin-top:10px">
+        <span class="lu-badge lu-fresh">
+          <span class="lu-dot"></span>
+          Datos en tiempo real · Google Sheets
+        </span>
+      </div>
     </div>
-  `).join('');
+    <div class="hero-right">
+      <div style="text-align:right">
+        <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Balance neto</div>
+        <div style="font-size:34px;font-weight:800;line-height:1;color:${bal>=0?'#86efac':'#fca5a5'}">${fmtM(bal)}</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:4px">${deltaSpan(dPct(s,prev,'total'),true,true)} vs mes anterior</div>
+      </div>
+    </div>
+  </div>
+  <div class="hero-chips">
+    <div class="stat-chip">
+      <div class="stat-chip-label">Ingreso</div>
+      <div class="stat-chip-value">${fmtM(s.ing,true)}</div>
+      <div class="stat-chip-delta">${deltaSpan(dPct(s,prev,'ing'),false,true)} vs ant.</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-chip-label">Gastos + TC</div>
+      <div class="stat-chip-value">${fmtM(s.total,true)}</div>
+      <div class="stat-chip-delta">${deltaSpan(dPct(s,prev,'total'),true,true)} vs ant.</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-chip-label">Tarjeta</div>
+      <div class="stat-chip-value">${fmtM(s.tc,true)}</div>
+      <div class="stat-chip-delta">${deltaSpan(dPct(s,prev,'tc'),true,true)} vs ant.</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-chip-label">Ahorro</div>
+      <div class="stat-chip-value">${pctAhorro.toFixed(1)}%</div>
+      <div class="stat-chip-delta chip-up">${fmtM(s.ahorro,true)} guardados</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-chip-label">Hipotecario</div>
+      <div class="stat-chip-value">${fmtM(s.hip,true)}</div>
+      <div class="stat-chip-delta chip-flat">cuota mensual</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ KPIs ══ -->
+<div id="kpi-strip" class="kpi-strip" style="margin-bottom:24px"></div>
+
+<!-- ══ FLUJO + DETALLE ══ -->
+<div class="sec-label">Flujo mensual</div>
+<div class="grid-main" style="margin-bottom:24px">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Ingresos vs Gastos — últimos 12 meses</div>
+      <span class="badge badge-navy">12M</span>
+    </div>
+    <div style="height:230px"><canvas id="chartFlow"></canvas></div>
+    <div style="display:flex;gap:16px;margin-top:12px;flex-wrap:wrap">
+      <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--muted)"><span style="width:10px;height:10px;border-radius:3px;background:#1B0088;flex-shrink:0"></span>Ingreso</span>
+      <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--muted)"><span style="width:10px;height:10px;border-radius:3px;background:#ED1650;flex-shrink:0"></span>Gasto total</span>
+      <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--muted)"><span style="width:10px;height:10px;border-radius:3px;background:#00b89e;flex-shrink:0"></span>Delta</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Detalle del mes</div>
+      <span class="badge badge-navy">${capFirst(mes)}</span>
+    </div>
+    <div class="tbl-scroll">
+      <table id="tbl-detalle">
+        <thead><tr><th>Concepto</th><th>Δ</th><th>Monto</th></tr></thead>
+        <tbody id="tbody-detalle"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══ DISTRIBUCIÓN ══ -->
+<div class="sec-label">Distribución de gastos</div>
+<div class="grid-dist" style="margin-bottom:24px">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Por categoría</div>
+      <span class="badge badge-teal">${capFirst(mes)}</span>
+    </div>
+    <div id="dist-bar-wrap"></div>
+    <div id="dist-bars" style="margin-top:12px"></div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Tasa de ahorro</div>
+    </div>
+    <div class="ring-wrap"><canvas id="chartRing" width="140" height="140"></canvas>
+      <div class="ring-label"><div class="ring-pct" id="ring-pct">${pctAhorro.toFixed(1)}%</div><div class="ring-sub">del ingreso</div></div>
+    </div>
+    <div style="background:rgba(27,0,136,.04);border:1px solid var(--border);border-radius:10px;padding:12px 16px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase">Ahorro</span>
+        <span style="font-size:13px;font-weight:800;color:var(--text)">${fmtM(s.ahorro)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase">Ingreso</span>
+        <span style="font-size:13px;font-weight:800;color:var(--text)">${fmtM(s.ing)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between">
+        <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase">Líquido</span>
+        <span style="font-size:13px;font-weight:800;color:${bal>=0?'var(--green-dk)':'var(--red)'}">${fmtM(bal)}</span>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title">Top gastos</div></div>
+    <div id="top-bars"></div>
+  </div>
+</div>
+
+<!-- ══ HISTÓRICO ══ -->
+<div class="sec-label">Evolución histórica</div>
+<div class="card" style="margin-bottom:24px">
+  <div class="card-header">
+    <div class="card-title">Ingreso anual vs Gasto anual (2019–${año})</div>
+    <span class="badge badge-purple">histórico</span>
+  </div>
+  <div style="height:200px"><canvas id="chartHistoric"></canvas></div>
+</div>
+
+<!-- ══ RECOMENDACIONES ══ -->
+<div class="sec-label">Recomendaciones del mes</div>
+<div class="grid-2" style="margin-bottom:24px">
+  <div class="card">
+    <div class="card-header"><div class="card-title">💡 Análisis financiero</div></div>
+    <div id="recs-list"></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title">📈 Tendencias observadas</div></div>
+    <div id="trends-list"></div>
+  </div>
+</div>
+
+`;
+
+  // Llenar componentes
+  renderKPIs(s, prev, dPct, deltaSpan);
+  renderFlowChart();
+  renderDetalleTable(prev);
+  renderDist(s);
+  renderRing(pctAhorro);
+  renderTopBars();
+  renderHistoric();
+  renderRecs(s, prev, pctAhorro, bal);
 }
 
-// ═══════════════════════════════════════
-//  FLOW CHART
-// ═══════════════════════════════════════
-function renderFlow() {
-  const last12 = months.slice(-12);
-  const labels = last12.map(m => capFirst(m.split('-')[0]).slice(0,3));
-  const ingresos = last12.map(m => sumsFor(m).ing);
-  const gastos   = last12.map(m => sumsFor(m).total);
-  const deltas   = ingresos.map((v,i)=>v-gastos[i]);
+/* ════════════════════════════════════════════
+   KPI STRIP
+════════════════════════════════════════════ */
+function renderKPIs(s, prev, dPct, deltaSpan) {
+  const liquido = s.ing - s.total;
+  const cards = [
+    { label:'Ingreso mensual',  val:fmtM(s.ing),    delta:deltaSpan(dPct(s,prev,'ing')),        stripe:'#1B0088' },
+    { label:'Gasto + TC',       val:fmtM(s.total),  delta:deltaSpan(dPct(s,prev,'total'),true), stripe:'#ED1650' },
+    { label:'Tarjeta crédito',  val:fmtM(s.tc),     delta:deltaSpan(dPct(s,prev,'tc'),true),    stripe:'#f59e0b' },
+    { label:'Ahorro',           val:fmtM(s.ahorro),
+      delta:`<span class="delta-up">${(s.ing>0?(s.ahorro/s.ing*100):0).toFixed(1)}% ing.</span>`,
+      stripe:'#059669' },
+    { label:'Hipotecario',      val:fmtM(s.hip),
+      delta:`<span class="delta-flat">cuota fija</span>`, stripe:'#7000AB' },
+  ];
+  document.getElementById('kpi-strip').innerHTML = cards.map(c=>`
+    <div class="kpi-card" style="--kpi-stripe:${c.stripe}">
+      <div class="kpi-label">${c.label}</div>
+      <div class="kpi-val">${c.val}</div>
+      <div class="kpi-delta">${c.delta}</div>
+    </div>`).join('');
+}
 
-  const ctx = document.getElementById('flowChart');
+/* ════════════════════════════════════════════
+   FLOW CHART
+════════════════════════════════════════════ */
+function renderFlowChart() {
+  const last12  = months.slice(-12);
+  const labels  = last12.map(m=>capFirst(m.split('-')[0]).slice(0,3));
+  const ingresos= last12.map(m=>sumsFor(m).ing);
+  const gastos  = last12.map(m=>sumsFor(m).total);
+  const deltas  = ingresos.map((v,i)=>v-gastos[i]);
+
   if (charts.flow) charts.flow.destroy();
-  charts.flow = new Chart(ctx, {
+  charts.flow = new Chart(document.getElementById('chartFlow'), {
     type:'bar',
     data:{
       labels,
       datasets:[
         { label:'Ingreso', data:ingresos,
-          backgroundColor:'rgba(30,79,140,0.55)',borderColor:'rgba(30,79,140,0.8)',
-          borderWidth:1,borderRadius:4,order:2 },
-        { label:'Gasto',   data:gastos,
-          backgroundColor:'rgba(184,50,50,0.45)',borderColor:'rgba(184,50,50,0.7)',
-          borderWidth:1,borderRadius:4,order:3 },
+          backgroundColor:'rgba(27,0,136,.55)', borderColor:'rgba(27,0,136,.8)',
+          borderWidth:1, borderRadius:5, order:2 },
+        { label:'Gasto', data:gastos,
+          backgroundColor:'rgba(237,22,80,.45)', borderColor:'rgba(237,22,80,.7)',
+          borderWidth:1, borderRadius:5, order:3 },
         { label:'Delta', data:deltas, type:'line',
-          borderColor:'#b8860b',backgroundColor:'rgba(184,134,11,0.08)',
-          borderWidth:2,pointBackgroundColor:'#b8860b',pointRadius:3,
-          fill:false,tension:0.4,order:1 }
+          borderColor:'#00b89e', backgroundColor:'rgba(0,184,158,.08)',
+          borderWidth:2, pointBackgroundColor:'#00b89e', pointRadius:3,
+          fill:false, tension:.4, order:1 }
       ]
     },
     options:{
-      responsive:true,maintainAspectRatio:false,
+      responsive:true, maintainAspectRatio:false,
       plugins:{
         legend:{display:false},
         tooltip:{
-          backgroundColor:'#fff',borderColor:'#e2ddd5',borderWidth:1,
-          titleColor:'#1a1714',bodyColor:'#4a4540',
-          titleFont:{family:'Sofia Sans',size:12,weight:'700'},
-          bodyFont:{family:'Sofia Sans',size:12},
-          callbacks:{label:c=>` ${c.dataset.label}: ${fmt(c.parsed.y)}`}
+          backgroundColor:'#fff', borderColor:'#e2e0f0', borderWidth:1,
+          titleColor:'#0F004F', bodyColor:'#1B0088',
+          titleFont:{family:"'Sofia Sans',sans-serif",size:12,weight:'800'},
+          bodyFont:{family:"'Sofia Sans',sans-serif",size:12},
+          callbacks:{label:c=>` ${c.dataset.label}: ${fmtM(c.parsed.y)}`}
         }
       },
       scales:{
-        x:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#9a9088',font:{family:'Sofia Sans',size:10}}},
-        y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{color:'#9a9088',font:{family:'Sofia Sans',size:10},callback:v=>fmt(v,true)}}
+        x:{grid:{display:false}, ticks:{font:{family:"'Sofia Sans',sans-serif",size:10},color:'#634dd2'}},
+        y:{grid:{color:'rgba(0,0,0,.04)'}, ticks:{font:{family:"'Sofia Sans',sans-serif",size:10},color:'#634dd2',callback:v=>fmtM(v,true)}}
       }
     }
   });
 }
 
-// ═══════════════════════════════════════
-//  DETAIL TABLE
-// ═══════════════════════════════════════
-function renderDetail() {
-  document.getElementById('detail-badge').textContent = capFirst(selMonth);
-  const pi = months.indexOf(selMonth)-1;
-  const prevRows = pi>=0 ? data.mensual.filter(r=>r.mes===months[pi]&&r.tipo==='gasto') : [];
-  const rows = data.mensual.filter(r=>r.mes===selMonth&&r.tipo==='gasto')
+/* ════════════════════════════════════════════
+   DETALLE TABLE
+════════════════════════════════════════════ */
+function renderDetalleTable(prev) {
+  const prevRows = prev ? rawData.filter(r=>r.mes===months[months.indexOf(selMonth)-1]&&r.tipo==='gasto') : [];
+  const rows = rawData.filter(r=>r.mes===selMonth&&r.tipo==='gasto')
     .sort((a,b)=>b.monto-a.monto);
 
-  const tbody = document.getElementById('detail-tbody');
-  tbody.innerHTML = rows.map(row => {
+  const BADGE = {
+    ahorro:'badge-green', casa:'badge-navy', auto:'badge-amber',
+    cred:'badge-purple',  mama:'badge-red',  seg:'badge-teal',
+    mant:'badge-blue',    '':'badge-gray'
+  };
+
+  document.getElementById('tbody-detalle').innerHTML = rows.map(row=>{
     const cat  = getCat(row.detalle);
-    const prev = prevRows.find(p=>p.detalle===row.detalle);
-    const pct  = prev&&prev.monto>0 ? ((row.monto-prev.monto)/prev.monto)*100 : null;
+    const prv  = prevRows.find(p=>p.detalle===row.detalle);
+    const pct  = prv&&prv.monto>0 ? ((row.monto-prv.monto)/prv.monto)*100 : null;
+    const catBadge = cat ? `<span class="badge ${BADGE[cat]||'badge-gray'}" style="font-size:9px;padding:2px 7px">${CAT_LABELS[cat]||cat}</span>` : '';
+    const dStr = pct===null ? '<span style="color:#9CA3AF;font-size:11px">—</span>'
+               : `<span style="font-size:11px;font-weight:800;color:${Math.abs(pct)<2?'#9CA3AF':pct>0?'#ED1650':'#059669'}">${pct>0?'↑':'↓'}${Math.abs(pct).toFixed(0)}%</span>`;
     return `<tr>
-      <td>${row.detalle}${pillHtml(cat)}</td>
-      <td>${deltaHtml(pct)}</td>
-      <td>${fmt(row.monto)}</td>
+      <td><span style="font-size:12px">${row.detalle}</span> ${catBadge}</td>
+      <td>${dStr}</td>
+      <td>${fmtM(row.monto)}</td>
     </tr>`;
-  }).join('') || `<tr><td colspan="3" style="color:var(--muted);font-size:12px;padding:16px 0">Sin datos</td></tr>`;
+  }).join('') || `<tr><td colspan="3" style="color:#9CA3AF;font-size:12px;padding:16px 0">Sin registros de gasto</td></tr>`;
 }
 
-// ═══════════════════════════════════════
-//  SPENDING BARS
-// ═══════════════════════════════════════
-function renderSpending() {
-  const rows = data.mensual.filter(r=>r.mes===selMonth&&r.tipo==='gasto')
-    .sort((a,b)=>b.monto-a.monto).slice(0,8);
-  const max = rows[0]?.monto || 1;
-  const colors = ['#1e4f8c','#b83232','#b8860b','#6b3fa0','#2d7a4f','#c45e1a','#9d174d','#0369a1'];
+/* ════════════════════════════════════════════
+   DISTRIBUCIÓN
+════════════════════════════════════════════ */
+function renderDist(s) {
+  const rows  = rawData.filter(r=>r.mes===selMonth&&r.tipo==='gasto');
+  const total = rows.reduce((a,r)=>a+r.monto,0);
 
-  document.getElementById('analysis-month').textContent = capFirst(selMonth);
-  document.getElementById('spending-bars').innerHTML = rows.map((r,i)=>`
+  const catDef = [
+    { key:'ahorro',  label:'Ahorro',      color:'#059669', match:d=>d.includes('ahorro') },
+    { key:'hip',     label:'Hipotecario', color:'#7000AB', match:d=>d.includes('hipotecario') },
+    { key:'tc',      label:'TC',          color:'#f59e0b', match:d=>d.includes('tarjeta credito')||d.includes('credito consumo') },
+    { key:'casa',    label:'Casa',        color:'#4257E8', match:d=>d.includes('casa')&&!d.includes('mama')&&!d.includes('mamá') },
+    { key:'mama',    label:'Mamá',        color:'#ED1650', match:d=>d.includes('mamá')||d.includes('mama') },
+    { key:'auto',    label:'Autopistas',  color:'#00b89e', match:d=>d.includes('autopista') },
+    { key:'seg',     label:'Seguros',     color:'#634dd2', match:d=>d.includes('seguro') },
+    { key:'otros',   label:'Otros',       color:'#9CA3AF', match:()=>false }
+  ];
+
+  const bkt = Object.fromEntries(catDef.map(c=>[c.key,0]));
+  rows.forEach(r=>{
+    const d = r.detalle.toLowerCase();
+    let ok = false;
+    for (const c of catDef) {
+      if (c.key==='otros') continue;
+      if (c.match(d)) { bkt[c.key]+=r.monto; ok=true; break; }
+    }
+    if (!ok) bkt['otros']+=r.monto;
+  });
+
+  const sorted = catDef.map(c=>({...c, amt:bkt[c.key]}))
+    .filter(c=>c.amt>0).sort((a,b)=>b.amt-a.amt);
+
+  // Proportional dist bar
+  document.getElementById('dist-bar-wrap').innerHTML = `
+    <div class="dist-bar">
+      ${sorted.map(c=>`
+        <div class="dist-seg" style="background:${c.color};flex:${c.amt}" title="${c.label}: ${fmtM(c.amt,true)}">
+          <div class="dist-seg-name">${c.label}</div>
+          <div class="dist-seg-val">${total>0?(c.amt/total*100).toFixed(0):'0'}%</div>
+        </div>`).join('')}
+    </div>`;
+
+  // Bar rows below
+  const maxAmt = sorted[0]?.amt || 1;
+  document.getElementById('dist-bars').innerHTML = sorted.map(c=>`
     <div class="bar-row">
       <div class="bar-meta">
         <div class="bar-name">
-          <span style="width:8px;height:8px;border-radius:2px;background:${colors[i%colors.length]};flex-shrink:0;display:inline-block"></span>
-          ${r.detalle}
+          <span style="width:8px;height:8px;border-radius:2px;background:${c.color};display:inline-block;flex-shrink:0"></span>
+          ${c.label}
         </div>
-        <div class="bar-amt">${fmt(r.monto,true)}</div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <span class="bar-pct">${total>0?(c.amt/total*100).toFixed(1):'0'}%</span>
+          <span class="bar-amt">${fmtM(c.amt,true)}</span>
+        </div>
       </div>
-      <div class="bar-track">
-        <div class="bar-fill" style="width:${(r.monto/max*100).toFixed(1)}%;background:${colors[i%colors.length]}"></div>
-      </div>
-    </div>
-  `).join('');
+      <div class="bar-track"><div class="bar-fill" style="width:${(c.amt/maxAmt*100).toFixed(1)}%;background:${c.color}"></div></div>
+    </div>`).join('');
 }
 
-// ═══════════════════════════════════════
-//  AHORRO RING
-// ═══════════════════════════════════════
-function renderAhorro() {
-  const s = sumsFor(selMonth);
-  const pct = s.ing > 0 ? (s.ahorro/s.ing)*100 : 0;
-  const liquido = s.ing - s.total;
-
-  document.getElementById('ring-pct').textContent = pct.toFixed(1)+'%';
-  document.getElementById('ahorro-val').textContent  = fmt(s.ahorro,true);
-  document.getElementById('ingreso-val').textContent = fmt(s.ing,true);
-  document.getElementById('liquido-val').textContent = fmt(liquido,true);
-
-  // Donut
-  const ctx = document.getElementById('ahorroRing').getContext('2d');
+/* ════════════════════════════════════════════
+   RING
+════════════════════════════════════════════ */
+function renderRing(pct) {
   if (charts.ring) charts.ring.destroy();
-  charts.ring = new Chart(ctx, {
+  charts.ring = new Chart(document.getElementById('chartRing').getContext('2d'), {
     type:'doughnut',
     data:{
       datasets:[{
         data:[pct, 100-pct],
-        backgroundColor:['#2d7a4f','#e8eef8'],
-        borderWidth:0,
-        hoverOffset:0
+        backgroundColor:['#059669', '#e2e0f0'],
+        borderWidth:0, hoverOffset:0
       }]
     },
     options:{
-      responsive:false,cutout:'75%',
+      responsive:false, cutout:'76%',
       plugins:{legend:{display:false},tooltip:{enabled:false}},
-      animation:{animateRotate:true,duration:800}
-    }
-  });
-
-  // Trend line
-  const last12 = months.slice(-12);
-  const trendData = last12.map(m=>{
-    const ss = sumsFor(m);
-    return ss.ing>0 ? parseFloat((ss.ahorro/ss.ing*100).toFixed(1)) : 0;
-  });
-
-  const tctx = document.getElementById('ahorroTrend');
-  if (charts.ahorroTrend) charts.ahorroTrend.destroy();
-  charts.ahorroTrend = new Chart(tctx, {
-    type:'line',
-    data:{
-      labels: last12.map(m=>capFirst(m.split('-')[0]).slice(0,3)),
-      datasets:[{
-        data:trendData,
-        borderColor:'#2d7a4f',backgroundColor:'rgba(45,122,79,0.1)',
-        borderWidth:2,pointRadius:2,fill:true,tension:0.4
-      }]
-    },
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{enabled:false}},
-      scales:{
-        x:{display:false},
-        y:{display:true,grid:{color:'rgba(0,0,0,0.04)'},
-           ticks:{color:'#9a9088',font:{family:'Sofia Sans',size:9},callback:v=>`${v}%`}}
-      }
+      animation:{animateRotate:true,duration:900}
     }
   });
 }
 
-// ═══════════════════════════════════════
-//  DISTRIBUCIÓN
-// ═══════════════════════════════════════
-function renderDist() {
-  const rows = data.mensual.filter(r=>r.mes===selMonth&&r.tipo==='gasto');
-  const total = rows.reduce((a,r)=>a+r.monto,0);
-
-  const cats = {
-    'Ahorro':    {color:'#2d7a4f', match: d=>d.includes('ahorro')},
-    'Hipotec.':  {color:'#6b3fa0', match: d=>d.includes('hipotecario')},
-    'Casa':      {color:'#1e4f8c', match: d=>d.includes('casa')&&!d.includes('mama')},
-    'Mamá':      {color:'#9d174d', match: d=>d.includes('mamá')||d.includes('mama')},
-    'Autopistas':{color:'#c45e1a', match: d=>d.includes('autopista')},
-    'Seguros':   {color:'#0369a1', match: d=>d.includes('seguro')},
-    'Créd. cons.':{color:'#b8860b', match: d=>d.includes('consumo')},
-    'Otros':     {color:'#9a9088', match: ()=>false}
-  };
-
-  const buckets = Object.fromEntries(Object.keys(cats).map(k=>[k,0]));
-  rows.forEach(r=>{
-    const d = r.detalle.toLowerCase();
-    let matched = false;
-    for (const [k,v] of Object.entries(cats)) {
-      if (k==='Otros') continue;
-      if (v.match(d)) { buckets[k]+=r.monto; matched=true; break; }
-    }
-    if (!matched) buckets['Otros']+=r.monto;
-  });
-
-  const sorted = Object.entries(buckets)
-    .filter(([,v])=>v>0).sort(([,a],[,b])=>b-a);
-
-  document.getElementById('dist-bars').innerHTML = sorted.map(([cat,amt])=>{
-    const color = cats[cat].color;
-    const pct = total>0?(amt/total*100).toFixed(1):0;
-    return `<div class="bar-row">
+/* ════════════════════════════════════════════
+   TOP BARS
+════════════════════════════════════════════ */
+function renderTopBars() {
+  const rows = rawData.filter(r=>r.mes===selMonth&&r.tipo==='gasto')
+    .sort((a,b)=>b.monto-a.monto).slice(0,7);
+  const max = rows[0]?.monto || 1;
+  const palette = ['#1B0088','#ED1650','#f59e0b','#7000AB','#059669','#00b89e','#634dd2'];
+  document.getElementById('top-bars').innerHTML = rows.map((r,i)=>`
+    <div class="bar-row">
       <div class="bar-meta">
-        <div class="bar-name">
-          <span style="width:8px;height:8px;border-radius:2px;background:${color};flex-shrink:0;display:inline-block"></span>
-          ${cat}
+        <div class="bar-name" style="font-size:12px">
+          <span style="width:8px;height:8px;border-radius:2px;background:${palette[i]};display:inline-block;flex-shrink:0"></span>
+          ${r.detalle}
         </div>
-        <div class="bar-pct">${pct}%</div>
+        <span class="bar-amt">${fmtM(r.monto,true)}</span>
       </div>
-      <div class="bar-track">
-        <div class="bar-fill" style="width:${pct}%;background:${color}"></div>
-      </div>
-    </div>`;
-  }).join('');
+      <div class="bar-track"><div class="bar-fill" style="width:${(r.monto/max*100).toFixed(1)}%;background:${palette[i]}"></div></div>
+    </div>`).join('');
 }
 
-// ═══════════════════════════════════════
-//  HISTORIC
-// ═══════════════════════════════════════
+/* ════════════════════════════════════════════
+   HISTORIC
+════════════════════════════════════════════ */
 function renderHistoric() {
-  // yearly aggregation
   const byYear = {};
-  months.forEach(m => {
+  months.forEach(m=>{
     const año = m.split('-')[1];
-    if (!byYear[año]) byYear[año] = {ing:0, gasto:0};
+    if (!byYear[año]) byYear[año]={ing:0,gasto:0};
     const s = sumsFor(m);
     byYear[año].ing   += s.ing;
     byYear[año].gasto += s.total;
   });
-
-  const labels = Object.keys(byYear).sort();
+  const labels   = Object.keys(byYear).sort();
   const ingresos = labels.map(y=>byYear[y].ing);
   const gastos   = labels.map(y=>byYear[y].gasto);
 
-  const ctx = document.getElementById('historicChart');
   if (charts.historic) charts.historic.destroy();
-  charts.historic = new Chart(ctx, {
+  charts.historic = new Chart(document.getElementById('chartHistoric'), {
     type:'bar',
     data:{
       labels,
       datasets:[
         { label:'Ingreso anual', data:ingresos,
-          backgroundColor:'rgba(30,79,140,0.5)',borderColor:'rgba(30,79,140,0.8)',
-          borderWidth:1,borderRadius:6,order:2 },
+          backgroundColor:'rgba(27,0,136,.55)', borderColor:'rgba(27,0,136,.8)',
+          borderWidth:1, borderRadius:6 },
         { label:'Gasto anual', data:gastos,
-          backgroundColor:'rgba(184,50,50,0.4)',borderColor:'rgba(184,50,50,0.7)',
-          borderWidth:1,borderRadius:6,order:3 }
+          backgroundColor:'rgba(237,22,80,.4)', borderColor:'rgba(237,22,80,.7)',
+          borderWidth:1, borderRadius:6 }
       ]
     },
     options:{
-      responsive:true,maintainAspectRatio:false,
+      responsive:true, maintainAspectRatio:false,
       plugins:{
-        legend:{
-          display:true,
-          labels:{font:{family:'Sofia Sans',size:11},color:'#4a4540',boxWidth:12,boxHeight:12}
-        },
+        legend:{display:true, labels:{font:{family:"'Sofia Sans',sans-serif",size:11},color:'#1B0088',boxWidth:12,boxHeight:12}},
         tooltip:{
-          backgroundColor:'#fff',borderColor:'#e2ddd5',borderWidth:1,
-          titleColor:'#1a1714',bodyColor:'#4a4540',
-          titleFont:{family:'Sofia Sans',size:12,weight:'700'},
-          bodyFont:{family:'Sofia Sans',size:12},
-          callbacks:{label:c=>` ${c.dataset.label}: ${fmt(c.parsed.y,true)}`}
+          backgroundColor:'#fff', borderColor:'#e2e0f0', borderWidth:1,
+          titleColor:'#0F004F', bodyColor:'#1B0088',
+          titleFont:{family:"'Sofia Sans',sans-serif",size:12,weight:'800'},
+          bodyFont:{family:"'Sofia Sans',sans-serif",size:12},
+          callbacks:{label:c=>` ${c.dataset.label}: ${fmtM(c.parsed.y,true)}`}
         }
       },
       scales:{
-        x:{grid:{display:false},ticks:{color:'#9a9088',font:{family:'Sofia Sans',size:11}}},
-        y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#9a9088',font:{family:'Sofia Sans',size:10},callback:v=>fmt(v,true)}}
+        x:{grid:{display:false}, ticks:{font:{family:"'Sofia Sans',sans-serif",size:11},color:'#634dd2'}},
+        y:{grid:{color:'rgba(0,0,0,.04)'}, ticks:{font:{family:"'Sofia Sans',sans-serif",size:10},color:'#634dd2',callback:v=>fmtM(v,true)}}
       }
     }
   });
 }
 
-// ═══════════════════════════════════════
-//  TC TAB
-// ═══════════════════════════════════════
-function renderTC() {
-  document.getElementById('tc-badge').textContent = capFirst(selMonth);
+/* ════════════════════════════════════════════
+   RECOMENDACIONES (generadas con datos reales)
+════════════════════════════════════════════ */
+function renderRecs(s, prev, pctAhorro, bal) {
+  const recs = [];
+  const trends = [];
 
-  // Monthly TC amounts
-  const last12 = months.slice(-12);
-  const tcAmts = last12.map(m => {
-    const rows = data.mensual.filter(r=>r.mes===m&&r.tipo==='tc');
-    return rows.reduce((a,r)=>a+r.monto,0);
-  });
+  // Tasa de ahorro
+  if (pctAhorro >= 20) {
+    recs.push({ icon:'🏆', color:'rgba(5,150,105,.1)', title:'Excelente tasa de ahorro',
+      desc:`Estás ahorrando el ${pctAhorro.toFixed(1)}% de tu ingreso. El objetivo recomendado es 20%. ¡Lo estás superando!`,
+      tag:'badge-green', tagTxt:'Óptimo' });
+  } else if (pctAhorro >= 10) {
+    recs.push({ icon:'✅', color:'rgba(27,0,136,.07)', title:'Tasa de ahorro saludable',
+      desc:`Ahorro del ${pctAhorro.toFixed(1)}%. Considera aumentar gradualmente hacia el 20% reduciendo gastos discrecionales.`,
+      tag:'badge-navy', tagTxt:'Bueno' });
+  } else {
+    recs.push({ icon:'⚠️', color:'rgba(237,22,80,.07)', title:'Aumentar tasa de ahorro',
+      desc:`Solo estás ahorrando el ${pctAhorro.toFixed(1)}% del ingreso. Identifica gastos variables que puedas reducir.`,
+      tag:'badge-red', tagTxt:'Revisar' });
+  }
 
-  const ctx = document.getElementById('tcChart');
-  if (charts.tc) charts.tc.destroy();
-  charts.tc = new Chart(ctx, {
-    type:'bar',
-    data:{
-      labels: last12.map(m=>capFirst(m.split('-')[0]).slice(0,3)),
-      datasets:[{
-        label:'TC',
-        data:tcAmts,
-        backgroundColor:'rgba(196,94,26,0.55)',
-        borderColor:'rgba(196,94,26,0.8)',
-        borderWidth:1,borderRadius:4
-      }]
-    },
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{
-        legend:{display:false},
-        tooltip:{
-          backgroundColor:'#fff',borderColor:'#e2ddd5',borderWidth:1,
-          titleColor:'#1a1714',bodyColor:'#4a4540',
-          titleFont:{family:'Sofia Sans',size:12,weight:'700'},
-          bodyFont:{family:'Sofia Sans',size:12},
-          callbacks:{label:c=>` TC: ${fmt(c.parsed.y)}`}
-        }
-      },
-      scales:{
-        x:{grid:{display:false},ticks:{color:'#9a9088',font:{family:'Sofia Sans',size:10}}},
-        y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#9a9088',font:{family:'Sofia Sans',size:10},callback:v=>fmt(v,true)}}
-      }
+  // Tarjeta de crédito
+  const pctTC = s.ing > 0 ? s.tc/s.ing*100 : 0;
+  if (pctTC > 100) {
+    recs.push({ icon:'🚨', color:'rgba(237,22,80,.07)', title:'Tarjeta supera el ingreso',
+      desc:`La TC representa ${pctTC.toFixed(0)}% del ingreso mensual. Revisa cuotas activas y considera consolidar deuda.`,
+      tag:'badge-red', tagTxt:'Urgente' });
+  } else if (pctTC > 60) {
+    recs.push({ icon:'📋', color:'rgba(245,158,11,.07)', title:'Alta carga en tarjeta',
+      desc:`La TC es ${pctTC.toFixed(0)}% del ingreso. Evita nuevas cuotas hasta reducir el nivel actual.`,
+      tag:'badge-amber', tagTxt:'Atención' });
+  }
+
+  // Balance neto
+  if (bal < 0) {
+    recs.push({ icon:'🔴', color:'rgba(237,22,80,.07)', title:'Balance neto negativo',
+      desc:`Estás gastando ${fmtM(Math.abs(bal))} más de lo que ingresas. Revisa gastos discrecionales o aumenta ingresos.`,
+      tag:'badge-red', tagTxt:'Déficit' });
+  } else if (bal > 0) {
+    recs.push({ icon:'💰', color:'rgba(5,150,105,.08)', title:'Balance positivo',
+      desc:`Tienes ${fmtM(bal)} disponibles después de todos los compromisos. Considera invertirlos en instrumentos financieros.`,
+      tag:'badge-green', tagTxt:'Superávit' });
+  }
+
+  // Hipotecario como % del ingreso
+  const pctHip = s.ing > 0 ? s.hip/s.ing*100 : 0;
+  if (pctHip > 30) {
+    recs.push({ icon:'🏠', color:'rgba(112,0,171,.06)', title:'Carga hipotecaria elevada',
+      desc:`El hipotecario representa el ${pctHip.toFixed(1)}% del ingreso. Se recomienda no superar el 30%. Considera prepago si tienes excedentes.`,
+      tag:'badge-purple', tagTxt:'Alto' });
+  }
+
+  // TRENDS
+  if (prev) {
+    const dIng = ((s.ing-prev.ing)/prev.ing*100);
+    const dGas = ((s.total-prev.total)/prev.total*100);
+    trends.push({ icon: dIng>=0?'📈':'📉', color:'rgba(27,0,136,.06)',
+      title:`Ingreso ${dIng>=0?'subió':'bajó'} ${Math.abs(dIng).toFixed(1)}%`,
+      desc:`De ${fmtM(prev.ing,true)} a ${fmtM(s.ing,true)} vs el mes anterior.`,
+      tag: dIng>=0?'badge-green':'badge-red', tagTxt: dIng>=0?'↑ Crecimiento':'↓ Baja' });
+    trends.push({ icon: dGas<=0?'✅':'⚠️', color:'rgba(237,22,80,.06)',
+      title:`Gastos ${dGas>=0?'subieron':'bajaron'} ${Math.abs(dGas).toFixed(1)}%`,
+      desc:`Total gastado: ${fmtM(s.total,true)} vs ${fmtM(prev.total,true)} del mes pasado.`,
+      tag: dGas<=0?'badge-green':'badge-amber', tagTxt: dGas<=0?'✓ Menor':'↑ Mayor' });
+    const dTC = prev.tc > 0 ? ((s.tc-prev.tc)/prev.tc*100) : null;
+    if (dTC !== null) {
+      trends.push({ icon:'💳', color:'rgba(245,158,11,.06)',
+        title:`TC ${dTC>=0?'aumentó':'disminuyó'} ${Math.abs(dTC).toFixed(1)}%`,
+        desc:`${fmtM(s.tc,true)} este mes vs ${fmtM(prev.tc,true)} el anterior.`,
+        tag: dTC<=0?'badge-teal':'badge-orange', tagTxt: dTC<=0?'↓ Reducción':'↑ Aumento' });
     }
-  });
+  }
 
-  // Pending cuotas (estado != Pagado)
-  const pending = data.tc.filter(r=>r.estado!=='Pagado');
-  // Group by movimiento
-  const byMov = {};
-  pending.forEach(r => {
-    if (!byMov[r.movimiento]) byMov[r.movimiento] = { cuota: r.valor_cuota, count:0, total:r.total, cuotas:r.cuotas };
-    byMov[r.movimiento].count++;
-  });
+  const months12 = months.slice(-12);
+  const avgAhorro = months12.reduce((a,m)=>{
+    const ss=sumsFor(m); return a+(ss.ing>0?ss.ahorro/ss.ing*100:0);
+  },0)/months12.length;
+  trends.push({ icon:'📊', color:'rgba(5,150,105,.06)',
+    title:`Ahorro promedio 12M: ${avgAhorro.toFixed(1)}%`,
+    desc:`Tu tasa actual de ${pctAhorro.toFixed(1)}% está ${pctAhorro>=avgAhorro?'por encima':'por debajo'} del promedio de los últimos 12 meses.`,
+    tag: pctAhorro>=avgAhorro?'badge-green':'badge-amber',
+    tagTxt: pctAhorro>=avgAhorro?'↑ Sobre promedio':'↓ Bajo promedio' });
 
-  const sorted = Object.entries(byMov).sort(([,a],[,b])=>b.cuota-a.cuota).slice(0,12);
-  document.getElementById('tc-tbody').innerHTML = sorted.map(([mov,v])=>`
-    <tr>
-      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${mov}</td>
-      <td style="text-align:right">${fmt(v.cuota,true)}</td>
-      <td style="text-align:right"><span class="badge badge-orange">${v.count} cuotas</span></td>
-    </tr>
-  `).join('') || `<tr><td colspan="3" style="color:var(--muted);font-size:12px">Sin cuotas pendientes</td></tr>`;
-
-  // Evo list
-  const maxTc = Math.max(...tcAmts, 1);
-  document.getElementById('tc-evo-list').innerHTML = last12.map((m,i)=>`
-    <div class="evo-item">
-      <div class="evo-month">${capFirst(m.split('-')[0]).slice(0,3)} ${m.split('-')[1]?.slice(2)}</div>
-      <div class="evo-bar-track">
-        <div class="evo-bar-fill" style="width:${(tcAmts[i]/maxTc*100).toFixed(1)}%;background:rgba(196,94,26,0.6)"></div>
-      </div>
-      <div class="evo-val">${fmt(tcAmts[i],true)}</div>
-    </div>
-  `).join('');
-}
-
-// ═══════════════════════════════════════
-//  CRÉDITOS TAB
-// ═══════════════════════════════════════
-function renderCreditos() {
-  // Active credits (pending)
-  const pending = data.creditos.filter(r=>r.estado!=='Pagado');
-  const byCredit = {};
-  pending.forEach(r => {
-    const key = r.detalle;
-    if (!byCredit[key]) {
-      byCredit[key] = { detalle:r.detalle, cuotas:r.cuotas, valor:r.valor, pending:0, minPend:999 };
-    }
-    byCredit[key].pending++;
-    if (r.cuota_num < byCredit[key].minPend) byCredit[key].minPend = r.cuota_num;
-  });
-
-  // Also get total cuotas from creditos data
-  const allCredits = {};
-  data.creditos.forEach(r => {
-    const key = r.detalle;
-    if (!allCredits[key]) allCredits[key] = { cuotas: r.cuotas, valor: r.valor };
-  });
-
-  const credits = Object.values(byCredit).sort((a,b)=>b.valor-a.valor);
-
-  const icons = { 'hipotecario':'🏠', 'consumo':'💰', 'default':'📋' };
-  const colors = ['#1e4f8c','#6b3fa0','#b8860b'];
-
-  document.getElementById('creditos-list').innerHTML = credits.map((c,i)=>{
-    const iconKey = c.detalle.toLowerCase().includes('hipotecario')?'hipotecario'
-                  : c.detalle.toLowerCase().includes('consumo')?'consumo':'default';
-    const total = c.cuotas;
-    const done  = total - c.pending;
-    const pct   = total > 0 ? (done/total*100).toFixed(0) : 0;
-    const color = colors[i%colors.length];
-    return `
-    <div class="deuda-item">
-      <div class="deuda-icon" style="background:${color}22">${icons[iconKey]}</div>
-      <div class="deuda-info">
-        <div class="deuda-name">${c.detalle}</div>
-        <div class="deuda-detail">${done} de ${total} cuotas · ${pct}% pagado</div>
-        <div class="deuda-progress">
-          <div class="deuda-progress-fill" style="width:${pct}%;background:${color}"></div>
+  function recHtml(items) {
+    return items.map(r=>`
+      <div class="rec-item">
+        <div class="rec-icon" style="background:${r.color}">${r.icon}</div>
+        <div class="rec-body">
+          <div class="rec-title">${r.title}</div>
+          <div class="rec-desc">${r.desc}</div>
+          <span class="badge ${r.tag} rec-tag">${r.tagTxt}</span>
         </div>
-      </div>
-      <div class="deuda-cuota">${fmt(c.valor,true)}<br><span style="font-size:10px;color:var(--muted);font-weight:500">/mes</span></div>
-    </div>`;
-  }).join('') || `<div style="color:var(--muted);font-size:13px">Sin créditos activos</div>`;
+      </div>`).join('');
+  }
 
-  // Monthly debt load chart (last 12m from mensual data)
-  const last12 = months.slice(-12);
-  const hipData  = last12.map(m => sumsFor(m).hip);
-  const consData = last12.map(m => sumsFor(m).cons);
-
-  const ctx = document.getElementById('cargaChart');
-  if (charts.carga) charts.carga.destroy();
-  charts.carga = new Chart(ctx, {
-    type:'bar',
-    data:{
-      labels: last12.map(m=>capFirst(m.split('-')[0]).slice(0,3)),
-      datasets:[
-        { label:'Hipotecario', data:hipData,
-          backgroundColor:'rgba(30,79,140,0.55)',borderRadius:4,borderSkipped:false },
-        { label:'Consumo', data:consData,
-          backgroundColor:'rgba(107,63,160,0.55)',borderRadius:4,borderSkipped:false }
-      ]
-    },
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{
-        legend:{display:true,
-          labels:{font:{family:'Sofia Sans',size:11},color:'#4a4540',boxWidth:10,boxHeight:10}},
-        tooltip:{
-          backgroundColor:'#fff',borderColor:'#e2ddd5',borderWidth:1,
-          titleColor:'#1a1714',bodyColor:'#4a4540',
-          titleFont:{family:'Sofia Sans',size:12,weight:'700'},
-          bodyFont:{family:'Sofia Sans',size:12},
-          callbacks:{label:c=>` ${c.dataset.label}: ${fmt(c.parsed.y)}`}
-        }
-      },
-      scales:{
-        x:{stacked:true,grid:{display:false},ticks:{color:'#9a9088',font:{family:'Sofia Sans',size:10}}},
-        y:{stacked:true,grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#9a9088',font:{family:'Sofia Sans',size:10},callback:v=>fmt(v,true)}}
-      }
-    }
-  });
+  document.getElementById('recs-list').innerHTML   = recHtml(recs);
+  document.getElementById('trends-list').innerHTML = recHtml(trends);
 }
 
-// ═══════════════════════════════════════
-//  MAMÁ TAB
-// ═══════════════════════════════════════
-function renderMama() {
-  // Running balance over time
-  const sorted = [...data.mama].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
-  let running = 0;
-  const points = sorted.map(r => {
-    running += (r.tipo==='ingreso'?1:-1)*r.monto;
-    return { x: r.fecha.slice(0,7), y: running };
-  });
-
-  // Downsample to monthly for chart
-  const monthly = {};
-  points.forEach(p => { monthly[p.x] = p.y; });
-  const mkeys = Object.keys(monthly).sort();
-
-  const ctx = document.getElementById('mamaChart');
-  if (charts.mama) charts.mama.destroy();
-  charts.mama = new Chart(ctx, {
-    type:'line',
-    data:{
-      labels: mkeys.map(k=>k.slice(0,7)),
-      datasets:[{
-        label:'Balance acumulado',
-        data: mkeys.map(k=>monthly[k]),
-        borderColor:'#9d174d',
-        backgroundColor:'rgba(157,23,77,0.08)',
-        borderWidth:2,pointRadius:0,fill:true,tension:0.4
-      }]
-    },
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{
-        legend:{display:false},
-        tooltip:{
-          backgroundColor:'#fff',borderColor:'#e2ddd5',borderWidth:1,
-          titleColor:'#1a1714',bodyColor:'#4a4540',
-          titleFont:{family:'Sofia Sans',size:12,weight:'700'},
-          bodyFont:{family:'Sofia Sans',size:12},
-          callbacks:{label:c=>` Balance: ${fmt(c.parsed.y)}`}
-        }
-      },
-      scales:{
-        x:{display:false},
-        y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#9a9088',font:{family:'Sofia Sans',size:10},callback:v=>fmt(v,true)}}
-      }
-    }
-  });
-
-  // Recent rows
-  const recent = [...data.mama].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).slice(0,20);
-  document.getElementById('mama-tbody').innerHTML = recent.map(r=>`
-    <tr>
-      <td style="white-space:nowrap">${r.fecha.slice(0,10)}</td>
-      <td>${r.detalle}</td>
-      <td style="color:${r.tipo==='ingreso'?'var(--green)':'var(--red)'};font-weight:700">
-        ${r.tipo==='ingreso'?'+':'-'}${fmt(r.monto,true)}
-      </td>
-    </tr>
-  `).join('');
+/* ════════════════════════════════════════════
+   SIDEBAR MOBILE
+════════════════════════════════════════════ */
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('overlay').classList.add('active');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('active');
 }
 
-// ═══════════════════════════════════════
-//  BOOT
-// ═══════════════════════════════════════
-function loadChartJS(cb) {
-  if (window.Chart) { cb(); return; }
-  const s = document.createElement('script');
-  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
-  s.onload = cb;
-  document.head.appendChild(s);
+function setTab(tab, btn) {
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  closeSidebar();
+  // Solo mensual implementado por ahora
+  document.querySelector('.topbar-title').innerHTML = `
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1B0088" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    ${btn.textContent.trim().replace('Pronto','')}`;
 }
 
-loadChartJS(loadAll);
+/* ════════════════════════════════════════════
+   INIT
+════════════════════════════════════════════ */
+loadData();
 </script>
 </body>
 </html>
