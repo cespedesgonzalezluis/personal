@@ -330,16 +330,23 @@ async function loadData() {
       monto:   parseMonto(r.c[3]?.v)
     })).filter(r => r.mes && r.monto);
 
-    tcData = rowsTC.map(r => ({
-      movimiento: String(r.c[0]?.v || ''),
-      fecha:      String(r.c[1]?.v || ''),
-      total:      parseMonto(r.c[2]?.v),
-      cuotas:     Number(r.c[3]?.v || 1),
-      cuotaNum:   Number(r.c[4]?.v || 1),
-      mes:        parseMesCell(r.c[5]),
-      valorCuota: parseMonto(r.c[6]?.v),
-      estado:     String(r.c[7]?.v || '').toLowerCase().trim()
-    })).filter(r => r.movimiento && r.mes);
+    tcData = rowsTC.map(r => {
+      const total      = parseMonto(r.c[2]?.v);
+      const cuotas     = Math.max(Number(r.c[3]?.v || 1), 1);
+      const rawValor   = parseMonto(r.c[6]?.v);
+      const valorCuota = rawValor > 0 ? rawValor : (total > 0 ? total / cuotas : 0);
+      return {
+        movimiento: String(r.c[0]?.v || ''),
+        fecha:      String(r.c[1]?.v || ''),
+        total,
+        cuotas,
+        cuotaNum:   Number(r.c[4]?.v || 1),
+        mes:        parseMesCell(r.c[5]),
+        valorCuota,
+        estado:     String(r.c[7]?.v || '').toLowerCase().trim()
+      };
+    }).filter(r => r.movimiento && r.mes);
+    console.log('[TC] muestra primeras 3 filas:', tcData.slice(0,3));
 
     months = [...new Set(rawData.map(r => r.mes))].sort((a,b) => monthKey(a) - monthKey(b));
     selMonth = nextMonth(months[months.length - 1]);
