@@ -501,20 +501,41 @@ async function loadData(){
       mes:parseMesMama(r.c[0]),tipo:String(r.c[1]?.v||'').toLowerCase().trim(),
       detalle:String(r.c[2]?.v||'').trim(),monto:parseMonto(r.c[3]?.v)
     })).filter(r=>r.mes&&r.detalle);
-    // Leer Ahorro Credito (S1) e Inicio (S2) desde hoja Otros — columna S = índice 18
-    if(rowsOtros.length>=2){
-      ahorroCredito=parseMonto(rowsOtros[0]?.c[18]?.v)||0;
-      const rawFecha=rowsOtros[1]?.c[18]?.v;
-      if(rawFecha){
+    // Leer Ahorro Credito e Inicio desde hoja Otros
+    // El gviz no garantiza índice fijo — buscar la celda con label "Ahorro Credito"
+    // La hoja tiene estructura: col R = labels, col S = valores
+    // Buscamos la fila que tenga "Ahorro Credito" en cualquier celda y tomamos la siguiente
+    if(rowsOtros.length>=1){
+      // Estrategia: recorrer todas las filas y todas las celdas buscando los labels
+      let ahorroVal=null, inicioVal=null;
+      rowsOtros.forEach(row=>{
+        const cells=row.c||[];
+        cells.forEach((cell,ci)=>{
+          if(!cell||cell.v==null) return;
+          const v=String(cell.v).trim();
+          if(v==='Ahorro Credito'||v==='Ahorro Crédito'){
+            // El valor está en la celda siguiente
+            const next=cells[ci+1];
+            if(next?.v!=null) ahorroVal=next.v;
+          }
+          if(v==='Inicio'){
+            const next=cells[ci+1];
+            if(next?.v!=null) inicioVal=next.v;
+          }
+        });
+      });
+      if(ahorroVal!=null) ahorroCredito=parseMonto(ahorroVal)||0;
+      if(inicioVal!=null){
+        const sv=String(inicioVal);
         let d;
-        if(String(rawFecha).startsWith('Date(')){
-          const p=String(rawFecha).replace('Date(','').replace(')','').split(',').map(Number);
+        if(sv.startsWith('Date(')){
+          const p=sv.replace('Date(','').replace(')','').split(',').map(Number);
           d=new Date(p[0],p[1],p[2]);
         } else {
-          d=new Date(rawFecha);
+          d=new Date(sv);
         }
         if(!isNaN(d)) inicioAhorro=d.toLocaleDateString('es-CL',{day:'2-digit',month:'long',year:'numeric'});
-        else inicioAhorro=String(rawFecha);
+        else inicioAhorro=sv;
       }
     }
     months=[...new Set(rawData.map(r=>r.mes))].sort((a,b)=>monthKey(a)-monthKey(b));
