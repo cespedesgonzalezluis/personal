@@ -450,69 +450,83 @@ function setTab(tab,btn){
 function renderCreditos(){
   hideTooltip();
 
-  // Agrupar filas por detalle (cada crédito único)
+  // Helper: parsear fecha raw a "mes-año" legible
+  function fmtFechaCredito(str){
+    if(!str)return'—';
+    if(str.startsWith('Date(')){
+      const p=str.replace('Date(','').replace(')','').split(',').map(Number);
+      return fmtMesCorto(`${MESES[p[1]]}-${p[0]}`);
+    }
+    const d=new Date(str);
+    if(!isNaN(d))return fmtMesCorto(`${MESES[d.getMonth()]}-${d.getFullYear()}`);
+    return str;
+  }
+
+  // Helper: fecha a timestamp para ordenar
+  function fechaTs(str){
+    if(!str)return 0;
+    if(str.startsWith('Date(')){const p=str.replace('Date(','').replace(')','').split(',').map(Number);return new Date(p[0],p[1],p[2]).getTime();}
+    return new Date(str).getTime()||0;
+  }
+
+  // Agrupar filas por detalle
   const creditosMap={};
   credData.forEach(r=>{
     if(!creditosMap[r.detalle])creditosMap[r.detalle]={
       detalle:r.detalle,fecha:r.fecha,cuotas:r.cuotas,
-      valorCuota:r.valorCuota,pagadas:0,pendientes:0,mesFin:''
+      valorCuota:r.valorCuota,pagadas:0,pendientes:0,mesFin:'',mesFinPagado:''
     };
     const c=creditosMap[r.detalle];
-    if(r.estado==='pagado')c.pagadas++;
-    else{
+    if(r.estado==='pagado'){
+      c.pagadas++;
+      if(!c.mesFinPagado||monthKey(r.mes)>monthKey(c.mesFinPagado))c.mesFinPagado=r.mes;
+    } else {
       c.pendientes++;
       if(!c.mesFin||monthKey(r.mes)>monthKey(c.mesFin))c.mesFin=r.mes;
     }
-    // Tomar el valor cuota más reciente (puede variar en hipotecario)
     if(r.valorCuota>0)c.valorCuota=r.valorCuota;
   });
 
-  const creditos=Object.values(creditosMap).filter(c=>c.cuotas>0);
+  const todos=Object.values(creditosMap).filter(c=>c.cuotas>0)
+    .sort((a,b)=>fechaTs(a.fecha)-fechaTs(b.fecha));
 
-  // KPIs globales
-  const totalDeuda=creditos.reduce((a,c)=>a+c.valorCuota*c.pendientes,0);
-  const totalCuotaMes=creditos.reduce((a,c)=>a+c.valorCuota,0);
+  const activos=todos.filter(c=>c.pendientes>0);
+  const pagados=todos.filter(c=>c.pendientes===0);
+
+  const totalCuotaMes=activos.reduce((a,c)=>a+c.valorCuota,0);
+  const totalPendiente=activos.reduce((a,c)=>a+c.valorCuota*c.pendientes,0);
 
   const ACCENT='#634dd2';
 
-  document.getElementById('page-content').innerHTML=`
-${UI.hero('Créditos',fmtM(totalDeuda),'pendiente','Resumen de créditos vigentes')}
-<div class="kpi-strip" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px">
-  ${UI.kpiCard('Créditos activos',creditos.filter(c=>c.pendientes>0).length+'','<span class="delta-flat">vigentes</span>')}
-  ${UI.kpiCard('Deuda total',fmtM(totalDeuda,true),'<span class="delta-flat">pendiente</span>')}
-  ${UI.kpiCard('Cuota mensual total',fmtM(totalCuotaMes),'<span class="delta-flat">este mes</span>')}
-</div>
-${UI.sectionLabel('Detalle por crédito')}
-<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:var(--gap);margin-bottom:24px">
-  ${creditos.map(c=>{
+  function cardHTML(c){
+    const esActivo=c.pendientes>0;
     const pct=c.cuotas>0?Math.round(c.pagadas/c.cuotas*100):0;
     const montoTotal=c.valorCuota*c.cuotas;
-    const montoPagado=c.valorCuota*c.pagadas;
     const montoPendiente=c.valorCuota*c.pendientes;
-    const esActivo=c.pendientes>0;
+    const barGrad=esActivo
+      ?`linear-gradient(90deg,${ACCENT},#a855f7)`
+      :`linear-gradient(90deg,#059669,#22c55e)`;
+    const pctColor=esActivo?ACCENT:'#059669';
+    const mesFinal=esActivo?c.mesFin:c.mesFinPagado;
     return`<div class="card" style="position:relative;overflow:hidden">
-      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${ACCENT}"></div>
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${pctColor}"></div>
       <div style="margin-bottom:18px">
         <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px">${c.detalle}</div>
-        <div style="font-size:11px;color:var(--muted);font-weight:600">${c.fecha?'Desde '+c.fecha:''}</div>
+        <div style="font-size:11px;color:var(--muted);font-weight:600">Desde ${fmtFechaCredito(c.fecha)}</div>
       </div>
-
-      <!-- Barra de progreso -->
       <div style="margin-bottom:20px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
           <span style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Progreso</span>
-          <span style="font-size:18px;font-weight:800;color:${ACCENT}">${pct}%</span>
+          <span style="font-size:18px;font-weight:800;color:${pctColor}">${pct}%</span>
         </div>
-        <div style="height:10px;background:rgba(99,77,210,.1);border-radius:6px;overflow:hidden">
-          <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,${ACCENT},#a855f7);border-radius:6px;transition:width .8s cubic-bezier(.4,0,.2,1)"></div>
+        <div style="height:10px;background:rgba(99,77,210,.08);border-radius:6px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:${barGrad};border-radius:6px;transition:width .8s cubic-bezier(.4,0,.2,1)"></div>
         </div>
         <div style="display:flex;justify-content:space-between;margin-top:5px">
           <span style="font-size:10px;font-weight:600;color:var(--muted)">$0</span>
           <span style="font-size:10px;font-weight:600;color:var(--muted)">${fmtM(montoTotal,true)}</span>
         </div>
       </div>
-
-      <!-- Grid de datos -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
         <div style="background:rgba(99,77,210,.05);border-radius:10px;padding:12px">
           <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Total cuotas</div>
@@ -531,21 +545,34 @@ ${UI.sectionLabel('Detalle por crédito')}
           <div style="font-size:16px;font-weight:800;color:var(--text)">${fmtM(c.valorCuota,true)}</div>
         </div>
       </div>
-
-      <!-- Fila inferior -->
       <div style="display:flex;justify-content:space-between;align-items:center;padding-top:14px;border-top:1px solid var(--border)">
         <div>
-          <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">Pendiente total</div>
-          <div style="font-size:15px;font-weight:800;color:#ED1650">${fmtM(montoPendiente)}</div>
+          <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">${esActivo?'Pendiente total':'Total pagado'}</div>
+          <div style="font-size:15px;font-weight:800;color:${esActivo?'#ED1650':'#059669'}">${fmtM(esActivo?montoPendiente:montoTotal)}</div>
         </div>
         <div style="text-align:right">
-          <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">Mes fin</div>
-          <div style="font-size:15px;font-weight:800;color:${esActivo?ACCENT:'#9CA3AF'}">${c.mesFin?fmtMesCorto(c.mesFin):'—'}</div>
+          <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">${esActivo?'Mes fin':'Terminó'}</div>
+          <div style="font-size:15px;font-weight:800;color:${esActivo?ACCENT:'#9CA3AF'}">${mesFinal?fmtMesCorto(mesFinal):'—'}</div>
         </div>
       </div>
     </div>`;
-  }).join('')}
+  }
+
+  document.getElementById('page-content').innerHTML=`
+${UI.hero('Créditos',fmtM(totalPendiente),'pendiente','Resumen de créditos')}
+<div class="kpi-strip" style="grid-template-columns:repeat(2,1fr);margin-bottom:24px">
+  ${UI.kpiCard('Cuota mensual total',fmtM(totalCuotaMes),'<span class="delta-flat">créditos activos</span>')}
+  ${UI.kpiCard('Créditos activos',activos.length+' de '+todos.length,'<span class="delta-flat">vigentes</span>')}
+</div>
+${UI.sectionLabel('Detalle Créditos Activos')}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:var(--gap);margin-bottom:28px">
+  ${activos.length?activos.map(cardHTML).join(''):'<div style="color:#9CA3AF;font-size:13px;padding:20px 0">Sin créditos activos</div>'}
+</div>
+${UI.sectionLabel('Detalle Créditos Pagados')}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:var(--gap);margin-bottom:24px">
+  ${pagados.length?pagados.map(cardHTML).join(''):'<div style="color:#9CA3AF;font-size:13px;padding:20px 0">Sin créditos pagados</div>'}
 </div>`;
+}
 }
 loadData();
 </script>
