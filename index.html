@@ -136,6 +136,15 @@ body{background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-d
 .filter-active-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(99,77,210,.08);border:1px solid rgba(99,77,210,.2);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;color:var(--accent);cursor:pointer;margin-left:4px}
 .filter-active-badge:hover{background:rgba(237,22,80,.08);border-color:rgba(237,22,80,.2);color:var(--red)}
 
+/* CAT PILLS */
+.cat-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.cat-btn{border:1.5px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font);font-size:11px;font-weight:700;padding:4px 11px;border-radius:20px;cursor:pointer;transition:all .15s}
+.cat-btn:hover{border-color:var(--accent);color:var(--accent)}
+.cat-btn.active{background:var(--navy);color:#fff;border-color:var(--navy);box-shadow:0 2px 6px rgba(27,0,136,.25)}
+.cat-btn.active[data-cat]:not([data-cat=""]){background:var(--cat-c,var(--navy));border-color:var(--cat-c,var(--navy))}
+/* Tooltip off on touch devices */
+@media(hover:none){.chart-tooltip{display:none!important}}
+
 /* TABLE */
 .tbl-scroll{overflow-y:auto;max-height:340px;scrollbar-width:thin;scrollbar-color:#c4c0e0 transparent}
 table{width:100%;border-collapse:separate;border-spacing:0}
@@ -149,10 +158,10 @@ tbody tr:hover td{background:rgba(99,77,210,.02)}
 .tc-td{padding:9px 8px;font-size:12px}
 
 /* DIST BARS */
-.dist-bar{display:flex;height:40px;border-radius:9px;overflow:hidden;gap:2px;margin-bottom:12px}
+.dist-bar{display:flex;height:54px;border-radius:9px;overflow:hidden;gap:2px;margin-bottom:12px}
 .dist-seg{display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-weight:800;padding:0 8px;min-width:fit-content;transition:filter .15s;cursor:default}
 .dist-seg:hover{filter:brightness(1.1)}
-.dist-seg-name,.dist-seg-val{font-size:8px;white-space:nowrap}
+.dist-seg-name,.dist-seg-val{font-size:10px;white-space:nowrap}
 .dist-seg-val{font-weight:700;opacity:.75}
 .bar-row{margin-bottom:10px}.bar-row:last-child{margin-bottom:0}
 .bar-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
@@ -259,6 +268,7 @@ let rawData=[], tcData=[], credData=[], mamaData=[];
 let months=[], selMonth='', evoRange=12, mamaEvoRange=12;
 let charts={}, tcFiltroMes='', tcFiltroMov='';
 let ahorroCredito=0, inicioAhorro='';
+let distCatFilter='';
 
 // ── TOOLTIP ──
 const tip = document.getElementById('chartTooltip');
@@ -387,12 +397,10 @@ function lineDataset(label,data,color){
   return{label,data,borderColor:color,borderWidth:2.5,pointRadius:3.5,pointHoverRadius:6,pointBackgroundColor:color,pointBorderColor:'#fff',pointBorderWidth:2,fill:false,tension:.35};
 }
 function stdLineOptions(tooltipFn,maxTicks=12){
-  return{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{enabled:false,external:tooltipFn}},scales:{x:{grid:{display:false},ticks:{font:{family:SF,size:10},color:'#9CA3AF',maxTicksLimit:maxTicks,maxRotation:0}},y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{family:SF,size:10},color:'#9CA3AF',callback:v=>fmtM(v,true)}}}};
+  return{responsive:true,maintainAspectRatio:false,events:['mousemove','mouseout','click'],interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{enabled:false,external:tooltipFn}},scales:{x:{grid:{display:false},ticks:{font:{family:SF,size:10},color:'#9CA3AF',maxTicksLimit:maxTicks,maxRotation:0}},y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{family:SF,size:10},color:'#9CA3AF',callback:v=>fmtM(v,true)}}}};
 }
 function stdBarOptions(tooltipFn){
-  return{responsive:true,maintainAspectRatio:false,animation:{duration:500,easing:'easeOutQuart'},plugins:{legend:{display:false},tooltip:{enabled:false,external:tooltipFn}},scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{family:SF,size:11,weight:'700'},color:'#9CA3AF',maxRotation:45}},y:{grid:{color:'rgba(27,0,136,.04)',drawTicks:false},border:{display:false},ticks:{font:{family:SF,size:11},color:'#9CA3AF',padding:8,
-  // [2] Eje Y TC en formato $25.000 (no M)
-  callback:v=>fmtM(v)}}}};
+  return{responsive:true,maintainAspectRatio:false,events:['mousemove','mouseout','click'],animation:{duration:500,easing:'easeOutQuart'},plugins:{legend:{display:false},tooltip:{enabled:false,external:tooltipFn}},scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{family:SF,size:11,weight:'700'},color:'#9CA3AF',maxRotation:45}},y:{grid:{color:'rgba(27,0,136,.04)',drawTicks:false},border:{display:false},ticks:{font:{family:SF,size:11},color:'#9CA3AF',padding:8,callback:v=>fmtM(v)}}}};
 }
 
 // [2] Etiquetas barras TC: formato $25.000 sin M
@@ -456,7 +464,7 @@ function buildDropdown(id,options,currentVal,placeholder,onSelect){
     :`<div class="filter-trigger-left"><div class="filter-trigger-val placeholder">${placeholder}</div></div>`;
   const chevron=`<svg class="filter-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
   const optionsHtml=options.map(o=>`
-    <div class="filter-option${o.value===currentVal?' selected':''}" onclick="(${onSelect})(${JSON.stringify(o.value)});closeAllDropdowns()">
+    <div class="filter-option${o.value===currentVal?' selected':''}" onclick="event.stopPropagation();closeAllDropdowns();(${onSelect})(${JSON.stringify(o.value)})">
       <div class="filter-option-name">${o.label}</div>
       <div style="display:flex;align-items:center;gap:8px">
         <div class="filter-option-amt">${o.amt}</div>
@@ -464,8 +472,8 @@ function buildDropdown(id,options,currentVal,placeholder,onSelect){
       </div>
     </div>`).join('');
   const clearHtml=currentVal
-    ?`<div class="filter-clear" onclick="(${onSelect})('');closeAllDropdowns()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span class="filter-clear-txt">Limpiar selección</span></div>`:'';
-  return`<div class="filter-trigger${currentVal?' open':''}" onclick="event.stopPropagation();toggleDropdown('${id}')">${triggerContent}${chevron}</div>
+    ?`<div class="filter-clear" onclick="event.stopPropagation();closeAllDropdowns();(${onSelect})('')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span class="filter-clear-txt">Limpiar selección</span></div>`:'';
+  return`<div class="filter-trigger" onclick="event.stopPropagation();toggleDropdown('${id}')">${triggerContent}${chevron}</div>
     <div class="filter-dropdown" id="${id}">${optionsHtml}${clearHtml}</div>`;
 }
 
@@ -513,12 +521,11 @@ async function loadData(){
         cells.forEach((cell,ci)=>{
           if(!cell||cell.v==null) return;
           const v=String(cell.v).trim();
-          if(v==='Ahorro Credito'||v==='Ahorro Crédito'){
-            // El valor está en la celda siguiente
+          if(/ahorro\s*cr[eé]dito/i.test(v)){
             const next=cells[ci+1];
             if(next?.v!=null) ahorroVal=next.v;
           }
-          if(v==='Inicio'){
+          if(/^inicio$/i.test(v)){
             const next=cells[ci+1];
             if(next?.v!=null) inicioVal=next.v;
           }
@@ -617,7 +624,11 @@ ${UI.sectionLabel('Análisis del mes')}
 ${UI.sectionLabel('Evolutivo de distribución')}
 ${UI.card('Distribución del gasto por mes — % sobre ingreso',
   UI.periodToggle(evoRange,[{val:12,label:'12M',fn:'setEvoRange(12,this)'},{val:0,label:'Todo',fn:'setEvoRange(0,this)'}]),
-  `<div style="height:260px"><canvas id="chartDist"></canvas></div>${UI.chartLegend(CAT_DEF.filter(c=>c.key!=='otros').map(c=>({color:c.color,label:c.label})))}`,
+  `<div class="cat-pills" id="dist-cat-pills">
+    <button class="cat-btn${!distCatFilter?' active':''}" data-cat="" onclick="setDistCat('')">Todas</button>
+    ${CAT_DEF.filter(c=>c.key!=='otros').map(c=>`<button class="cat-btn${distCatFilter===c.key?' active':''}" data-cat="${c.key}" style="--cat-c:${c.color}" onclick="setDistCat('${c.key}')">${c.label}</button>`).join('')}
+  </div>
+  <div style="height:260px"><canvas id="chartDist"></canvas></div>${UI.chartLegend(CAT_DEF.filter(c=>c.key!=='otros').map(c=>({color:c.color,label:c.label})))}`,
   'margin-bottom:20px')}`;
   renderEvoChart();renderDetalle(prevMes);renderDist();renderDistEvo();
 }
@@ -647,14 +658,21 @@ function renderEvoChart(){
   charts.evo=new Chart(document.getElementById('chartEvo'),{type:'line',data:{labels,datasets:[lineDataset('Ingreso',ingresos,'#059669'),lineDataset('Gasto',gastos,'#ED1650'),lineDataset('TC',tcs,'#f59e0b')]},options:stdLineOptions(tooltipFn,evoRange===0?20:evoRange)});
 }
 
-// [1] Evolutivo de distribución: stacked area en % + valor CLP en tooltip
+function setDistCat(key){
+  distCatFilter=key;
+  document.querySelectorAll('#dist-cat-pills .cat-btn').forEach(b=>b.classList.remove('active'));
+  const activeBtn=document.querySelector(`#dist-cat-pills .cat-btn[data-cat="${key}"]`);
+  if(activeBtn) activeBtn.classList.add('active');
+  renderDistEvo();
+}
+
 function renderDistEvo(){
   const slice=evoRange===0?months:months.slice(-evoRange);
   const labels=slice.map(m=>{const[mes,año]=m.split('-');return[mes.slice(0,3).toUpperCase(),año];});
   const labelsFmt=slice.map(m=>fmtMesLabel(m));
-  const activeCats=CAT_DEF.filter(c=>c.key!=='otros');
-  // % por categoría por mes
-  const pctData=activeCats.map(cat=>({
+  const allCats=CAT_DEF.filter(c=>c.key!=='otros');
+  const catsToShow=distCatFilter?allCats.filter(c=>c.key===distCatFilter):allCats;
+  const pctData=catsToShow.map(cat=>({
     ...cat,
     pcts:slice.map(m=>{
       const ing=sumsFor(m).ing;
@@ -665,31 +683,32 @@ function renderDistEvo(){
   }));
   const datasets=pctData.map(cat=>({
     label:cat.label,data:cat.pcts,
-    borderColor:cat.color,backgroundColor:cat.color+'55',
-    borderWidth:1.5,pointRadius:2,pointHoverRadius:5,
+    borderColor:cat.color,backgroundColor:cat.color+'33',
+    borderWidth:2,pointRadius:2.5,pointHoverRadius:5,
     pointBackgroundColor:cat.color,pointBorderColor:'#fff',pointBorderWidth:1.5,
-    fill:true,tension:.4,stack:'area',
+    fill:true,tension:.4,
+    ...(distCatFilter?{}:{stack:'area'}),
   }));
-  // [1] Tooltip: % + valor en $
   const tooltipFn=makeExternalTooltip(
     i=>labelsFmt[i],
     i=>pctData.filter(c=>c.pcts[i]>0).map(c=>({
-      color:c.color,
-      label:c.label,
-      // [1] porcentaje + valor CLP sin sufijo
+      color:c.color,label:c.label,
       val:`${c.pcts[i].toFixed(1)}%  ${fmtM(c.amts[i])}`
     }))
   );
+  const yScale=distCatFilter
+    ?{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{family:SF,size:10},color:'#9CA3AF',callback:v=>`${v}%`}}
+    :{stacked:true,grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{family:SF,size:10},color:'#9CA3AF',callback:v=>`${v}%`},min:0,max:100};
   if(charts.dist) charts.dist.destroy();
   charts.dist=new Chart(document.getElementById('chartDist'),{
     type:'line',data:{labels,datasets},
     options:{
-      responsive:true,maintainAspectRatio:false,
+      responsive:true,maintainAspectRatio:false,events:['mousemove','mouseout','click'],
       interaction:{mode:'index',intersect:false},
       plugins:{legend:{display:false},tooltip:{enabled:false,external:tooltipFn}},
       scales:{
         x:{grid:{display:false},ticks:{font:{family:SF,size:10},color:'#9CA3AF',maxTicksLimit:evoRange===0?20:evoRange,maxRotation:0}},
-        y:{stacked:true,grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{family:SF,size:10},color:'#9CA3AF',callback:v=>`${v}%`},min:0,max:100}
+        y:yScale
       }
     }
   });
@@ -1067,7 +1086,7 @@ function renderMamaChart(saldoPorMes){
       {label:'Saldo acumulado',data:slice.map(s=>s.saldo),type:'line',borderColor:'#1B0088',borderWidth:2.5,pointRadius:3.5,pointHoverRadius:6,pointBackgroundColor:'#1B0088',pointBorderColor:'#fff',pointBorderWidth:2,fill:false,tension:.3,order:1,yAxisID:'ySaldo'}
     ]},
     options:{
-      responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      responsive:true,maintainAspectRatio:false,events:['mousemove','mouseout','click'],interaction:{mode:'index',intersect:false},
       plugins:{legend:{display:false},tooltip:{enabled:false,external:tooltipFn}},
       scales:{
         x:{grid:{display:false},ticks:{font:{family:SF,size:10},color:'#9CA3AF',maxRotation:0}},
