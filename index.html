@@ -120,7 +120,7 @@ tbody tr:hover td{background:rgba(99,77,210,.025)}
     <nav class="sidebar-nav">
       <button class="nav-item active" onclick="setTab('mensual',this)"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Mensual</button>
       <button class="nav-item" onclick="setTab('tc',this)"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Tarjeta Crédito</button>
-      <button class="nav-item" onclick="setTab('creditos',this)"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Créditos<span class="nav-soon">Pronto</span></button>
+      <button class="nav-item" onclick="setTab('creditos',this)"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Créditos</button>
       <button class="nav-item" onclick="setTab('mama',this)"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Mamá<span class="nav-soon">Pronto</span></button>
     </nav>
     <div class="sidebar-month"><div class="sidebar-month-label">Período</div><select id="month-select" onchange="onMonthChange()"><option>Cargando…</option></select></div>
@@ -135,7 +135,7 @@ const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto'
 const GASTO_TIPOS = ['ahorro','casa','mamá','mama','transporte','deuda','tarjeta credito'];
 const ESTADO_PENDIENTE = new Set(['pendiente','por pagar','pending','activo','no pagado','debe','p']);
 
-let rawData=[], tcData=[], months=[], selMonth='', evoRange=12, charts={};
+let rawData=[], tcData=[], credData=[], months=[], selMonth='', evoRange=12, charts={};
 
 // ── TOOLTIP ──
 const tip = document.getElementById('chartTooltip');
@@ -208,7 +208,7 @@ async function fetchSheet(sheet){
 }
 async function loadData(){
   try{
-    const[rowsMensual,rowsTC]=await Promise.all([fetchSheet('mensual'),fetchSheet('Tarjeta Credito')]);
+    const[rowsMensual,rowsTC,rowsCred]=await Promise.all([fetchSheet('mensual'),fetchSheet('Tarjeta Credito'),fetchSheet('Creditos')]);
     rawData=rowsMensual.map(r=>({
       detalle:String(r.c[0]?.v||''),tipo:String(r.c[1]?.v||'').toLowerCase().trim(),
       mes:parseMesCell(r.c[2]),monto:parseMonto(r.c[3]?.v)
@@ -220,6 +220,16 @@ async function loadData(){
         mes:parseMesCell(r.c[5]),valorCuota:rawValor>0?rawValor:(total>0?total/cuotas:0),
         estado:String(r.c[7]?.v||'').toLowerCase().trim()};
     }).filter(r=>r.movimiento&&r.mes);
+    // Creditos: Detalle,Fecha,Cuotas,Mes,Cuota Numero,Valor Cuota,Estado
+    credData=rowsCred.map(r=>({
+      detalle:String(r.c[0]?.v||''),
+      fecha:String(r.c[1]?.v||''),
+      cuotas:Number(r.c[2]?.v)||0,
+      mes:parseMesCell(r.c[3]),
+      cuotaNum:Number(r.c[4]?.v)||0,
+      valorCuota:parseMonto(r.c[5]?.v),
+      estado:String(r.c[6]?.v||'').toLowerCase().trim()
+    })).filter(r=>r.detalle&&r.mes);
     months=[...new Set(rawData.map(r=>r.mes))].sort((a,b)=>monthKey(a)-monthKey(b));
     selMonth=nextMonth(months[months.length-1]);
     document.getElementById('month-select').innerHTML=[...months,selMonth].map(m=>`<option value="${m}"${m===selMonth?' selected':''}>${capFirst(m)}</option>`).join('');
@@ -432,7 +442,110 @@ function setTab(tab,btn){
   btn.classList.add('active');closeSidebar();
   if(tab==='tc')renderTC();
   else if(tab==='mensual')renderPage();
+  else if(tab==='creditos')renderCreditos();
   else{hideTooltip();document.getElementById('page-content').innerHTML=`<div class="loading-state"><div class="loading-text">Próximamente…</div></div>`;}
+}
+
+// ── PAGE: CRÉDITOS ──
+function renderCreditos(){
+  hideTooltip();
+
+  // Agrupar filas por detalle (cada crédito único)
+  const creditosMap={};
+  credData.forEach(r=>{
+    if(!creditosMap[r.detalle])creditosMap[r.detalle]={
+      detalle:r.detalle,fecha:r.fecha,cuotas:r.cuotas,
+      valorCuota:r.valorCuota,pagadas:0,pendientes:0,mesFin:''
+    };
+    const c=creditosMap[r.detalle];
+    if(r.estado==='pagado')c.pagadas++;
+    else{
+      c.pendientes++;
+      if(!c.mesFin||monthKey(r.mes)>monthKey(c.mesFin))c.mesFin=r.mes;
+    }
+    // Tomar el valor cuota más reciente (puede variar en hipotecario)
+    if(r.valorCuota>0)c.valorCuota=r.valorCuota;
+  });
+
+  const creditos=Object.values(creditosMap).filter(c=>c.cuotas>0);
+
+  // KPIs globales
+  const totalDeuda=creditos.reduce((a,c)=>a+c.valorCuota*c.pendientes,0);
+  const totalCuotaMes=creditos.reduce((a,c)=>a+c.valorCuota,0);
+
+  const ACCENT='#634dd2';
+
+  document.getElementById('page-content').innerHTML=`
+${UI.hero('Créditos',fmtM(totalDeuda),'pendiente','Resumen de créditos vigentes')}
+<div class="kpi-strip" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px">
+  ${UI.kpiCard('Créditos activos',creditos.filter(c=>c.pendientes>0).length+'','<span class="delta-flat">vigentes</span>')}
+  ${UI.kpiCard('Deuda total',fmtM(totalDeuda,true),'<span class="delta-flat">pendiente</span>')}
+  ${UI.kpiCard('Cuota mensual total',fmtM(totalCuotaMes),'<span class="delta-flat">este mes</span>')}
+</div>
+${UI.sectionLabel('Detalle por crédito')}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:var(--gap);margin-bottom:24px">
+  ${creditos.map(c=>{
+    const pct=c.cuotas>0?Math.round(c.pagadas/c.cuotas*100):0;
+    const montoTotal=c.valorCuota*c.cuotas;
+    const montoPagado=c.valorCuota*c.pagadas;
+    const montoPendiente=c.valorCuota*c.pendientes;
+    const esActivo=c.pendientes>0;
+    return`<div class="card" style="position:relative;overflow:hidden">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${ACCENT}"></div>
+      <div style="margin-bottom:18px">
+        <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px">${c.detalle}</div>
+        <div style="font-size:11px;color:var(--muted);font-weight:600">${c.fecha?'Desde '+c.fecha:''}</div>
+      </div>
+
+      <!-- Barra de progreso -->
+      <div style="margin-bottom:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Progreso</span>
+          <span style="font-size:18px;font-weight:800;color:${ACCENT}">${pct}%</span>
+        </div>
+        <div style="height:10px;background:rgba(99,77,210,.1);border-radius:6px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,${ACCENT},#a855f7);border-radius:6px;transition:width .8s cubic-bezier(.4,0,.2,1)"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:5px">
+          <span style="font-size:10px;font-weight:600;color:var(--muted)">$0</span>
+          <span style="font-size:10px;font-weight:600;color:var(--muted)">${fmtM(montoTotal,true)}</span>
+        </div>
+      </div>
+
+      <!-- Grid de datos -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+        <div style="background:rgba(99,77,210,.05);border-radius:10px;padding:12px">
+          <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Total cuotas</div>
+          <div style="font-size:20px;font-weight:800;color:var(--text)">${c.cuotas}</div>
+        </div>
+        <div style="background:rgba(99,77,210,.05);border-radius:10px;padding:12px">
+          <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Cuotas pagadas</div>
+          <div style="font-size:20px;font-weight:800;color:#059669">${c.pagadas}</div>
+        </div>
+        <div style="background:rgba(99,77,210,.05);border-radius:10px;padding:12px">
+          <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Cuotas restantes</div>
+          <div style="font-size:20px;font-weight:800;color:${esActivo?'#ED1650':'#9CA3AF'}">${c.pendientes}</div>
+        </div>
+        <div style="background:rgba(99,77,210,.05);border-radius:10px;padding:12px">
+          <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Valor cuota</div>
+          <div style="font-size:16px;font-weight:800;color:var(--text)">${fmtM(c.valorCuota,true)}</div>
+        </div>
+      </div>
+
+      <!-- Fila inferior -->
+      <div style="display:flex;justify-content:space-between;align-items:center;padding-top:14px;border-top:1px solid var(--border)">
+        <div>
+          <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">Pendiente total</div>
+          <div style="font-size:15px;font-weight:800;color:#ED1650">${fmtM(montoPendiente)}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">Mes fin</div>
+          <div style="font-size:15px;font-weight:800;color:${esActivo?ACCENT:'#9CA3AF'}">${c.mesFin?fmtMesCorto(c.mesFin):'—'}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('')}
+</div>`;
 }
 loadData();
 </script>
