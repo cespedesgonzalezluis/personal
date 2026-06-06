@@ -60,7 +60,7 @@ body{font-family:'Sofia Sans',sans-serif;background:var(--bg);color:var(--text);
 .kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--gap);margin-bottom:24px}
 .kpi-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);position:relative;overflow:hidden;transition:box-shadow .2s,transform .2s}
 .kpi-card:hover{box-shadow:var(--shadow-lg);transform:translateY(-2px)}
-.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--kpi-stripe,#1B0088)}
+.kpi-card::before{display:none}
 .kpi-label{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
 .kpi-val{font-size:20px;font-weight:800;color:var(--text);line-height:1;margin-bottom:6px}
 .kpi-delta{font-size:11px;font-weight:700;display:flex;align-items:center;gap:3px}
@@ -491,11 +491,15 @@ const BAR_LABELS_PLUGIN = {
       const bar  = chart.getDatasetMeta(0).data[i];
       const barH = y.getPixelForValue(0) - bar.y;
       if (barH < 22) return;
+      const abs = Math.abs(val);
+      const label = abs >= 1e6 ? `$${(abs/1e6).toFixed(2)}M`
+                  : abs >= 1e3 ? `$${(abs/1e3).toFixed(2)}K`
+                  : `$${Math.round(abs).toLocaleString('es-CL')}`;
       ctx.font = "700 10px 'Sofia Sans', sans-serif";
       ctx.fillStyle = 'rgba(0,0,0,.55)';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
-      ctx.fillText(fmtM(val, true), bar.x, bar.y + 6);
+      ctx.fillText(label, bar.x, bar.y + 6);
     });
     ctx.restore();
   }
@@ -663,13 +667,14 @@ function setEvoRange(n, btn) {
 
 function renderEvoChart() {
   const slice    = evoRange === 0 ? months : months.slice(-evoRange);
-  const labels   = slice.map(m => { const [mes,año]=m.split('-'); return `${capFirst(mes).slice(0,3)} ${String(año).slice(2)}`; });
+  const labels   = slice.map(m => { const [mes,año]=m.split('-'); return [mes.slice(0,3).toUpperCase(), año]; });
+  const labelsFmt = slice.map(m => { const [mes,año]=m.split('-'); return `${mes.slice(0,3).toUpperCase()} ${año}`; });
   const ingresos = slice.map(m => sumsFor(m).ing);
   const gastos   = slice.map(m => sumsFor(m).gasto);
   const tcs      = slice.map(m => sumsFor(m).tc);
 
   const tooltipFn = makeExternalTooltip(
-    i => labels[i],
+    i => labelsFmt[i],
     i => [
       {color:'#059669', label:'Ingreso', val:fmtM(ingresos[i])},
       {color:'#ED1650', label:'Gasto',   val:fmtM(gastos[i])},
@@ -683,15 +688,16 @@ function renderEvoChart() {
     data: { labels, datasets: [
       lineDataset('Ingreso',        ingresos, '#059669'),
       lineDataset('Gasto',          gastos,   '#ED1650'),
-      lineDataset('Tarjeta Crédito', tcs,     '#f59e0b', [6,4]),
+      lineDataset('Tarjeta Crédito', tcs,     '#f59e0b'),
     ]},
     options: stdLineOptions(tooltipFn, evoRange === 0 ? 20 : evoRange)
   });
 }
 
 function renderDetalle(prevMes) {
-  const prevRows = prevMes ? rawData.filter(r => r.mes===prevMes && GASTO_TIPOS.includes(r.tipo)) : [];
-  const rows = gastoRows(selMonth).sort((a,b) => a.detalle.localeCompare(b.detalle,'es'));
+  const prevRows = prevMes ? rawData.filter(r => r.mes===prevMes) : [];
+  const searchMes = months.includes(selMonth) ? selMonth : months[months.length - 1];
+  const rows = rawData.filter(r => r.mes === searchMes).sort((a,b) => a.detalle.localeCompare(b.detalle,'es'));
 
   document.getElementById('tbody-detalle').innerHTML = rows.map(row => {
     const prv = prevRows.find(p => p.detalle===row.detalle);
@@ -731,15 +737,45 @@ function renderDist() {
   const pctOfIng = c => ing > 0 ? (c.amt/ing*100) : 0;
   const maxAmt   = sorted[0]?.amt || 1;
 
-  document.getElementById('dist-bar-wrap').innerHTML = `<div class="dist-bar">${
+  const totalAmt = sorted.reduce((a,c)=>a+c.amt,0);
+  document.getElementById('dist-bar-wrap').innerHTML = `<div class="dist-bar" id="dist-bar-inner">${
     sorted.map(c => {
       const pct = pctOfIng(c).toFixed(1)+'%';
-      return `<div class="dist-seg" style="background:${c.color};flex:${c.amt}" title="${c.label}: ${fmtM(c.amt,true)} (${pct} del ingreso)">
-        <div class="dist-seg-name">${c.label}</div>
-        <div class="dist-seg-val">${pct}</div>
+      const segPct = totalAmt > 0 ? c.amt / totalAmt : 0;
+      return `<div class="dist-seg" data-pct="${segPct}" style="background:${c.color};flex:${c.amt}" title="${c.label}: ${fmtM(c.amt,true)} (${pct} del ingreso)">
+        <div class="dist-seg-name" style="white-space:nowrap">${c.label}</div>
+        <div class="dist-seg-val" style="white-space:nowrap">${pct}</div>
       </div>`;
     }).join('')
   }</div>`;
+
+  // Ajuste dinámico de font-size: reduce hasta que el texto quepa en el segmento
+  requestAnimationFrame(() => {
+    const bar = document.getElementById('dist-bar-inner');
+    if (!bar) return;
+    bar.querySelectorAll('.dist-seg').forEach(seg => {
+      const nameEl = seg.querySelector('.dist-seg-name');
+      const valEl  = seg.querySelector('.dist-seg-val');
+      const availW = seg.offsetWidth - 6;
+      if (availW <= 0) return;
+      let fs = 9;
+      nameEl.style.fontSize = fs + 'px';
+      valEl.style.fontSize  = fs + 'px';
+      // Aumentar hasta que no quepan
+      while (fs < 9) { // ya empieza en mínimo, solo ajusta si hay espacio
+        fs++;
+        nameEl.style.fontSize = fs + 'px';
+        valEl.style.fontSize  = fs + 'px';
+        if (nameEl.scrollWidth > availW || valEl.scrollWidth > availW) { fs--; break; }
+      }
+      // Si aun en 9px no cabe, reducir a 7, 6 (mínimo absoluto)
+      while ((nameEl.scrollWidth > availW || valEl.scrollWidth > availW) && fs > 6) {
+        fs--;
+        nameEl.style.fontSize = fs + 'px';
+        valEl.style.fontSize  = fs + 'px';
+      }
+    });
+  });
 
   document.getElementById('dist-bars').innerHTML = sorted.map(c => `
     <div class="bar-row">
@@ -754,12 +790,13 @@ function renderDist() {
 /* ═══════════════════════════════════════════════
    PAGE: TARJETA CRÉDITO
    ═══════════════════════════════════════════════ */
+let tcFiltroMes = '', tcFiltroMov = '';
+
 function renderTC() {
   hideTooltip();
 
   const pending   = tcData.filter(r => ESTADO_PENDIENTE.has(r.estado));
   const mesesPend = [...new Set(pending.map(r=>r.mes))].sort((a,b)=>monthKey(a)-monthKey(b));
-  const mesActual = mesesPend[0] || '';
 
   const proyMap = {};
   pending.forEach(r => { proyMap[r.mes] = (proyMap[r.mes]||0) + r.valorCuota; });
@@ -771,31 +808,42 @@ function renderTC() {
     if (!movsMap[k]) movsMap[k] = {
       movimiento: r.movimiento, fecha: r.fecha,
       total: r.total, cuotas: r.cuotas, valorCuota: r.valorCuota,
-      pagadas: 0, pendientesCount: 0, pendientesMonto: 0, mesFin: ''
+      pagadas: 0, pendientesCount: 0, pendientesMonto: 0, mesFin: '',
+      mesPrimero: r.mes
     };
     const m = movsMap[k];
     if (ESTADO_PENDIENTE.has(r.estado)) {
       m.pendientesCount++;
       m.pendientesMonto += r.valorCuota;
       if (!m.mesFin || monthKey(r.mes) > monthKey(m.mesFin)) m.mesFin = r.mes;
+      if (!m.mesPrimero || monthKey(r.mes) < monthKey(m.mesPrimero)) m.mesPrimero = r.mes;
     }
   });
 
-  // pagadas = total cuotas menos las que aún están pendientes
   Object.values(movsMap).forEach(m => {
     m.pagadas = Math.max(0, m.cuotas - m.pendientesCount);
   });
 
-  const movsPend = Object.values(movsMap)
+  const todosMovsPend = Object.values(movsMap)
     .filter(m => m.pendientesCount > 0)
     .sort((a,b) => {
       const df = parseFechaNum(a.fecha) - parseFechaNum(b.fecha);
       return df !== 0 ? df : a.movimiento.localeCompare(b.movimiento,'es');
     });
 
-  const deudaTotal = movsPend.reduce((a,m) => a + m.pendientesMonto, 0);
+  const deudaTotal = todosMovsPend.reduce((a,m) => a + m.pendientesMonto, 0);
 
-  /* Caja de diagnóstico visible cuando no hay datos o estados no reconocidos */
+  // Opciones para filtros
+  const mesesCompra = [...new Set(todosMovsPend.map(m => m.mesPrimero))].sort((a,b)=>monthKey(a)-monthKey(b));
+  const movNombres  = [...new Set(todosMovsPend.map(m => m.movimiento))].sort((a,b)=>a.localeCompare(b,'es'));
+
+  // Aplicar filtros
+  let movsFiltrados = todosMovsPend;
+  if (tcFiltroMes) movsFiltrados = movsFiltrados.filter(m => m.mesPrimero === tcFiltroMes);
+  if (tcFiltroMov) movsFiltrados = movsFiltrados.filter(m => m.movimiento === tcFiltroMov);
+  const deudaFiltrada = movsFiltrados.reduce((a,m) => a + m.pendientesMonto, 0);
+
+  /* Debug box */
   const estadosUnicos = [...new Set(tcData.map(r => r.estado || '(vacío)'))];
   const debugBox = tcData.length === 0
     ? `<div class="debug-box">⚠ No se cargaron filas de la hoja <code>Tarjeta Credito</code>. Verifica que el nombre de la pestaña sea exactamente ese.</div>`
@@ -805,10 +853,44 @@ function renderTC() {
        <small>Reconocidos como pendiente: <code>pendiente</code> · <code>por pagar</code> · <code>activo</code> · <code>debe</code> · <code>no pagado</code></small></div>`
     : '';
 
+  // Tooltip con número completo
   const tooltipFn = makeExternalTooltip(
     i => capFirst(proyMeses[i][0].replace('-',' ')),
-    i => [{color:'#00b89e', label:'Cuotas', val:fmtM(proyMeses[i][1], true)}]
+    i => [{color:'#00b89e', label:'Cuotas', val:`$${Math.round(proyMeses[i][1]).toLocaleString('es-CL')}`}]
   );
+
+  // Helper formato millones con 2 decimales
+  function fmtM2(n) {
+    const abs = Math.abs(n);
+    if (abs >= 1e6) return `$${(abs/1e6).toFixed(2)}M`;
+    if (abs >= 1e3) return `$${(abs/1e3).toFixed(2)}K`;
+    return `$${Math.round(abs).toLocaleString('es-CL')}`;
+  }
+
+  // Filtros HTML
+  const filtrosHTML = `
+  <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px">
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <label style="font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Mes de compra</label>
+      <select onchange="tcFiltroMes=this.value;renderTC()" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-family:'Sofia Sans',sans-serif;font-size:12px;font-weight:700;color:var(--text);cursor:pointer;outline:none;min-width:140px">
+        <option value="">Todos los meses</option>
+        ${mesesCompra.map(m=>`<option value="${m}"${tcFiltroMes===m?' selected':''}>${capFirst(m)} — $${Math.round(todosMovsPend.filter(mv=>mv.mesPrimero===m).reduce((a,mv)=>a+mv.pendientesMonto,0)).toLocaleString('es-CL')}</option>`).join('')}
+      </select>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <label style="font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Movimiento</label>
+      <select onchange="tcFiltroMov=this.value;renderTC()" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-family:'Sofia Sans',sans-serif;font-size:12px;font-weight:700;color:var(--text);cursor:pointer;outline:none;min-width:200px;max-width:320px">
+        <option value="">Todos los movimientos</option>
+        ${movNombres.map(n=>`<option value="${n}"${tcFiltroMov===n?' selected':''}>${n} — $${Math.round(todosMovsPend.filter(mv=>mv.movimiento===n).reduce((a,mv)=>a+mv.pendientesMonto,0)).toLocaleString('es-CL')}</option>`).join('')}
+      </select>
+    </div>
+    ${(tcFiltroMes||tcFiltroMov)?`
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <label style="font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Pendiente filtrado</label>
+      <div style="padding:7px 12px;background:rgba(237,22,80,.07);border:1px solid rgba(237,22,80,.2);border-radius:8px;font-size:13px;font-weight:800;color:#ED1650">$${Math.round(deudaFiltrada).toLocaleString('es-CL')}</div>
+    </div>
+    <button onclick="tcFiltroMes='';tcFiltroMov='';renderTC()" style="align-self:flex-end;border:1px solid var(--border);background:var(--bg);border-radius:8px;padding:7px 14px;font-family:'Sofia Sans',sans-serif;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer">✕ Limpiar</button>`:''}
+  </div>`;
 
   document.getElementById('page-content').innerHTML = `
 ${UI.hero('Tarjeta Crédito', fmtM(deudaTotal), 'pendiente')}
@@ -824,8 +906,9 @@ ${UI.card(
 
 ${UI.card(
   'Movimientos Pendientes',
-  `<div style="font-size:11px;color:var(--muted)">${movsPend.length} movimientos</div>`,
-  `<div style="overflow-x:auto">
+  `<div style="font-size:11px;color:var(--muted)">${movsFiltrados.length} movimientos</div>`,
+  `${filtrosHTML}
+  <div style="overflow-x:auto">
     <table style="border-collapse:collapse;font-size:12px">
       <thead>
         <tr style="border-bottom:2px solid var(--border)">
@@ -840,31 +923,37 @@ ${UI.card(
         </tr>
       </thead>
       <tbody>
-        ${movsPend.map((m,i) => {
-          const pagadoMonto = m.total - m.pendientesMonto;
-          const isProx = m.mesFin === mesActual;
-          return `<tr style="border-bottom:1px solid var(--border);background:${isProx?'rgba(0,184,158,.06)':i%2===0?'transparent':'rgba(0,0,0,.015)'}">
-            <td class="tc-td" style="font-weight:600;color:var(--text);max-width:220px">${m.movimiento}</td>
+        ${movsFiltrados.map((m,i) => {
+          const pagadoMonto  = m.total - m.pendientesMonto;
+          const isUltima     = m.pendientesCount === 1;
+          const rowBg = isUltima
+            ? 'rgba(0,184,158,.07)'
+            : i%2===0 ? 'transparent' : 'rgba(0,0,0,.015)';
+          const ultimaBadge = isUltima
+            ? `<span style="margin-left:6px;font-size:9px;font-weight:800;background:rgba(0,184,158,.15);color:#007a72;padding:1px 6px;border-radius:6px;vertical-align:middle">ÚLTIMA</span>`
+            : '';
+          return `<tr style="border-bottom:1px solid var(--border);background:${rowBg}">
+            <td class="tc-td" style="font-weight:600;color:var(--text);max-width:220px">${m.movimiento}${ultimaBadge}</td>
             <td class="tc-td" style="text-align:center;color:var(--muted);white-space:nowrap">${fmtFecha(m.fecha)}</td>
             <td class="tc-td" style="text-align:right;color:var(--muted)">$${Math.round(m.total).toLocaleString('es-CL')}</td>
             <td class="tc-td" style="text-align:right;color:#059669">$${Math.round(pagadoMonto).toLocaleString('es-CL')}</td>
             <td class="tc-td" style="text-align:right;color:#ED1650;font-weight:700">$${Math.round(m.pendientesMonto).toLocaleString('es-CL')}</td>
             <td class="tc-td" style="text-align:right;color:var(--muted)">$${Math.round(m.valorCuota).toLocaleString('es-CL')}</td>
             <td class="tc-td" style="text-align:center;min-width:80px">
-              <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:3px;text-align:center">${m.pagadas}/${m.cuotas}</div>
+              <div style="font-size:10px;font-weight:700;color:${isUltima?'#007a72':'var(--muted)'};margin-bottom:3px;text-align:center">${m.pagadas}/${m.cuotas}</div>
               <div style="height:4px;background:rgba(27,0,136,.08);border-radius:3px;overflow:hidden">
-                <div style="height:100%;width:${Math.round(m.pagadas/Math.max(m.cuotas,1)*100)}%;background:#00b89e;border-radius:3px;transition:width .6s"></div>
+                <div style="height:100%;width:${Math.round(m.pagadas/Math.max(m.cuotas,1)*100)}%;background:${isUltima?'#00b89e':'#634dd2'};border-radius:3px;transition:width .6s"></div>
               </div>
             </td>
-            <td class="tc-td" style="text-align:center;color:${isProx?'#00b89e':'var(--muted)'};font-weight:${isProx?700:400};white-space:nowrap">${fmtMesCorto(m.mesFin)}</td>
+            <td class="tc-td" style="text-align:center;color:${isUltima?'#007a72':'var(--muted)'};font-weight:${isUltima?700:400};white-space:nowrap">${fmtMesCorto(m.mesFin)}</td>
           </tr>`;
         }).join('')}
       </tbody>
       <tfoot>
         <tr style="border-top:2px solid var(--border);background:rgba(0,0,0,.02)">
           <td colspan="4" style="padding:10px 10px;font-weight:700;color:var(--text)">Total Pendiente</td>
-          <td style="padding:10px 8px;text-align:right;font-weight:800;color:#ED1650;font-size:13px">$${Math.round(deudaTotal).toLocaleString('es-CL')}</td>
-          <td style="padding:10px 8px;text-align:right;font-weight:800;color:var(--muted);font-size:13px">$${Math.round(movsPend.reduce((a,m)=>a+m.valorCuota,0)).toLocaleString('es-CL')}</td>
+          <td style="padding:10px 8px;text-align:right;font-weight:800;color:#ED1650;font-size:13px">$${Math.round(deudaFiltrada).toLocaleString('es-CL')}</td>
+          <td style="padding:10px 8px;text-align:right;font-weight:800;color:var(--muted);font-size:13px">$${Math.round(movsFiltrados.reduce((a,m)=>a+m.valorCuota,0)).toLocaleString('es-CL')}</td>
           <td colspan="2"></td>
         </tr>
       </tfoot>
@@ -886,7 +975,10 @@ ${UI.card(
       type: 'bar',
       plugins: [BAR_LABELS_PLUGIN],
       data: {
-        labels: proyMeses.map(([mes]) => capFirst(mes.replace('-',' ').replace(' 20'," '"))),
+        labels: proyMeses.map(([mes]) => {
+          const [m, y] = mes.split('-');
+          return [m.slice(0,3).toUpperCase(), y];
+        }),
         datasets: [{
           label: 'Cuotas',
           data: proyMeses.map(([,v]) => v),
@@ -895,7 +987,13 @@ ${UI.card(
           borderWidth: 0, borderRadius: 8, borderSkipped: false
         }]
       },
-      options: stdBarOptions(tooltipFn)
+      options: {
+        ...stdBarOptions(tooltipFn),
+        plugins: {
+          ...stdBarOptions(tooltipFn).plugins,
+          // sobreescribir barLabels para usar 2 decimales
+        }
+      }
     });
   });
 }
