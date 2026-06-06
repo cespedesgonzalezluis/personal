@@ -23,10 +23,6 @@ body{font-family:'Sofia Sans',sans-serif;background:var(--bg);color:var(--text);
 .nav-item.active{background:linear-gradient(135deg,rgba(0,184,158,.22),rgba(0,184,158,.10));color:#00e5c8;border:1px solid rgba(0,184,158,.22)}
 .nav-icon{width:17px;height:17px;flex-shrink:0}
 .nav-soon{font-size:9px;font-weight:800;background:rgba(255,255,255,.08);color:rgba(255,255,255,.35);padding:2px 7px;border-radius:20px;margin-left:auto}
-.sidebar-month{padding:14px 12px;border-top:1px solid rgba(255,255,255,.08)}
-.sidebar-month-label{font-size:9px;font-weight:800;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px}
-.sidebar-month select{width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px 10px;font-family:'Sofia Sans',sans-serif;font-size:13px;font-weight:700;color:rgba(255,255,255,.85);cursor:pointer;outline:none;appearance:none}
-.sidebar-month select option{background:#1B0088;color:#fff}
 .sidebar-footer{padding:14px 18px;border-top:1px solid rgba(255,255,255,.08);font-size:11px;font-weight:600;color:rgba(255,255,255,.25);line-height:1.5}
 .sidebar-footer span{display:block;color:rgba(255,255,255,.45);font-weight:700}
 .main{margin-left:var(--sidebar);flex:1;display:flex;flex-direction:column;min-width:0}
@@ -123,7 +119,7 @@ tbody tr:hover td{background:rgba(99,77,210,.025)}
       <button class="nav-item" onclick="setTab('creditos',this)"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Créditos</button>
       <button class="nav-item" onclick="setTab('mama',this)"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Mamá</button>
     </nav>
-    <div class="sidebar-month"><div class="sidebar-month-label">Período</div><select id="month-select" onchange="onMonthChange()"><option>Cargando…</option></select></div>
+    <select id="month-select" style="display:none"></select>
     <div class="sidebar-footer">Última actualización<br><span id="sidebar-ts">—</span></div>
   </aside>
   <div class="main"><div class="content" id="page-content"><div class="loading-state"><div class="spinner"></div><div class="loading-text">Conectando con Google Sheets…</div></div></div></div>
@@ -163,17 +159,11 @@ function makeExternalTooltip(getHeader,getRows){
 const parseMonto=v=>{if(v==null)return 0;if(typeof v==='number')return v;const n=parseFloat(String(v).replace(/[$.\s]/g,'').replace(',','.'));return isNaN(n)?0:n;};
 function parseMesMama(cell){
   if(!cell)return '';
-  const{v,f=''}=cell;
-  if(!v&&v!==0)return '';
-  const sv=String(v);
-  // Date(2026,4,29) — formato gviz
-  if(sv.startsWith('Date(')){const p=sv.replace('Date(','').replace(')','').split(',').map(Number);const m=MESES[p[1]];return m?`${m}-${p[0]}`:''}
-  // ISO 2026-05-29 o 2026-5-29
+  const base=parseMesCell(cell);
+  if(base)return base;
+  const sv=String(cell.v||'');
   const iso=sv.match(/^(\d{4})-(\d{1,2})-\d{1,2}$/);
   if(iso){const m=MESES[parseInt(iso[2],10)-1];return m?`${m}-${iso[1]}`:''}
-  // ya viene como mayo-2026
-  if(/[a-záéíóúüñ]+-\d{4}/i.test(sv))return sv.toLowerCase();
-  if(f&&/[a-záéíóúüñ]+-\d{4}/i.test(f))return f.toLowerCase();
   return '';
 }
 
@@ -253,6 +243,8 @@ async function loadData(){
       detalle:String(r.c[2]?.v||'').trim(),
       monto:parseMonto(r.c[3]?.v)
     })).filter(r=>r.mes&&r.detalle);
+    console.log('[Mamá] rowsMama raw:', rowsMama.length, '| mamaData parseado:', mamaData.length);
+    if(rowsMama.length>0) console.log('[Mamá] primera fila raw:', JSON.stringify(rowsMama[0]));
     months=[...new Set(rawData.map(r=>r.mes))].sort((a,b)=>monthKey(a)-monthKey(b));
     selMonth=nextMonth(months[months.length-1]);
     document.getElementById('month-select').innerHTML=[...months,selMonth].map(m=>`<option value="${m}"${m===selMonth?' selected':''}>${capFirst(m)}</option>`).join('');
@@ -473,9 +465,13 @@ function setTab(tab,btn){
 // ── PAGE: MAMÁ ──
 function renderMama(){
   hideTooltip();
+  console.log('[Mamá] mamaData.length=', mamaData.length, '| muestra:', mamaData.slice(0,3));
 
   if(!mamaData.length){
-    document.getElementById('page-content').innerHTML=`<div class="error-box">No se encontraron datos en la pestaña <strong>Mama</strong>.<br><small style="opacity:.7">Verifica que la pestaña exista y tenga columnas: Fecha · Detalle · Monto</small></div>`;
+    document.getElementById('page-content').innerHTML=`<div class="error-box">
+      ⚠ No se encontraron datos en la pestaña <strong>Mama</strong>.<br>
+      <small style="opacity:.7">Abre la consola del browser (F12) para ver el diagnóstico detallado.</small>
+    </div>`;
     return;
   }
 
