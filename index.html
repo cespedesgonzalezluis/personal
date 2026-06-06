@@ -138,7 +138,7 @@ body{background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-d
 
 /* CAT PILLS */
 .cat-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
-.cat-btn{border:1.5px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font);font-size:11px;font-weight:700;padding:4px 11px;border-radius:20px;cursor:pointer;transition:all .15s}
+.cat-btn{border:1.5px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font);font-size:11px;font-weight:700;padding:4px 11px;border-radius:6px;cursor:pointer;transition:all .15s}
 .cat-btn:hover{border-color:var(--accent);color:var(--accent)}
 .cat-btn.active{background:var(--navy);color:#fff;border-color:var(--navy);box-shadow:0 2px 6px rgba(27,0,136,.25)}
 .cat-btn.active[data-cat]:not([data-cat=""]){background:var(--cat-c,var(--navy));border-color:var(--cat-c,var(--navy))}
@@ -240,6 +240,10 @@ tbody tr:hover td{background:rgba(99,77,210,.02)}
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
         Créditos
       </button>
+      <button class="nav-item" onclick="setTab('pendientes',this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Pendientes
+      </button>
       <div class="nav-section">Familia</div>
       <button class="nav-item" onclick="setTab('mama',this)">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
@@ -269,6 +273,7 @@ let months=[], selMonth='', evoRange=12, mamaEvoRange=12;
 let charts={}, tcFiltroMes='', tcFiltroMov='';
 let ahorroCredito=0, inicioAhorro='';
 let distCatFilter='';
+let pendientesData=[], pendFiltroResp='';
 
 // ── TOOLTIP ──
 const tip = document.getElementById('chartTooltip');
@@ -464,7 +469,7 @@ function buildDropdown(id,options,currentVal,placeholder,onSelect){
     :`<div class="filter-trigger-left"><div class="filter-trigger-val placeholder">${placeholder}</div></div>`;
   const chevron=`<svg class="filter-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
   const optionsHtml=options.map(o=>`
-    <div class="filter-option${o.value===currentVal?' selected':''}" onclick="event.stopPropagation();closeAllDropdowns();(${onSelect})(${JSON.stringify(o.value)})">
+    <div class="filter-option${o.value===currentVal?' selected':''}" onclick="event.stopPropagation();closeAllDropdowns();(${onSelect})(${JSON.stringify(o.value).replace(/"/g,'&quot;')})">
       <div class="filter-option-name">${o.label}</div>
       <div style="display:flex;align-items:center;gap:8px">
         <div class="filter-option-amt">${o.amt}</div>
@@ -486,8 +491,8 @@ async function fetchSheet(sheet){
 }
 async function loadData(){
   try{
-    const[rowsMensual,rowsTC,rowsCred,rowsMama,rowsOtros]=await Promise.all([
-      fetchSheet('mensual'),fetchSheet('Tarjeta Credito'),fetchSheet('Creditos'),fetchSheet('Mama'),fetchSheet('Otros')
+    const[rowsMensual,rowsTC,rowsCred,rowsMama,rowsOtros,rowsPend]=await Promise.all([
+      fetchSheet('mensual'),fetchSheet('Tarjeta Credito'),fetchSheet('Creditos'),fetchSheet('Mama'),fetchSheet('Otros'),fetchSheet('Pendientes')
     ]);
     rawData=rowsMensual.map(r=>({
       detalle:String(r.c[0]?.v||''),tipo:String(r.c[1]?.v||'').toLowerCase().trim(),
@@ -509,6 +514,16 @@ async function loadData(){
       mes:parseMesMama(r.c[0]),tipo:String(r.c[1]?.v||'').toLowerCase().trim(),
       detalle:String(r.c[2]?.v||'').trim(),monto:parseMonto(r.c[3]?.v)
     })).filter(r=>r.mes&&r.detalle);
+    pendientesData=rowsPend.map(r=>{
+      const raw=String(r.c[7]?.f||r.c[7]?.v||'');
+      let cuotasPagadas=0,cuotasTotal=0;
+      if(raw.includes('/')){const[a,b]=raw.split('/');cuotasPagadas=parseInt(a)||0;cuotasTotal=parseInt(b)||0;}
+      else{cuotasTotal=parseInt(raw)||0;}
+      const total=parseMonto(r.c[3]?.v),pagado=parseMonto(r.c[4]?.v),cuota=parseMonto(r.c[6]?.v);
+      const pendiente=parseMonto(r.c[5]?.v)||Math.max(0,total-pagado);
+      return{responsable:String(r.c[0]?.v||'').trim(),fecha:String(r.c[1]?.v||''),
+        detalles:String(r.c[2]?.v||'').trim(),total,pagado,pendiente,cuota,cuotasPagadas,cuotasTotal};
+    }).filter(r=>r.responsable&&r.total>0);
     // Leer Ahorro Credito e Inicio desde hoja Otros
     // El gviz no garantiza índice fijo — buscar la celda con label "Ahorro Credito"
     // La hoja tiene estructura: col R = labels, col S = valores
@@ -871,7 +886,7 @@ ${UI.card('Movimientos Pendientes',`<div style="font-size:11px;color:var(--muted
     charts.tc=new Chart(canvas,{type:'bar',plugins:[BAR_LABELS_PLUGIN],data:{
       labels:proyMeses.map(([mes])=>{const[m,y]=mes.split('-');return[m.slice(0,3).toUpperCase(),y];}),
       datasets:[{label:'Cuotas',data:proyMeses.map(([,v])=>v),backgroundColor:grad,hoverBackgroundColor:'#00e5c8',borderWidth:0,borderRadius:7,borderSkipped:false}]
-    },options:{...stdBarOptions(tooltipFn),layout:{padding:{top:22}}}});
+    },options:{...stdBarOptions(tooltipFn),layout:{padding:{top:22}},scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{family:SF,size:11,weight:'700'},color:'#9CA3AF',maxRotation:45}},y:{grid:{color:'rgba(27,0,136,.04)',drawTicks:false},border:{display:false},ticks:{font:{family:SF,size:11},color:'#9CA3AF',padding:8,callback:v=>{if(!v)return'0';const m=v/1e6;return'$'+(m===Math.floor(m)?m:m.toFixed(1).replace('.',','))+'M'}}}}}});
   });
 }
 
@@ -906,59 +921,35 @@ function renderCreditos(){
     const montoTotal=c.valorCuota*c.cuotas,montoPendiente=c.valorCuota*c.pendientes;
     const barGrad=esActivo?`linear-gradient(90deg,${ACCENT},#a855f7)`:`linear-gradient(90deg,#059669,#22c55e)`;
     const pctColor=esActivo?ACCENT:'#059669',mesFinal=esActivo?c.mesFin:c.mesFinPagado;
-    return`<div class="card" style="position:relative;overflow:hidden">
+    return`<div class="card" style="position:relative;overflow:hidden;padding:12px 14px">
       <div style="position:absolute;top:0;left:0;right:0;height:2px;background:${pctColor}"></div>
-      <div style="margin-bottom:16px"><div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:3px">${c.detalle}</div><div style="font-size:10px;color:var(--muted);font-weight:600">Desde ${fmtFechaCredito(c.fecha)}</div></div>
-      <div style="margin-bottom:18px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px"><span style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Progreso</span><span style="font-size:17px;font-weight:800;color:${pctColor}">${pct}%</span></div>
-        <div style="height:22px;background:rgba(99,77,210,.07);border-radius:6px;overflow:hidden;position:relative">
+      <div style="margin-bottom:10px"><div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:2px">${c.detalle}</div><div style="font-size:10px;color:var(--muted);font-weight:600">Desde ${fmtFechaCredito(c.fecha)}</div></div>
+      <div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px"><span style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Progreso</span><span style="font-size:14px;font-weight:800;color:${pctColor}">${pct}%</span></div>
+        <div style="height:14px;background:rgba(99,77,210,.07);border-radius:6px;overflow:hidden;position:relative">
           <div style="height:100%;width:${pct}%;background:${barGrad};border-radius:6px;transition:width .8s cubic-bezier(.4,0,.2,1);position:relative">
-            ${pct>=18?`<span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:800;color:#fff;white-space:nowrap">${fmtM(montoTotal-montoPendiente,true)}</span>`:""}
+            ${pct>=18?`<span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:9px;font-weight:800;color:#fff;white-space:nowrap">${fmtM(montoTotal-montoPendiente,true)}</span>`:""}
           </div>
-          ${pct<18?`<span style="position:absolute;left:${pct+2}%;top:50%;transform:translateY(-50%);font-size:10px;font-weight:800;color:${pctColor};white-space:nowrap">${fmtM(montoTotal-montoPendiente,true)}</span>`:""}
+          ${pct<18?`<span style="position:absolute;left:${pct+2}%;top:50%;transform:translateY(-50%);font-size:9px;font-weight:800;color:${pctColor};white-space:nowrap">${fmtM(montoTotal-montoPendiente,true)}</span>`:""}
         </div>
-        <div style="display:flex;justify-content:space-between;margin-top:4px"><span style="font-size:9px;font-weight:600;color:var(--muted)">$0</span><span style="font-size:9px;font-weight:600;color:var(--muted)">${fmtM(montoTotal,true)}</span></div>
+        <div style="display:flex;justify-content:space-between;margin-top:3px"><span style="font-size:9px;font-weight:600;color:var(--muted)">$0</span><span style="font-size:9px;font-weight:600;color:var(--muted)">${fmtM(montoTotal,true)}</span></div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-        <div style="background:rgba(99,77,210,.04);border-radius:8px;padding:10px"><div style="font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Total cuotas</div><div style="font-size:18px;font-weight:800;color:var(--text)">${c.cuotas}</div></div>
-        <div style="background:rgba(99,77,210,.04);border-radius:8px;padding:10px"><div style="font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Pagadas</div><div style="font-size:18px;font-weight:800;color:#059669">${c.pagadas}</div></div>
-        <div style="background:rgba(99,77,210,.04);border-radius:8px;padding:10px"><div style="font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Restantes</div><div style="font-size:18px;font-weight:800;color:${esActivo?'#ED1650':'#9CA3AF'}">${c.pendientes}</div></div>
-        <div style="background:rgba(99,77,210,.04);border-radius:8px;padding:10px"><div style="font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Valor cuota</div><div style="font-size:15px;font-weight:800;color:var(--text)">${fmtM(c.valorCuota,true)}</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
+        <div style="background:rgba(99,77,210,.04);border-radius:7px;padding:6px 8px"><div style="font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:1px">Total cuotas</div><div style="font-size:14px;font-weight:800;color:var(--text)">${c.cuotas}</div></div>
+        <div style="background:rgba(99,77,210,.04);border-radius:7px;padding:6px 8px"><div style="font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:1px">Pagadas</div><div style="font-size:14px;font-weight:800;color:#059669">${c.pagadas}</div></div>
+        <div style="background:rgba(99,77,210,.04);border-radius:7px;padding:6px 8px"><div style="font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:1px">Restantes</div><div style="font-size:14px;font-weight:800;color:${esActivo?'#ED1650':'#9CA3AF'}">${c.pendientes}</div></div>
+        <div style="background:rgba(99,77,210,.04);border-radius:7px;padding:6px 8px"><div style="font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:1px">Valor cuota</div><div style="font-size:13px;font-weight:800;color:var(--text)">${fmtM(c.valorCuota,true)}</div></div>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px solid var(--border)">
-        <div><div style="font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">${esActivo?'Pendiente total':'Total pagado'}</div><div style="font-size:14px;font-weight:800;color:${esActivo?'#ED1650':'#059669'}">${fmtM(esActivo?montoPendiente:montoTotal)}</div></div>
-        <div style="text-align:right"><div style="font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">${esActivo?'Mes fin':'Terminó'}</div><div style="font-size:14px;font-weight:800;color:${esActivo?ACCENT:'#9CA3AF'}">${mesFinal?fmtMesCorto(mesFinal):'—'}</div></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px solid var(--border)">
+        <div><div style="font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:1px">${esActivo?'Pendiente total':'Total pagado'}</div><div style="font-size:13px;font-weight:800;color:${esActivo?'#ED1650':'#059669'}">${fmtM(esActivo?montoPendiente:montoTotal)}</div></div>
+        <div style="text-align:right"><div style="font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:1px">${esActivo?'Mes fin':'Terminó'}</div><div style="font-size:13px;font-weight:800;color:${esActivo?ACCENT:'#9CA3AF'}">${mesFinal?fmtMesCorto(mesFinal):'—'}</div></div>
       </div></div>`;
   }
-  // ── Calcular meta prepago (10% deuda pendiente crédito consumo ITAU) ──
-  const creditoConsumo = activos.find(c => /consumo|itau/i.test(c.detalle));
-  const montoPendienteConsumo = creditoConsumo ? creditoConsumo.valorCuota * creditoConsumo.pendientes : 0;
-  const metaPrepago = Math.round(montoPendienteConsumo * 0.10);
-  const pctPrepago = metaPrepago > 0 ? Math.min(100, Math.round(ahorroCredito / metaPrepago * 100)) : 0;
-  const faltaPrepago = Math.max(0, metaPrepago - ahorroCredito);
-  const barColor = pctPrepago >= 100 ? '#059669' : '#634dd2';
-
-  // ── KPI card prepago (estilo kpi-strip) ──
-  const kpiPrepago = `<div class="kpi-card" style="display:flex;flex-direction:column;justify-content:space-between">
-    <div class="kpi-label">Meta Prepago</div>
-    <div class="kpi-val">${fmtM(ahorroCredito)}</div>
-    <div style="margin:6px 0 4px">
-      <div style="height:4px;background:rgba(27,0,136,.06);border-radius:3px;overflow:hidden">
-        <div style="height:100%;width:${pctPrepago}%;background:${barColor};border-radius:3px;transition:width .8s cubic-bezier(.4,0,.2,1)"></div>
-      </div>
-    </div>
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <span style="font-size:11px;font-weight:700;color:${barColor}">${pctPrepago}% de ${fmtM(metaPrepago,true)}</span>
-      ${faltaPrepago>0?`<span style="font-size:10px;font-weight:700;color:var(--muted)">Falta ${fmtM(faltaPrepago,true)}</span>`:`<span style="font-size:10px;font-weight:700;color:#059669">¡Meta alcanzada!</span>`}
-    </div>
-  </div>`;
-
   document.getElementById('page-content').innerHTML=`
 ${UI.hero('Créditos',fmtM(totalPendiente),'pendiente','Resumen de créditos')}
-<div class="kpi-strip" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px">
+<div class="kpi-strip" style="grid-template-columns:repeat(2,1fr);margin-bottom:20px">
   ${UI.kpiCard('Cuota mensual total',fmtM(totalCuotaMes))}
   ${UI.kpiCard('Créditos activos',activos.length+' de '+todos.length)}
-  ${kpiPrepago}
 </div>
 ${UI.sectionLabel('Créditos Activos')}
 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:var(--gap);margin-bottom:24px">
@@ -1097,13 +1088,155 @@ function renderMamaChart(saldoPorMes){
   });
 }
 
+// ── PAGE: PENDIENTES ──
+const RESP_COLORS=['#634dd2','#ED1650','#00b89e','#1B0088','#f59e0b','#059669','#7000AB','#4257E8','#c4c0e0'];
+function primerMesPend(fechaStr,pagadas){
+  if(!fechaStr) return null;
+  let d;
+  if(fechaStr.startsWith('Date(')){const p=fechaStr.replace('Date(','').replace(')','').split(',').map(Number);d=new Date(p[0],p[1],p[2]);}
+  else d=new Date(fechaStr);
+  if(isNaN(d)) return null;
+  d.setMonth(d.getMonth()+pagadas);
+  return`${MESES[d.getMonth()]}-${d.getFullYear()}`;
+}
+function computePendProy(rows){
+  const map={};
+  rows.forEach(r=>{
+    const rem=r.cuotasTotal-r.cuotasPagadas;
+    if(rem<=0||r.cuota<=0) return;
+    const first=primerMesPend(r.fecha,r.cuotasPagadas);
+    if(!first) return;
+    const[mes,año]=first.split('-');
+    let mi=MESES.indexOf(mes.toLowerCase()),yi=parseInt(año);
+    if(mi<0) return;
+    for(let i=0;i<rem;i++){
+      const k=`${MESES[mi]}-${yi}`;
+      map[k]=(map[k]||0)+r.cuota;
+      mi++;if(mi>=12){mi=0;yi++;}
+    }
+  });
+  return Object.entries(map).sort((a,b)=>monthKey(a[0])-monthKey(b[0]));
+}
+function renderPendientes(){
+  hideTooltip();
+  if(!pendientesData.length){
+    document.getElementById('page-content').innerHTML=`<div class="error-box">No se encontraron datos en la pestaña <strong>Pendientes</strong>.</div>`;
+    return;
+  }
+  const activos=pendientesData.filter(r=>r.pendiente>0);
+  const respUnicos=[...new Set(pendientesData.map(r=>r.responsable))].sort();
+  const respColorMap=Object.fromEntries(respUnicos.map((r,i)=>[r,RESP_COLORS[i%RESP_COLORS.length]]));
+  const filtered=pendFiltroResp?activos.filter(r=>r.responsable===pendFiltroResp):activos;
+  const totalPend=filtered.reduce((a,r)=>a+r.pendiente,0);
+  const proy=computePendProy(filtered);
+  const cuotaSig=proy.length>0?proy[0][1]:0;
+  const barData=respUnicos.map(r=>({
+    label:r,color:respColorMap[r],
+    value:activos.filter(f=>f.responsable===r&&(!pendFiltroResp||pendFiltroResp===r)).reduce((a,f)=>a+f.pendiente,0)
+  })).filter(d=>d.value>0).sort((a,b)=>b.value-a.value);
+  const opsResp=respUnicos.map(r=>({
+    value:r,label:r,
+    amt:fmtM(activos.filter(f=>f.responsable===r).reduce((a,f)=>a+f.pendiente,0))
+  }));
+  const tableRows=filtered.slice().sort((a,b)=>{
+    const rc=a.responsable.localeCompare(b.responsable,'es');
+    return rc!==0?rc:parseFechaNum(a.fecha)-parseFechaNum(b.fecha);
+  }).map((r,i)=>{
+    const sinPago=r.pagado===0;
+    const bg=sinPago?'rgba(0,184,158,.08)':(i%2===0?'transparent':'rgba(0,0,0,.012)');
+    const color=respColorMap[r.responsable]||'#634dd2';
+    const cuotasLabel=r.cuotasTotal>0?`${r.cuotasPagadas}/${r.cuotasTotal}`:'—';
+    return`<tr style="border-bottom:1px solid var(--border);background:${bg}">
+      <td class="tc-td" style="font-weight:700;white-space:nowrap"><span style="display:inline-block;width:6px;height:6px;border-radius:2px;background:${color};margin-right:5px;vertical-align:middle"></span><span style="color:${color}">${r.responsable}</span></td>
+      <td class="tc-td" style="text-align:center;color:var(--muted);white-space:nowrap">${fmtFecha(r.fecha)}</td>
+      <td class="tc-td" style="max-width:220px;font-weight:600">${r.detalles}</td>
+      <td class="tc-td" style="text-align:right;color:var(--muted)">${fmtM(r.total)}</td>
+      <td class="tc-td" style="text-align:right;color:#059669">${fmtM(r.pagado)}</td>
+      <td class="tc-td" style="text-align:right;color:#ED1650;font-weight:700">${fmtM(r.pendiente)}</td>
+      <td class="tc-td" style="text-align:right;color:var(--muted)">${fmtM(r.cuota)}</td>
+      <td class="tc-td" style="text-align:center;color:${sinPago?'#007a72':'var(--muted)'};font-weight:${sinPago?700:400}">${cuotasLabel}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('page-content').innerHTML=`
+${UI.hero('Pendientes',fmtM(totalPend),'pendiente','Compromisos y deudas')}
+<div class="kpi-strip" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px">
+  ${UI.kpiCard('Total pendiente',fmtM(totalPend))}
+  ${UI.kpiCard('Cuota próximo mes',fmtM(cuotaSig))}
+  ${UI.kpiCard('Ítems activos',activos.length+'')}
+</div>
+<div class="filter-row" style="margin-bottom:18px">
+  <div class="filter-group">
+    <div class="filter-label">Responsable</div>
+    ${buildDropdown('dd-pend-resp',opsResp,pendFiltroResp,'Todos los responsables',`v=>{pendFiltroResp=v;renderPendientes()}`)}
+  </div>
+  ${pendFiltroResp?`<div style="display:flex;flex-direction:column;gap:5px;align-self:flex-end"><div class="filter-label">Pendiente filtrado</div><div style="padding:9px 14px;background:rgba(237,22,80,.07);border:1.5px solid rgba(237,22,80,.2);border-radius:10px;font-size:13px;font-weight:800;color:#ED1650">${fmtM(totalPend)}</div></div>`:''}
+</div>
+${UI.sectionLabel('Por responsable · Detalle')}
+<div class="grid-main" style="margin-bottom:20px">
+  ${UI.card('Pendiente por responsable','',`<div style="position:relative;height:${Math.max(180,barData.length*50)}px"><canvas id="pend-bar"></canvas></div>`)}
+  ${UI.card('Detalle de compromisos',`<div style="font-size:11px;color:var(--muted)">${filtered.length} ítems</div>`,`<div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:12px;width:100%">
+    <thead><tr style="border-bottom:2px solid var(--border)">
+      <th class="tc-th" style="text-align:left">Responsable</th>
+      <th class="tc-th" style="text-align:center">Fecha</th>
+      <th class="tc-th" style="text-align:left">Detalles</th>
+      <th class="tc-th" style="text-align:right">$ Total</th>
+      <th class="tc-th" style="text-align:right">$ Pagado</th>
+      <th class="tc-th" style="text-align:right">$ Pendiente</th>
+      <th class="tc-th" style="text-align:right">$ Cuota</th>
+      <th class="tc-th" style="text-align:center"># Cuota</th>
+    </tr></thead>
+    <tbody>${tableRows}</tbody>
+    <tfoot><tr style="border-top:2px solid var(--border);background:rgba(0,0,0,.015)">
+      <td colspan="4" style="padding:9px;font-weight:700;color:var(--text)">Total</td>
+      <td style="padding:9px 8px;text-align:right;font-weight:800;color:#059669">${fmtM(filtered.reduce((a,r)=>a+r.pagado,0))}</td>
+      <td style="padding:9px 8px;text-align:right;font-weight:800;color:#ED1650;font-size:13px">${fmtM(totalPend)}</td>
+      <td style="padding:9px 8px;text-align:right;font-weight:800;color:var(--muted)">${fmtM(filtered.reduce((a,r)=>a+r.cuota,0))}</td>
+      <td></td>
+    </tr></tfoot>
+  </table></div>`)}
+</div>
+${UI.sectionLabel('Proyección de pagos')}
+${UI.card('Cuotas mensuales proyectadas',`<div style="font-size:11px;color:var(--muted)">${proy.length} meses</div>`,`<div style="position:relative;height:240px"><canvas id="pend-proy"></canvas></div>`,'margin-bottom:var(--gap)')}`;
+  requestAnimationFrame(()=>{
+    const barCanvas=document.getElementById('pend-bar');
+    if(barCanvas){
+      if(charts.pendBar){charts.pendBar.destroy();delete charts.pendBar;}
+      const ttBar=makeExternalTooltip(i=>barData[i].label,i=>[{color:barData[i].color,label:'Pendiente',val:fmtM(barData[i].value)}]);
+      charts.pendBar=new Chart(barCanvas,{
+        type:'bar',
+        data:{labels:barData.map(d=>d.label),datasets:[{data:barData.map(d=>d.value),backgroundColor:barData.map(d=>d.color+'bb'),borderColor:barData.map(d=>d.color),borderWidth:1.5,borderRadius:5,borderSkipped:false}]},
+        options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,events:['mousemove','mouseout','click'],
+          plugins:{legend:{display:false},tooltip:{enabled:false,external:ttBar}},
+          scales:{
+            x:{grid:{color:'rgba(0,0,0,.04)'},border:{display:false},ticks:{font:{family:SF,size:10},color:'#9CA3AF',callback:v=>fmtM(v,true)}},
+            y:{grid:{display:false},border:{display:false},ticks:{font:{family:SF,size:11,weight:'700'},color:'#374151'}}
+          }}
+      });
+    }
+    const proyCanvas=document.getElementById('pend-proy');
+    if(proyCanvas&&proy.length>0){
+      if(charts.pendProy){charts.pendProy.destroy();delete charts.pendProy;}
+      const ttProy=makeExternalTooltip(i=>fmtMesLabel(proy[i][0]),i=>[{color:'#634dd2',label:'Cuotas',val:fmtM(proy[i][1])}]);
+      charts.pendProy=new Chart(proyCanvas,{
+        type:'bar',plugins:[BAR_LABELS_PLUGIN],
+        data:{labels:proy.map(([mes])=>{const[m,y]=mes.split('-');return[m.slice(0,3).toUpperCase(),y];}),
+          datasets:[{data:proy.map(([,v])=>v),backgroundColor:'#634dd2bb',hoverBackgroundColor:'#634dd2',borderWidth:0,borderRadius:7,borderSkipped:false}]},
+        options:{...stdBarOptions(ttProy),layout:{padding:{top:22}},
+          scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{family:SF,size:11,weight:'700'},color:'#9CA3AF',maxRotation:45}},
+            y:{grid:{color:'rgba(27,0,136,.04)',drawTicks:false},border:{display:false},ticks:{font:{family:SF,size:11},color:'#9CA3AF',padding:8,callback:v=>{if(!v)return'0';const m=v/1e6;return'$'+(m===Math.floor(m)?m:m.toFixed(1).replace('.',','))+'M'}}}}}
+      });
+    }
+  });
+}
+
+
 // ── NAV ──
 function openSidebar(){document.getElementById('sidebar').classList.add('open');document.getElementById('overlay').classList.add('active');}
 function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('active');}
 function setTab(tab,btn){
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');closeSidebar();
-  const pages={tc:renderTC,mensual:renderPage,creditos:renderCreditos,mama:renderMama};
+  const pages={tc:renderTC,mensual:renderPage,creditos:renderCreditos,mama:renderMama,pendientes:renderPendientes};
   if(pages[tab]) pages[tab]();
   else{hideTooltip();document.getElementById('page-content').innerHTML=`<div class="loading-state"><div class="loading-text">Próximamente…</div></div>`;}
 }
