@@ -889,77 +889,32 @@ function renderCreditos(){
   const creditoConsumo = activos.find(c => /consumo|itau/i.test(c.detalle));
   const montoPendienteConsumo = creditoConsumo ? creditoConsumo.valorCuota * creditoConsumo.pendientes : 0;
   const metaPrepago = Math.round(montoPendienteConsumo * 0.10);
+  const pctPrepago = metaPrepago > 0 ? Math.min(100, Math.round(ahorroCredito / metaPrepago * 100)) : 0;
+  const faltaPrepago = Math.max(0, metaPrepago - ahorroCredito);
+  const barColor = pctPrepago >= 100 ? '#059669' : '#634dd2';
 
-  // ── Card prepago HTML ──
-  const inputStyle = 'width:100%;border:1.5px solid var(--border);border-radius:9px;padding:8px 10px 8px 20px;font-family:var(--font);font-size:13px;font-weight:700;color:var(--text);background:var(--card);outline:none;box-sizing:border-box';
-  const cardPrepago = `<div class="card" style="position:relative;overflow:hidden;margin-bottom:var(--gap)">
-  <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#634dd2,#a855f7)"></div>
-  <div class="card-header">
-    <div class="card-title">Prepago — Crédito de Consumo</div>
-    <span class="badge badge-navy">10% del saldo</span>
-  </div>
-  <p style="font-size:11px;color:var(--muted);margin:-8px 0 16px">Junta el equivalente al 10% de tu deuda y realiza un abono anticipado.${inicioAhorro?` <span style="font-weight:700">Ahorrando desde ${inicioAhorro}.</span>`:''}</p>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-    <div>
-      <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px">Meta de prepago (10%)</div>
-      <div style="position:relative">
-        <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--muted);pointer-events:none">$</span>
-        <input id="pp-meta" type="number" min="0" step="1000" value="${metaPrepago}" style="${inputStyle}" oninput="ppCalc()">
+  // ── KPI card prepago (estilo kpi-strip) ──
+  const kpiPrepago = `<div class="kpi-card" style="display:flex;flex-direction:column;justify-content:space-between">
+    <div class="kpi-label">Meta Prepago</div>
+    <div class="kpi-val">${fmtM(ahorroCredito)}</div>
+    <div style="margin:6px 0 4px">
+      <div style="height:4px;background:rgba(27,0,136,.06);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${pctPrepago}%;background:${barColor};border-radius:3px;transition:width .8s cubic-bezier(.4,0,.2,1)"></div>
       </div>
-      ${creditoConsumo?`<div style="font-size:9px;color:var(--muted);margin-top:4px">Saldo pendiente: ${fmtM(montoPendienteConsumo)}</div>`:''}
     </div>
-    <div>
-      <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px">Lo que ya tienes</div>
-      <div style="position:relative">
-        <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--muted);pointer-events:none">$</span>
-        <input id="pp-tengo" type="number" min="0" step="1000" value="${ahorroCredito}" style="${inputStyle}" oninput="ppCalc()">
-      </div>
-      ${ahorroCredito>0?`<div style="font-size:9px;color:var(--muted);margin-top:4px">Desde hoja Otros ↗</div>`:''}
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:11px;font-weight:700;color:${barColor}">${pctPrepago}% de ${fmtM(metaPrepago,true)}</span>
+      ${faltaPrepago>0?`<span style="font-size:10px;font-weight:700;color:var(--muted)">Falta ${fmtM(faltaPrepago,true)}</span>`:`<span style="font-size:10px;font-weight:700;color:#059669">¡Meta alcanzada!</span>`}
     </div>
-  </div>
-  <div style="background:var(--bg);border-radius:10px;padding:14px;margin-bottom:14px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <span style="font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Progreso hacia la meta</span>
-      <span style="font-size:20px;font-weight:800;color:var(--accent)" id="pp-pct">0%</span>
-    </div>
-    <div style="height:10px;background:rgba(99,77,210,.1);border-radius:8px;overflow:hidden;margin-bottom:6px">
-      <div id="pp-fill" style="height:100%;width:0%;background:linear-gradient(90deg,#634dd2,#a855f7);border-radius:8px;transition:width .6s cubic-bezier(.4,0,.2,1)"></div>
-    </div>
-    <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:600;color:var(--muted)">
-      <span>$0</span><span id="pp-meta-label">Meta: —</span>
-    </div>
-  </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-    <div style="background:rgba(5,150,105,.05);border:1px solid rgba(5,150,105,.15);border-radius:9px;padding:10px 12px">
-      <div style="font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Ya ahorrado</div>
-      <div style="font-size:16px;font-weight:800;color:#059669" id="pp-ahorrado">—</div>
-    </div>
-    <div style="background:rgba(237,22,80,.05);border:1px solid rgba(237,22,80,.15);border-radius:9px;padding:10px 12px">
-      <div style="font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Falta para la meta</div>
-      <div style="font-size:16px;font-weight:800;color:#ED1650" id="pp-falta">—</div>
-    </div>
-  </div>
-  <div style="padding-top:14px;border-top:1px solid var(--border)">
-    <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">¿Cuánto puedes ahorrar al mes?</div>
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-      <div style="position:relative">
-        <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--muted);pointer-events:none">$</span>
-        <input id="pp-mes" type="number" min="0" step="5000" style="width:160px;border:1.5px solid var(--border);border-radius:9px;padding:8px 10px 8px 20px;font-family:var(--font);font-size:13px;font-weight:700;color:var(--text);background:var(--card);outline:none" placeholder="ej. 50.000" oninput="ppCalc()">
-      </div>
-      <div style="font-size:12px;font-weight:600;color:var(--muted)" id="pp-meses-res">→ ingresa un monto mensual</div>
-    </div>
-  </div>
-  <div id="pp-alert" style="display:none;margin-top:12px;padding:8px 12px;border-radius:9px;font-size:12px;font-weight:700"></div>
-</div>`;
+  </div>`;
 
   document.getElementById('page-content').innerHTML=`
 ${UI.hero('Créditos',fmtM(totalPendiente),'pendiente','Resumen de créditos')}
-<div class="kpi-strip" style="grid-template-columns:repeat(2,1fr);margin-bottom:20px">
+<div class="kpi-strip" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px">
   ${UI.kpiCard('Cuota mensual total',fmtM(totalCuotaMes))}
   ${UI.kpiCard('Créditos activos',activos.length+' de '+todos.length)}
+  ${kpiPrepago}
 </div>
-${UI.sectionLabel('Prepago Crédito Consumo')}
-${cardPrepago}
 ${UI.sectionLabel('Créditos Activos')}
 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:var(--gap);margin-bottom:24px">
   ${activos.length?activos.map(cardHTML).join(''):'<div style="color:#9CA3AF;font-size:13px;padding:20px 0">Sin créditos activos</div>'}
@@ -968,8 +923,6 @@ ${UI.sectionLabel('Créditos Pagados')}
 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:var(--gap);margin-bottom:24px">
   ${pagados.length?pagados.map(cardHTML).join(''):'<div style="color:#9CA3AF;font-size:13px;padding:20px 0">Sin créditos pagados</div>'}
 </div>`;
-  // Calcular automáticamente al renderizar
-  setTimeout(ppCalc, 80);
 }
 
 // ── PAGE: MAMÁ ──
@@ -1108,51 +1061,6 @@ function setTab(tab,btn){
   const pages={tc:renderTC,mensual:renderPage,creditos:renderCreditos,mama:renderMama};
   if(pages[tab]) pages[tab]();
   else{hideTooltip();document.getElementById('page-content').innerHTML=`<div class="loading-state"><div class="loading-text">Próximamente…</div></div>`;}
-}
-
-// ── PREPAGO CRÉDITO ──
-function ppCalc(){
-  const meta  = parseFloat(document.getElementById('pp-meta')?.value)  || 0;
-  const tengo = parseFloat(document.getElementById('pp-tengo')?.value) || 0;
-  const mes   = parseFloat(document.getElementById('pp-mes')?.value)   || 0;
-  const falta = Math.max(0, meta - tengo);
-  const pct   = meta > 0 ? Math.min(100, Math.round(tengo / meta * 100)) : 0;
-
-  const fillEl = document.getElementById('pp-fill');
-  if(fillEl) fillEl.style.width = pct + '%';
-  const pctEl = document.getElementById('pp-pct');
-  if(pctEl) pctEl.textContent = pct + '%';
-  const metaLbl = document.getElementById('pp-meta-label');
-  if(metaLbl) metaLbl.textContent = meta > 0 ? 'Meta: ' + fmtM(meta) : 'Meta: —';
-  const ahorradoEl = document.getElementById('pp-ahorrado');
-  if(ahorradoEl) ahorradoEl.textContent = tengo > 0 ? fmtM(tengo) : '—';
-  const faltaEl = document.getElementById('pp-falta');
-  if(faltaEl) faltaEl.textContent = meta > 0 ? (falta === 0 ? '¡Listo!' : fmtM(falta)) : '—';
-
-  const alertEl = document.getElementById('pp-alert');
-  const resEl   = document.getElementById('pp-meses-res');
-
-  if(meta > 0 && tengo >= meta){
-    if(alertEl){
-      alertEl.style.display='block';
-      alertEl.style.background='rgba(5,150,105,.08)';
-      alertEl.style.border='1px solid rgba(5,150,105,.2)';
-      alertEl.style.color='#065f46';
-      alertEl.textContent='✓ ¡Ya alcanzaste la meta! Puedes realizar el prepago.';
-    }
-    if(resEl) resEl.textContent='';
-  } else if(meta > 0 && mes > 0 && falta > 0){
-    const meses = Math.ceil(falta / mes);
-    const d = new Date();
-    d.setMonth(d.getMonth() + meses);
-    const MESES_CORTO = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-    const llegada = MESES_CORTO[d.getMonth()] + ' ' + d.getFullYear();
-    if(resEl) resEl.innerHTML = `→ llegarías en <strong>${meses} mes${meses!==1?'es':''}</strong> (~${llegada})`;
-    if(alertEl) alertEl.style.display='none';
-  } else {
-    if(resEl) resEl.textContent = '→ ingresa un monto mensual';
-    if(alertEl) alertEl.style.display='none';
-  }
 }
 
 loadData();
