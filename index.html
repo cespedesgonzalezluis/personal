@@ -161,6 +161,22 @@ function makeExternalTooltip(getHeader,getRows){
 
 // ── UTILS ──
 const parseMonto=v=>{if(v==null)return 0;if(typeof v==='number')return v;const n=parseFloat(String(v).replace(/[$.\s]/g,'').replace(',','.'));return isNaN(n)?0:n;};
+function parseMesMama(cell){
+  if(!cell)return '';
+  const{v,f=''}=cell;
+  if(!v&&v!==0)return '';
+  const sv=String(v);
+  // Date(2026,4,29) — formato gviz
+  if(sv.startsWith('Date(')){const p=sv.replace('Date(','').replace(')','').split(',').map(Number);const m=MESES[p[1]];return m?`${m}-${p[0]}`:''}
+  // ISO 2026-05-29 o 2026-5-29
+  const iso=sv.match(/^(\d{4})-(\d{1,2})-\d{1,2}$/);
+  if(iso){const m=MESES[parseInt(iso[2],10)-1];return m?`${m}-${iso[1]}`:''}
+  // ya viene como mayo-2026
+  if(/[a-záéíóúüñ]+-\d{4}/i.test(sv))return sv.toLowerCase();
+  if(f&&/[a-záéíóúüñ]+-\d{4}/i.test(f))return f.toLowerCase();
+  return '';
+}
+
 function parseMesCell(cell){
   if(!cell)return '';
   const{v,f=''}=cell;
@@ -232,7 +248,7 @@ async function loadData(){
     })).filter(r=>r.detalle&&r.mes);
     // Mama: Fecha(date), Tipo(ingreso/gasto), Detalle, Monto — col A=fecha, B=tipo, C=detalle, D=monto
     mamaData=rowsMama.map(r=>({
-      mes:parseMesCell(r.c[0]),
+      mes:parseMesMama(r.c[0]),
       tipo:String(r.c[1]?.v||'').toLowerCase().trim(),
       detalle:String(r.c[2]?.v||'').trim(),
       monto:parseMonto(r.c[3]?.v)
