@@ -108,10 +108,10 @@ tbody tr:hover td{background:rgba(99,77,210,.025)}
 
 /* ── DIST BAR ── */
 .dist-bar{display:flex;height:44px;border-radius:10px;overflow:hidden;gap:2px;margin-bottom:14px}
-.dist-seg{display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-weight:800;padding:0 8px;min-width:32px;transition:filter .15s;cursor:default;overflow:hidden}
+.dist-seg{display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-weight:800;padding:0 10px;min-width:fit-content;transition:filter .15s;cursor:default;overflow:visible}
 .dist-seg:hover{filter:brightness(1.1)}
 .dist-seg-name{font-size:9px;font-weight:800;white-space:nowrap}
-.dist-seg-val{font-size:8px;font-weight:700;opacity:.8}
+.dist-seg-val{font-size:9px;font-weight:700;opacity:.8;white-space:nowrap}
 .bar-row{margin-bottom:11px}
 .bar-row:last-child{margin-bottom:0}
 .bar-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
@@ -144,7 +144,7 @@ tbody tr:hover td{background:rgba(99,77,210,.025)}
 .ct-row:last-child{margin-bottom:0}
 .ct-label{display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,.55)}
 .ct-dot{width:7px;height:7px;border-radius:2px;flex-shrink:0}
-.ct-val{font-size:12px;font-weight:800;color:#fff}
+.ct-val{font-size:12px;font-weight:800;color:#fff;display:flex;align-items:center;gap:4px;flex-wrap:nowrap}
 
 /* ── RESPONSIVE ── */
 @media(max-width:1100px){.kpi-strip{grid-template-columns:repeat(3,1fr)}}
@@ -673,13 +673,27 @@ function renderEvoChart() {
   const gastos   = slice.map(m => sumsFor(m).gasto);
   const tcs      = slice.map(m => sumsFor(m).tc);
 
+  // variación vs mes anterior dentro del slice
+  function varHtml(curr, prev, invert = false) {
+    if (prev == null || prev === 0) return '';
+    const diff = curr - prev;
+    if (Math.abs(diff) < 1) return ' <span style="color:rgba(255,255,255,.35);font-size:10px">≈</span>';
+    const good = invert ? diff < 0 : diff > 0;
+    const color = good ? '#22c55e' : '#f87171';
+    const arrow = diff > 0 ? '↑' : '↓';
+    return ` <span style="color:${color};font-size:10px;font-weight:700">${arrow} ${fmtM(Math.abs(diff), true)}</span>`;
+  }
+
   const tooltipFn = makeExternalTooltip(
     i => labelsFmt[i],
-    i => [
-      {color:'#059669', label:'Ingreso', val:fmtM(ingresos[i])},
-      {color:'#ED1650', label:'Gasto',   val:fmtM(gastos[i])},
-      {color:'#f59e0b', label:'TC',      val:fmtM(tcs[i])},
-    ]
+    i => {
+      const prevI = i > 0 ? i - 1 : null;
+      return [
+        {color:'#059669', label:'Ingreso', val: fmtM(ingresos[i]) + varHtml(ingresos[i], prevI !== null ? ingresos[prevI] : null, false)},
+        {color:'#ED1650', label:'Gasto',   val: fmtM(gastos[i])   + varHtml(gastos[i],   prevI !== null ? gastos[prevI]   : null, true)},
+        {color:'#f59e0b', label:'TC',      val: fmtM(tcs[i])      + varHtml(tcs[i],      prevI !== null ? tcs[prevI]      : null, true)},
+      ];
+    }
   );
 
   if (charts.evo) charts.evo.destroy();
@@ -695,20 +709,43 @@ function renderEvoChart() {
 }
 
 function renderDetalle(prevMes) {
-  const prevRows = prevMes ? rawData.filter(r => r.mes===prevMes) : [];
-  const searchMes = months.includes(selMonth) ? selMonth : months[months.length - 1];
-  const rows = rawData.filter(r => r.mes === searchMes).sort((a,b) => a.detalle.localeCompare(b.detalle,'es'));
+  // Mes base = el que tiene más registros (normalmente el último con datos reales)
+  const mesCounts = {};
+  rawData.forEach(r => { mesCounts[r.mes] = (mesCounts[r.mes]||0) + 1; });
+  const mesBase = months.reduce((best, m) => (mesCounts[m]||0) > (mesCounts[best]||0) ? m : best, months[months.length-1]);
 
-  document.getElementById('tbody-detalle').innerHTML = rows.map(row => {
-    const prv = prevRows.find(p => p.detalle===row.detalle);
+  // Todos los conceptos únicos del mes base, ordenados
+  const conceptosBase = [...new Map(
+    rawData.filter(r => r.mes === mesBase).map(r => [r.detalle, r])
+  ).values()].sort((a,b) => a.detalle.localeCompare(b.detalle,'es'));
+
+  // Filas del mes seleccionado y del anterior (para comparación)
+  const searchMes = months.includes(selMonth) ? selMonth : months[months.length - 1];
+  const rowsActual = rawData.filter(r => r.mes === searchMes);
+  const prevRows   = prevMes ? rawData.filter(r => r.mes === prevMes) : [];
+
+  document.getElementById('tbody-detalle').innerHTML = conceptosBase.map(base => {
+    const actual = rowsActual.find(r => r.detalle === base.detalle);
+    const prv    = prevRows.find(r => r.detalle === base.detalle);
+    const monto  = actual?.monto ?? null;
+
     let badge = '<span style="color:#9CA3AF;font-size:11px;font-weight:700">—</span>';
-    if (prv?.monto > 0) {
-      const diff = row.monto - prv.monto;
-      badge = Math.abs(diff)<1
+    if (prv?.monto > 0 && monto !== null) {
+      const diff = monto - prv.monto;
+      badge = Math.abs(diff) < 1
         ? `<span class="badge badge-gray" style="font-size:10px;padding:2px 8px">≈ igual</span>`
         : `<span class="badge ${diff>0?'badge-red':'badge-green'}" style="font-size:10px;padding:2px 8px">${diff>0?'↑':'↓'} $${Math.round(Math.abs(diff)).toLocaleString('es-CL')}</span>`;
     }
-    return `<tr><td style="font-size:13px">${row.detalle}</td><td style="text-align:center">${badge}</td><td>${fmtM(row.monto)}</td></tr>`;
+
+    const montoHtml = monto !== null
+      ? fmtM(monto)
+      : `<span style="color:#9CA3AF;font-size:12px;font-weight:600">—</span>`;
+
+    return `<tr>
+      <td style="font-size:13px">${base.detalle}</td>
+      <td style="text-align:center">${badge}</td>
+      <td>${montoHtml}</td>
+    </tr>`;
   }).join('') || `<tr><td colspan="3" style="color:#9CA3AF;font-size:12px;padding:20px 0">Sin registros</td></tr>`;
 }
 
@@ -741,41 +778,12 @@ function renderDist() {
   document.getElementById('dist-bar-wrap').innerHTML = `<div class="dist-bar" id="dist-bar-inner">${
     sorted.map(c => {
       const pct = pctOfIng(c).toFixed(1)+'%';
-      const segPct = totalAmt > 0 ? c.amt / totalAmt : 0;
-      return `<div class="dist-seg" data-pct="${segPct}" style="background:${c.color};flex:${c.amt}" title="${c.label}: ${fmtM(c.amt,true)} (${pct} del ingreso)">
-        <div class="dist-seg-name" style="white-space:nowrap">${c.label}</div>
-        <div class="dist-seg-val" style="white-space:nowrap">${pct}</div>
+      return `<div class="dist-seg" style="background:${c.color};flex:${c.amt}" title="${c.label}: ${fmtM(c.amt,true)} (${pct} del ingreso)">
+        <div class="dist-seg-name">${c.label}</div>
+        <div class="dist-seg-val">${pct}</div>
       </div>`;
     }).join('')
   }</div>`;
-
-  // Ajuste dinámico de font-size: reduce hasta que el texto quepa en el segmento
-  requestAnimationFrame(() => {
-    const bar = document.getElementById('dist-bar-inner');
-    if (!bar) return;
-    bar.querySelectorAll('.dist-seg').forEach(seg => {
-      const nameEl = seg.querySelector('.dist-seg-name');
-      const valEl  = seg.querySelector('.dist-seg-val');
-      const availW = seg.offsetWidth - 6;
-      if (availW <= 0) return;
-      let fs = 9;
-      nameEl.style.fontSize = fs + 'px';
-      valEl.style.fontSize  = fs + 'px';
-      // Aumentar hasta que no quepan
-      while (fs < 9) { // ya empieza en mínimo, solo ajusta si hay espacio
-        fs++;
-        nameEl.style.fontSize = fs + 'px';
-        valEl.style.fontSize  = fs + 'px';
-        if (nameEl.scrollWidth > availW || valEl.scrollWidth > availW) { fs--; break; }
-      }
-      // Si aun en 9px no cabe, reducir a 7, 6 (mínimo absoluto)
-      while ((nameEl.scrollWidth > availW || valEl.scrollWidth > availW) && fs > 6) {
-        fs--;
-        nameEl.style.fontSize = fs + 'px';
-        valEl.style.fontSize  = fs + 'px';
-      }
-    });
-  });
 
   document.getElementById('dist-bars').innerHTML = sorted.map(c => `
     <div class="bar-row">
@@ -802,21 +810,35 @@ function renderTC() {
   pending.forEach(r => { proyMap[r.mes] = (proyMap[r.mes]||0) + r.valorCuota; });
   const proyMeses = Object.entries(proyMap).sort((a,b)=>monthKey(a[0])-monthKey(b[0]));
 
+  // Helper: extrae "mes-año" (monthKey format) desde una fecha raw del campo fecha
+  function fechaToMesKey(fechaStr) {
+    if (!fechaStr) return '';
+    let d;
+    if (fechaStr.startsWith('Date(')) {
+      const p = fechaStr.replace('Date(','').replace(')','').split(',').map(Number);
+      d = new Date(p[0], p[1], p[2]);
+    } else {
+      d = new Date(fechaStr);
+    }
+    if (isNaN(d)) return '';
+    return `${MESES[d.getMonth()]}-${d.getFullYear()}`;
+  }
+
   const movsMap = {};
   tcData.forEach(r => {
     const k = r.movimiento + '|' + r.fecha;
+    const mesCompra = fechaToMesKey(r.fecha);
     if (!movsMap[k]) movsMap[k] = {
       movimiento: r.movimiento, fecha: r.fecha,
       total: r.total, cuotas: r.cuotas, valorCuota: r.valorCuota,
       pagadas: 0, pendientesCount: 0, pendientesMonto: 0, mesFin: '',
-      mesPrimero: r.mes
+      mesCompra
     };
     const m = movsMap[k];
     if (ESTADO_PENDIENTE.has(r.estado)) {
       m.pendientesCount++;
       m.pendientesMonto += r.valorCuota;
       if (!m.mesFin || monthKey(r.mes) > monthKey(m.mesFin)) m.mesFin = r.mes;
-      if (!m.mesPrimero || monthKey(r.mes) < monthKey(m.mesPrimero)) m.mesPrimero = r.mes;
     }
   });
 
@@ -833,13 +855,13 @@ function renderTC() {
 
   const deudaTotal = todosMovsPend.reduce((a,m) => a + m.pendientesMonto, 0);
 
-  // Opciones para filtros
-  const mesesCompra = [...new Set(todosMovsPend.map(m => m.mesPrimero))].sort((a,b)=>monthKey(a)-monthKey(b));
+  // Opciones para filtros — mes de compra desde campo fecha real
+  const mesesCompra = [...new Set(todosMovsPend.map(m => m.mesCompra).filter(Boolean))].sort((a,b)=>monthKey(a)-monthKey(b));
   const movNombres  = [...new Set(todosMovsPend.map(m => m.movimiento))].sort((a,b)=>a.localeCompare(b,'es'));
 
   // Aplicar filtros
   let movsFiltrados = todosMovsPend;
-  if (tcFiltroMes) movsFiltrados = movsFiltrados.filter(m => m.mesPrimero === tcFiltroMes);
+  if (tcFiltroMes) movsFiltrados = movsFiltrados.filter(m => m.mesCompra === tcFiltroMes);
   if (tcFiltroMov) movsFiltrados = movsFiltrados.filter(m => m.movimiento === tcFiltroMov);
   const deudaFiltrada = movsFiltrados.reduce((a,m) => a + m.pendientesMonto, 0);
 
@@ -874,7 +896,7 @@ function renderTC() {
       <label style="font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Mes de compra</label>
       <select onchange="tcFiltroMes=this.value;renderTC()" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-family:'Sofia Sans',sans-serif;font-size:12px;font-weight:700;color:var(--text);cursor:pointer;outline:none;min-width:140px">
         <option value="">Todos los meses</option>
-        ${mesesCompra.map(m=>`<option value="${m}"${tcFiltroMes===m?' selected':''}>${capFirst(m)} — $${Math.round(todosMovsPend.filter(mv=>mv.mesPrimero===m).reduce((a,mv)=>a+mv.pendientesMonto,0)).toLocaleString('es-CL')}</option>`).join('')}
+        ${mesesCompra.map(m=>`<option value="${m}"${tcFiltroMes===m?' selected':''}>${capFirst(m)} — $${Math.round(todosMovsPend.filter(mv=>mv.mesCompra===m).reduce((a,mv)=>a+mv.pendientesMonto,0)).toLocaleString('es-CL')}</option>`).join('')}
       </select>
     </div>
     <div style="display:flex;flex-direction:column;gap:4px">
