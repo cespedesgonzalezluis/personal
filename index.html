@@ -528,7 +528,7 @@ async function loadData() {
 
     tcData = rowsTC.map(r => {
       const total      = parseMonto(r.c[2]?.v);
-      const cuotas     = Math.max(Number(r.c[3]?.v || 1), 1);
+      const cuotas     = Number(r.c[3]?.v) || 0;
       const rawValor   = parseMonto(r.c[6]?.v);
       const valorCuota = rawValor > 0 ? rawValor : (total > 0 ? total / cuotas : 0);
       return {
@@ -774,12 +774,16 @@ function renderTC() {
       pagadas: 0, pendientesCount: 0, pendientesMonto: 0, mesFin: ''
     };
     const m = movsMap[k];
-    if (ESTADO_PAGADO.has(r.estado))    m.pagadas++;
     if (ESTADO_PENDIENTE.has(r.estado)) {
       m.pendientesCount++;
       m.pendientesMonto += r.valorCuota;
       if (!m.mesFin || monthKey(r.mes) > monthKey(m.mesFin)) m.mesFin = r.mes;
     }
+  });
+
+  // pagadas = total cuotas menos las que aún están pendientes
+  Object.values(movsMap).forEach(m => {
+    m.pagadas = Math.max(0, m.cuotas - m.pendientesCount);
   });
 
   const movsPend = Object.values(movsMap)
