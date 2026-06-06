@@ -463,19 +463,17 @@ function setTab(tab,btn){
 }
 
 // ── PAGE: MAMÁ ──
+let mamaEvoRange=12;
+
 function renderMama(){
   hideTooltip();
-  console.log('[Mamá] mamaData.length=', mamaData.length, '| muestra:', mamaData.slice(0,3));
 
   if(!mamaData.length){
-    document.getElementById('page-content').innerHTML=`<div class="error-box">
-      ⚠ No se encontraron datos en la pestaña <strong>Mama</strong>.<br>
-      <small style="opacity:.7">Abre la consola del browser (F12) para ver el diagnóstico detallado.</small>
-    </div>`;
+    document.getElementById('page-content').innerHTML=`<div class="error-box">No se encontraron datos en la pestaña <strong>Mama</strong>.</div>`;
     return;
   }
 
-  // ── Ordenar meses ──
+  // ── Meses ordenados ──
   const mamaMeses=[...new Set(mamaData.map(r=>r.mes))].sort((a,b)=>monthKey(a)-monthKey(b));
 
   // ── Saldo acumulado por mes ──
@@ -490,25 +488,10 @@ function renderMama(){
   });
 
   const saldoActual=saldoPorMes[saldoPorMes.length-1]?.saldo||0;
-  const totalAportado=mamaData.filter(esIngreso).reduce((a,r)=>a+r.monto,0);
-  const totalGastado=mamaData.filter(r=>!esIngreso(r)).reduce((a,r)=>a+r.monto,0);
+  const prevSaldo=saldoPorMes.length>1?saldoPorMes[saldoPorMes.length-2]:null;
+  const saldoColor=saldoActual>=0?'#059669':'#ED1650';
 
-  // Categorías de gastos
-  const catMap={};
-  mamaData.filter(r=>!esIngreso(r)).forEach(r=>{
-    const key=r.detalle.replace(/\s*\(\d+\/\d+\)/,'').trim();
-    catMap[key]=(catMap[key]||0)+r.monto;
-  });
-  const catSort=Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
-  const topGasto=catSort[0]||['—',0];
-
-  // Último mes con datos
-  const lastMes=mamaMeses[mamaMeses.length-1]||'';
-  const prevMes=mamaMeses.length>1?mamaMeses[mamaMeses.length-2]:null;
-  const lastSaldo=saldoPorMes[saldoPorMes.length-1];
-  const prevSaldo=prevMes?saldoPorMes[saldoPorMes.length-2]:null;
-
-  // ── Categorías y colores (definidos antes de usarse) ──
+  // ── Colores por categoría ──
   const COLORS_POOL=['#634dd2','#ED1650','#00b89e','#f59e0b','#1B0088','#7000AB','#4257E8'];
   function CAT_COLOR(name,esIng){
     if(esIng)return'#059669';
@@ -516,22 +499,28 @@ function renderMama(){
     return COLORS_POOL[idx];
   }
 
-  // ── Tabla: filas agrupadas por mes (desc) ──
+  // ── Tabla: agrupa por mes (desc) y agrupa detalles iguales ──
   const mesDescArr=[...mamaMeses].reverse();
   const tablaRows=mesDescArr.map(mes=>{
     const rows=mamaData.filter(r=>r.mes===mes);
     const sp=saldoPorMes.find(s=>s.mes===mes);
     const netColor=sp.neto>=0?'#059669':'#ED1650';
-    const rowsHTML=rows.map(r=>{
-      const esIng=esIngreso(r);
-      const cat=r.detalle.replace(/\s*\(\d+\/\d+\)/,'').trim();
-      const colorDot=CAT_COLOR(cat,esIng);
+    // Agrupar filas por detalle normalizado dentro del mes
+    const grupoMap={};
+    rows.forEach(r=>{
+      const key=r.detalle.replace(/\s*\(\d+\/\d+\)/,'').trim();
+      if(!grupoMap[key])grupoMap[key]={detalle:key,monto:0,tipo:r.tipo};
+      grupoMap[key].monto+=r.monto;
+    });
+    const rowsHTML=Object.values(grupoMap).map(g=>{
+      const esIng=g.tipo==='ingreso';
+      const colorDot=CAT_COLOR(g.detalle,esIng);
       return`<tr>
-        <td style="padding:8px 12px;font-size:12px;color:var(--muted);font-weight:600;padding-left:28px">
+        <td style="padding:7px 12px;font-size:12px;color:var(--muted);font-weight:600;padding-left:28px">
           <span style="display:inline-block;width:7px;height:7px;border-radius:2px;background:${colorDot};margin-right:7px;vertical-align:middle"></span>
-          ${r.detalle}
+          ${g.detalle}
         </td>
-        <td style="padding:8px 12px;text-align:right;font-size:13px;font-weight:800;color:${esIng?'#059669':'#ED1650'}">${esIng?'+':'-'}${fmtM(r.monto)}</td>
+        <td style="padding:7px 12px;text-align:right;font-size:13px;font-weight:800;color:${esIng?'#059669':'#ED1650'}">${esIng?'+':'-'}${fmtM(g.monto)}</td>
       </tr>`;
     }).join('');
     return`<tbody>
@@ -543,37 +532,20 @@ function renderMama(){
     </tbody>`;
   }).join('');
 
-  // ── Barras de categorías ──
-  const maxCat=catSort[0]?catSort[0][1]:1;
-  const catBarsHTML=catSort.map(([name,amt])=>{
-    const pct=(amt/totalGastado*100).toFixed(1);
-    const w=(amt/maxCat*100).toFixed(1);
-    const color=CAT_COLOR(name,false);
-    return`<div class="bar-row">
-      <div class="bar-meta">
-        <div class="bar-name"><span style="width:8px;height:8px;border-radius:2px;background:${color};display:inline-block;flex-shrink:0"></span>${name}</div>
-        <div class="bar-right"><span class="bar-pct">${pct}%</span><span class="bar-amt">${fmtM(amt,true)}</span></div>
-      </div>
-      <div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${color}"></div></div>
-    </div>`;
-  }).join('');
-
-  // ── Render HTML ──
-  const saldoColor=saldoActual>=0?'#059669':'#ED1650';
+  // ── Render ──
   document.getElementById('page-content').innerHTML=`
 ${UI.hero('Fondo Mamá', fmtM(Math.abs(saldoActual)), saldoActual>=0?'disponible':'déficit', 'Seguimiento de aportes y gastos')}
-<div class="kpi-strip" style="grid-template-columns:repeat(4,1fr);margin-bottom:24px">
+<div class="kpi-strip" style="grid-template-columns:1fr;margin-bottom:24px">
   ${UI.kpiCard('Saldo Actual',`<span style="color:${saldoColor}">${fmtM(saldoActual)}</span>`,
-    prevSaldo?`<span class="${(saldoActual-prevSaldo.saldo)>=0?'delta-up':'delta-down'}">${(saldoActual-prevSaldo.saldo)>=0?'↑':'↓'} ${fmtM(Math.abs(saldoActual-prevSaldo.saldo),true)} vs ant.</span>`:'<span class="delta-flat">—</span>')}
-  ${UI.kpiCard('Total Aportado', fmtM(totalAportado), `<span class="delta-flat">${mamaMeses.length} meses</span>`)}
-  ${UI.kpiCard('Total Gastado', fmtM(totalGastado), `<span class="delta-flat">${catSort.length} categorías</span>`)}
-  ${UI.kpiCard('Mayor Gasto', capFirst(topGasto[0].length>18?topGasto[0].slice(0,18)+'…':topGasto[0]), `<span class="delta-flat">${fmtM(topGasto[1],true)} total</span>`)}
+    prevSaldo?`<span class="${(saldoActual-prevSaldo.saldo)>=0?'delta-up':'delta-down'}">${(saldoActual-prevSaldo.saldo)>=0?'↑':'↓'} ${fmtM(Math.abs(saldoActual-prevSaldo.saldo),true)} vs mes anterior</span>`:'<span class="delta-flat">—</span>')}
 </div>
-${UI.sectionLabel('Saldo Acumulado')}
-${UI.card('Evolución del saldo mes a mes','',`<div style="position:relative;height:240px"><canvas id="mama-chart"></canvas></div>${UI.chartLegend([{color:'#059669',label:'Saldo positivo'},{color:'#ED1650',label:'Saldo negativo'}])}`,'margin-bottom:24px')}
-${UI.sectionLabel('Análisis de Gastos')}
-<div class="grid-main" style="margin-bottom:24px">
-  ${UI.card('Movimientos por Mes',`<span class="badge badge-navy">${mamaData.length} registros</span>`,
+${UI.sectionLabel('Fondo Mamá')}
+<div style="display:grid;grid-template-columns:5fr 3.5fr;gap:var(--gap);margin-bottom:24px">
+  ${UI.card('Ingresos · Gastos · Saldo acumulado',
+    UI.periodToggle(mamaEvoRange,[{val:12,label:'12M',fn:'setMamaRange(12,this)'},{val:0,label:'Todo',fn:'setMamaRange(0,this)'}]),
+    `<div style="position:relative;height:280px"><canvas id="mama-chart"></canvas></div>
+     ${UI.chartLegend([{color:'#059669',label:'Ingresos'},{color:'#ED1650',label:'Gastos'},{color:'#634dd2',label:'Saldo acumulado'}])}`)}
+  ${UI.card('Movimientos por Mes','',
     `<div class="tbl-scroll"><table style="width:100%">
       <thead><tr style="border-bottom:2px solid var(--border)">
         <th style="padding:10px 12px;font-size:11px;font-weight:800;color:var(--accent);text-align:left;position:sticky;top:0;background:var(--card);z-index:1">Detalle</th>
@@ -581,68 +553,115 @@ ${UI.sectionLabel('Análisis de Gastos')}
       </tr></thead>
       ${tablaRows}
     </table></div>`)}
-  ${UI.card('Distribución por Categoría',`<span class="badge badge-purple">${catSort.length} categorías</span>`,catBarsHTML)}
 </div>`;
 
-  // ── Gráfico saldo acumulado ──
-  requestAnimationFrame(()=>{
-    const canvas=document.getElementById('mama-chart');
-    if(!canvas)return;
-    if(charts.mama){charts.mama.destroy();delete charts.mama;}
-    const labels=saldoPorMes.map(s=>{const[m,y]=s.mes.split('-');return[m.slice(0,3).toUpperCase(),y];});
-    const labelsFmt=saldoPorMes.map(s=>{const[m,y]=s.mes.split('-');return`${m.slice(0,3).toUpperCase()} ${y}`;});
-    const saldos=saldoPorMes.map(s=>s.saldo);
-    const ptColors=saldos.map(v=>v>=0?'#059669':'#ED1650');
-    const tooltipFn=makeExternalTooltip(
-      i=>labelsFmt[i],
-      i=>{
-        const s=saldoPorMes[i];
-        return[
-          {color:s.saldo>=0?'#059669':'#ED1650', label:'Saldo acum.', val:fmtM(s.saldo)},
-          {color:'#059669', label:'Ingresos', val:fmtM(s.ingresos)},
-          {color:'#ED1650', label:'Gastos', val:fmtM(s.gastos)},
-          {color:'#634dd2', label:'Neto mes', val:(s.neto>=0?'+':'')+fmtM(s.neto)},
-        ];
-      }
-    );
-    const ctx=canvas.getContext('2d');
-    const grad=ctx.createLinearGradient(0,0,0,240);
-    grad.addColorStop(0,'rgba(99,77,210,.18)');
-    grad.addColorStop(1,'rgba(99,77,210,.01)');
-    charts.mama=new Chart(canvas,{
-      type:'line',
-      data:{
-        labels,
-        datasets:[{
-          data:saldos,
+  renderMamaChart(saldoPorMes);
+}
+
+function setMamaRange(n,btn){
+  mamaEvoRange=n;
+  document.querySelectorAll('#mama-chart').forEach(()=>{});
+  // Re-render solo el gráfico actualizando el rango
+  const mamaMeses=[...new Set(mamaData.map(r=>r.mes))].sort((a,b)=>monthKey(a)-monthKey(b));
+  const esIngreso=r=>r.tipo==='ingreso';
+  let saldoAcum=0;
+  const saldoPorMes=mamaMeses.map(mes=>{
+    const rows=mamaData.filter(r=>r.mes===mes);
+    const ingresos=rows.filter(esIngreso).reduce((a,r)=>a+r.monto,0);
+    const gastos=rows.filter(r=>!esIngreso(r)).reduce((a,r)=>a+r.monto,0);
+    saldoAcum+=ingresos-gastos;
+    return{mes,ingresos,gastos,neto:ingresos-gastos,saldo:saldoAcum};
+  });
+  document.querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderMamaChart(saldoPorMes);
+}
+
+function renderMamaChart(saldoPorMes){
+  const slice=mamaEvoRange===0?saldoPorMes:saldoPorMes.slice(-mamaEvoRange);
+  const canvas=document.getElementById('mama-chart');
+  if(!canvas)return;
+  if(charts.mama){charts.mama.destroy();delete charts.mama;}
+
+  const labels=slice.map(s=>{const[m,y]=s.mes.split('-');return[m.slice(0,3).toUpperCase(),y];});
+  const labelsFmt=slice.map(s=>{const[m,y]=s.mes.split('-');return`${m.slice(0,3).toUpperCase()} ${y}`;});
+
+  const tooltipFn=makeExternalTooltip(
+    i=>labelsFmt[i],
+    i=>{
+      const s=slice[i];
+      return[
+        {color:s.saldo>=0?'#059669':'#ED1650', label:'Saldo acum.', val:fmtM(s.saldo)},
+        {color:'#059669', label:'Ingresos', val:fmtM(s.ingresos)},
+        {color:'#ED1650', label:'Gastos',   val:fmtM(s.gastos)},
+        {color:'#634dd2', label:'Neto mes',  val:(s.neto>=0?'+':'')+fmtM(s.neto)},
+      ];
+    }
+  );
+
+  charts.mama=new Chart(canvas,{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {
+          label:'Ingresos',
+          data:slice.map(s=>s.ingresos),
+          backgroundColor:'rgba(5,150,105,.55)',
+          borderColor:'rgba(5,150,105,.8)',
+          borderWidth:1,
+          borderRadius:4,
+          order:2
+        },
+        {
+          label:'Gastos',
+          data:slice.map(s=>-s.gastos),
+          backgroundColor:'rgba(237,22,80,.45)',
+          borderColor:'rgba(237,22,80,.7)',
+          borderWidth:1,
+          borderRadius:4,
+          order:2
+        },
+        {
+          label:'Saldo acumulado',
+          data:slice.map(s=>s.saldo),
+          type:'line',
           borderColor:'#634dd2',
           borderWidth:2.5,
-          pointRadius:5,
-          pointHoverRadius:8,
-          pointBackgroundColor:ptColors,
+          pointRadius:4,
+          pointHoverRadius:7,
+          pointBackgroundColor:slice.map(s=>s.saldo>=0?'#059669':'#ED1650'),
           pointBorderColor:'#fff',
           pointBorderWidth:2,
-          fill:true,
-          backgroundColor:grad,
-          tension:.3
-        }]
-      },
-      options:{
-        responsive:true,
-        maintainAspectRatio:false,
-        interaction:{mode:'index',intersect:false},
-        plugins:{
-          legend:{display:false},
-          tooltip:{enabled:false,external:tooltipFn}
+          fill:false,
+          tension:.3,
+          order:1,
+          yAxisID:'ySaldo'
+        }
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:false},tooltip:{enabled:false,external:tooltipFn}},
+      scales:{
+        x:{grid:{display:false},ticks:{font:{family:SF,size:10},color:'#634dd2',maxRotation:0}},
+        y:{
+          grid:{color:'rgba(0,0,0,.04)'},
+          ticks:{font:{family:SF,size:10},color:'#634dd2',callback:v=>fmtM(v,true)},
+          title:{display:false}
         },
-        scales:{
-          x:{grid:{display:false},ticks:{font:{family:SF,size:10},color:'#634dd2',maxRotation:0}},
-          y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{family:SF,size:10},color:'#634dd2',callback:v=>fmtM(v,true)}}
+        ySaldo:{
+          position:'right',
+          grid:{display:false},
+          ticks:{font:{family:SF,size:10},color:'#9CA3AF',callback:v=>fmtM(v,true)},
         }
       }
-    });
+    }
   });
 }
+
 
 // ── PAGE: CRÉDITOS ──
 function renderCreditos(){
