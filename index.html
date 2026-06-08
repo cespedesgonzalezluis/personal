@@ -194,19 +194,27 @@ tbody tr:hover td{background:rgba(99,77,210,.02)}
 .tc-resumen-row:last-child{border-bottom:none}
 .tc-resumen-label{font-weight:600;color:var(--muted)}
 .tc-resumen-val{font-weight:800;color:var(--text)}
-@media(max-width:900px){.widget-grid,.widget-grid-4{grid-template-columns:repeat(2,1fr)}.widget-grid-2{grid-template-columns:1fr}}
-@media(max-width:560px){.widget-grid,.widget-grid-2,.widget-grid-4{grid-template-columns:1fr}}
-
+@media(max-width:900px){
+  .widget-grid,.widget-grid-4{grid-template-columns:repeat(2,1fr)}
+  .widget-grid-2{grid-template-columns:1fr}
   :root{--sidebar:0px}
   .sidebar{transform:translateX(-224px);width:224px}
   .sidebar.open{transform:translateX(0)}
-  .main{margin-left:0}.hamburger{display:flex}.overlay.active{display:block}
+  .main{margin-left:0}
+  .hamburger{display:flex}
+  .overlay.active{display:block}
   .kpi-strip{grid-template-columns:repeat(2,1fr)}
   .mama-grid{grid-template-columns:1fr}
   .filter-row{flex-direction:column}
   .filter-trigger{min-width:100%}
 }
-@media(max-width:560px){.content{padding:14px 16px}.hero{padding:20px 18px}.hero-title{font-size:26px}.kpi-strip{grid-template-columns:1fr}}
+@media(max-width:560px){
+  .content{padding:14px 16px}
+  .hero{padding:20px 18px}
+  .hero-title{font-size:26px}
+  .kpi-strip{grid-template-columns:1fr}
+  .widget-grid,.widget-grid-2,.widget-grid-4{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
@@ -229,11 +237,6 @@ tbody tr:hover td{background:rgba(99,77,210,.02)}
       </div>
     </div>
     <nav class="sidebar-nav">
-      <div class="nav-section">General</div>
-      <button class="nav-item" onclick="setTab('resumen',this)">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-        Resumen
-      </button>
       <div class="nav-section">Reportes</div>
       <button class="nav-item active" onclick="setTab('mensual',this)">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
@@ -250,6 +253,10 @@ tbody tr:hover td{background:rgba(99,77,210,.02)}
       <button class="nav-item" onclick="setTab('pendientes',this)">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         Pendientes
+      </button>
+      <button class="nav-item" onclick="setTab('varios',this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><circle cx="8" cy="16" r="3"/><circle cx="16" cy="16" r="3"/></svg>
+        Varios
       </button>
       <div class="nav-section">Familia</div>
       <button class="nav-item" onclick="setTab('mama',this)">
@@ -1200,8 +1207,8 @@ ${UI.card('',`<div style="font-size:11px;color:var(--muted)">${proy.length} mese
   });
 }
 
-// ── PÁGINA: RESUMEN ──
-function renderResumen(){
+// ── PÁGINA: VARIOS ──
+function renderVarios(){
   hideTooltip();
   const od=otrosData;
   const get=(key,fb=null)=>{
@@ -1210,41 +1217,36 @@ function renderResumen(){
     return fb;
   };
 
-  // ── LIQUIDEZ (col I-J de Otros) ──
-  const totalDisp=parseMonto(get('total',0));   // disponible en cuenta corriente
-  // Fin: parsear fecha del tipo "29-jun", "29 Jun", "29/06" o número serial de Sheets
+  const now=new Date();
+  const hoy=now.toLocaleDateString('es-CL',{day:'numeric',month:'long',year:'numeric'});
+
+  // ── DISPONIBLE (una sola card) ──
+  const totalDisp=parseMonto(get('total',0));
   let finRaw=get('fin',null);
   let finDate=null;
   if(finRaw!=null){
     const sv=String(finRaw).trim();
-    // Sheets serial date
-    if(typeof finRaw==='number'||/^\d{5}$/.test(sv)){
-      const serial=typeof finRaw==='number'?finRaw:Number(sv);
-      finDate=new Date(Date.UTC(1899,11,30)+serial*86400000);
+    if(typeof finRaw==='number'){
+      finDate=new Date(Date.UTC(1899,11,30)+finRaw*86400000);
     } else if(sv.startsWith('Date(')){
       const p=sv.replace('Date(','').replace(')','').split(',').map(Number);
       finDate=new Date(p[0],p[1],p[2]);
     } else {
-      // Intentar parsear "29-jun", "29 jun 2025", etc.
       const mmap={ene:0,feb:1,mar:2,abr:3,may:4,jun:5,jul:6,ago:7,sep:8,oct:9,nov:10,dic:11,
-                  enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,julio:6,agosto:7,septiembre:8,octubre:9,noviembre:10,diciembre:11};
+        enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,julio:6,agosto:7,septiembre:8,octubre:9,noviembre:10,diciembre:11};
       const m=sv.match(/(\d{1,2})[-\/\s]([a-záéíóú]+)/i);
       if(m){
-        const dia=parseInt(m[1]);const mesK=m[2].toLowerCase().slice(0,3);
-        const mesN=mmap[mesK]??mmap[m[2].toLowerCase()]??-1;
-        if(mesN>=0){const y=new Date();finDate=new Date(y.getFullYear(),mesN,dia);if(finDate<y)finDate.setFullYear(y.getFullYear()+1);}
+        const dia=parseInt(m[1]),mesK=m[2].toLowerCase().slice(0,3),mesN=mmap[mesK]??mmap[m[2].toLowerCase()]??-1;
+        if(mesN>=0){finDate=new Date(now.getFullYear(),mesN,dia);if(finDate<now)finDate.setFullYear(now.getFullYear()+1);}
       } else finDate=new Date(sv);
     }
-    if(finDate&&isNaN(finDate)) finDate=null;
+    if(finDate&&isNaN(finDate))finDate=null;
   }
-  const now=new Date();
-  const hoy=now.toLocaleDateString('es-CL',{day:'numeric',month:'long',year:'numeric'});
-  // días entre hoy y fin (inclusive hoy)
-  let diasRestantes=null, diario=0, finLabel='—';
+  const hoyStart=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  let diasRest=null,diario=0,finLabel='—';
   if(finDate){
-    const msDay=1000*60*60*24;
-    diasRestantes=Math.max(1,Math.round((finDate-new Date(now.getFullYear(),now.getMonth(),now.getDate()))/msDay)+1);
-    diario=totalDisp>0&&diasRestantes>0?totalDisp/diasRestantes:0;
+    diasRest=Math.max(1,Math.round((finDate-hoyStart)/86400000)+1);
+    diario=totalDisp>0?totalDisp/diasRest:0;
     finLabel=finDate.toLocaleDateString('es-CL',{day:'numeric',month:'long'});
   }
 
@@ -1253,181 +1255,148 @@ function renderResumen(){
   let ipcPct=0,ipcLabel='—';
   if(ipcRaw!=null){
     const n=typeof ipcRaw==='number'?ipcRaw:parseFloat(String(ipcRaw).replace('%','').replace(',','.').trim());
-    if(!isNaN(n)){ipcPct=n<1?n*100:n; ipcLabel=ipcPct.toFixed(1)+'%';}
+    if(!isNaN(n)){ipcPct=n<1?n*100:n;ipcLabel=ipcPct.toFixed(1)+'%';}
   }
   const liquidoOld=parseMonto(get('liquido old',get('líquido old',0)));
   const baseNew=parseMonto(get('base new',0));
-  const liquidoNew=parseMonto(get('liquido new',get('líquido new',0)));
   const aumento=parseMonto(get('aumento',0));
 
-  // ── DISTRIBUCIÓN AHORRO ──
-  const distAhorro=od['_distAhorro']||[];
-
-  // ── TC RESUMEN ──
-  const copecTC=parseMonto(get('copec',0));
-  const pagoTC=parseMonto(get('pago',0));
-  const totalTCGs=parseMonto(get('total tc',0));
-  const pendienteTC=parseMonto(get('pendiente',totalTCGs-pagoTC));
-  const deltaTC=parseMonto(get('delta',pagoTC-totalTCGs));
-
-  // ── LATAM PASS (Millas) ──
-  const GOLD_META=18000, SILVER_META=35000;
+  // ── LATAM PASS ──
+  const GOLD_META=18000,SILVER_META=35000;
   const millasAct=parseMonto(get('millas latam',get('millas',0)));
-  // Inicio para calcular promedio mensual
-  let inicioDateMillas=null;
-  const inicioRaw=get('inicio',null);
-  if(inicioRaw){
-    const sv=String(inicioRaw);
-    if(sv.startsWith('Date(')){const p=sv.replace('Date(','').replace(')','').split(',').map(Number);inicioDateMillas=new Date(p[0],p[1],p[2]);}
-    else inicioDateMillas=new Date(sv);
-    if(isNaN(inicioDateMillas))inicioDateMillas=null;
-  }
-  // Promedio mensual = millas actuales / meses desde inicio
-  let promMensual=0, fechaMetaGold=null, fechaMetaSilver=null;
-  if(inicioDateMillas&&millasAct>0){
-    const msDiff=now-inicioDateMillas;
-    const mesesTransc=Math.max(1,msDiff/(1000*60*60*24*30.44));
-    promMensual=millasAct/mesesTransc;
-    const addMeses=(base,n)=>{const d=new Date(base);d.setMonth(d.getMonth()+Math.ceil(n));return d;};
-    if(millasAct<GOLD_META) fechaMetaGold=addMeses(now,(GOLD_META-millasAct)/promMensual);
-    fechaMetaSilver=addMeses(now,(SILVER_META-millasAct)/promMensual);
-  }
+
+  // Promedio mensual: millas / días transcurridos del año × 30.44
+  const ini=new Date(now.getFullYear(),0,1); // 01-ene del año actual
+  const diasAnio=Math.max(1,Math.round((hoyStart-ini)/86400000)+1);
+  const promMensual=millasAct>0?(millasAct/diasAnio)*30.44:0;
+
+  // Proyección: cuántos meses hasta llegar a la meta
+  const mesesHastaMeta=(meta)=>promMensual>0?((meta-millasAct)/promMensual):null;
+  const addMeses=(meses)=>{
+    if(meses===null)return null;
+    const d=new Date(now);
+    d.setDate(1);
+    d.setMonth(d.getMonth()+Math.ceil(meses));
+    return d;
+  };
   const fmtFechaCorta=d=>d?d.toLocaleDateString('es-CL',{month:'long',year:'numeric'}):'—';
 
-  // Tramo actual: GOLD o SILVER
   const esSilver=millasAct>=GOLD_META;
   const metaActual=esSilver?SILVER_META:GOLD_META;
   const nivelLabel=esSilver?'SILVER':'GOLD';
-  const nivelColor=esSilver?'#9ca3af':'#d97706';
+  const nivelColor=esSilver?'#6b7280':'#d97706';
   const nivelBg=esSilver?'linear-gradient(90deg,#6b7280,#9ca3af)':'linear-gradient(90deg,#f59e0b,#fbbf24)';
-  const pctActual=Math.min(Math.round(millasAct/metaActual*100),100);
-  const pctGoldEnSilver=esSilver?Math.min(Math.round(GOLD_META/SILVER_META*100),100):100; // marcador GOLD en barra SILVER
+  const pctTotal=Math.min(millasAct/SILVER_META*100,100);
   const restantes=Math.max(0,metaActual-millasAct);
-
-  // Ahorro crédito
-  const ahorroCredVal=ahorroCredito||parseMonto(get('ahorro credito',0));
-  const inicioVal=inicioAhorro||String(get('inicio','')||'');
+  const fechaMetaGold=millasAct<GOLD_META?addMeses(mesesHastaMeta(GOLD_META)):null;
+  const fechaMetaSilver=millasAct<SILVER_META?addMeses(mesesHastaMeta(SILVER_META)):null;
 
   document.getElementById('page-content').innerHTML=`
-${UI.hero('Resumen','Mi situación','financiera',hoy)}
+${UI.hero('Varios','Métricas','& seguimiento',hoy)}
 
 ${UI.sectionLabel('Liquidez · Cuenta Corriente')}
-<div class="widget-grid" style="margin-bottom:20px">
-  <div class="widget">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--gap);margin-bottom:20px;max-width:640px">
+  <div class="card">
     <div class="widget-title">💰 Disponible</div>
-    <div class="widget-val widget-green">${fmtM(totalDisp)}</div>
-    <div class="widget-sub">Saldo en cuenta corriente</div>
+    <div style="font-size:24px;font-weight:800;color:#059669;line-height:1.1;margin-bottom:4px">${fmtM(totalDisp)}</div>
+    <div style="font-size:11px;font-weight:600;color:var(--muted)">Saldo cuenta corriente</div>
+    ${finDate?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+      <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px">Disponible diario</div>
+      <div style="font-size:18px;font-weight:800;color:var(--accent)">${fmtM(diario)}</div>
+      <div style="font-size:11px;font-weight:600;color:var(--muted);margin-top:2px">${diasRest} días · hasta ${finLabel}</div>
+    </div>`:''}
   </div>
-  <div class="widget">
-    <div class="widget-title">📅 Disponible Diario</div>
-    <div class="widget-val widget-accent">${diario?fmtM(diario):'—'}</div>
-    <div class="widget-sub">${diasRestantes!=null?`${diasRestantes} días · hasta ${finLabel}`:'Ingresa la fecha Fin en el Sheet'}</div>
-  </div>
-  <div class="widget">
+  <div class="card">
     <div class="widget-title">📈 Variación IPC</div>
-    <div class="widget-val" style="color:#f59e0b">${ipcLabel}</div>
-    <div class="widget-sub">${liquidoOld?`Base anterior ${fmtM(liquidoOld)}`:''} ${aumento?`· Aumento ${fmtM(aumento)}`:''}</div>
-  </div>
-</div>
-
-${distAhorro.length?`
-${UI.sectionLabel('Distribución de Ahorro')}
-<div class="card" style="margin-bottom:20px">
-  ${distAhorro.map(d=>`
-    <div class="dist-ahorro-row">
-      <span class="dist-ahorro-name">${d.tipo}</span>
-      <span class="dist-ahorro-bank">${d.banco}</span>
-      <span class="dist-ahorro-pct">${d.pct?d.pct+'%':''}</span>
-      <span class="dist-ahorro-monto">${d.monto?fmtM(d.monto):'—'}</span>
-    </div>`).join('')}
-</div>`:''}
-
-${UI.sectionLabel('Tarjeta de Crédito')}
-<div class="widget-grid-2" style="margin-bottom:20px">
-  <div class="widget">
-    <div class="widget-title">Resumen Deuda TC</div>
-    <div class="tc-resumen-row"><span class="tc-resumen-label">Total TC</span><span class="tc-resumen-val">${fmtM(totalTCGs)}</span></div>
-    <div class="tc-resumen-row"><span class="tc-resumen-label">Copec</span><span class="tc-resumen-val">${copecTC?fmtM(copecTC):'—'}</span></div>
-    <div class="tc-resumen-row"><span class="tc-resumen-label">Pago</span><span class="tc-resumen-val widget-green">${fmtM(pagoTC)}</span></div>
-    <div class="tc-resumen-row"><span class="tc-resumen-label">Pendiente</span><span class="tc-resumen-val widget-red">${fmtM(pendienteTC)}</span></div>
-    <div class="tc-resumen-row"><span class="tc-resumen-label">Delta</span><span class="tc-resumen-val ${deltaTC>=0?'widget-green':'widget-red'}">${deltaTC>=0?'+':''}${fmtM(Math.abs(deltaTC))}</span></div>
-  </div>
-  <div class="widget">
-    <div class="widget-title">Disponible diario TC</div>
-    <div class="widget-val widget-accent" style="margin-bottom:6px">${diario?fmtM(diario):'—'}</div>
-    ${finLabel!=='—'?`<div class="widget-sub">Cierre ${finLabel} · ${diasRestantes} días restantes</div>`:''}
+    <div style="font-size:24px;font-weight:800;color:#f59e0b;line-height:1.1;margin-bottom:4px">${ipcLabel}</div>
+    ${liquidoOld?`<div style="font-size:11px;font-weight:600;color:var(--muted)">Base anterior ${fmtM(liquidoOld)}</div>`:''}
+    ${baseNew?`<div style="font-size:11px;font-weight:600;color:var(--muted)">Base nueva ${fmtM(baseNew)}</div>`:''}
+    ${aumento?`<div style="margin-top:8px;font-size:13px;font-weight:800;color:#059669">+ ${fmtM(aumento)} de aumento</div>`:''}
   </div>
 </div>
 
 ${millasAct>0?`
 ${UI.sectionLabel('LATAM Pass')}
-<div class="card" style="margin-bottom:20px">
-  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px">
-    <div>
-      <div style="font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Millas acumuladas</div>
-      <div style="font-size:28px;font-weight:800;color:var(--text);line-height:1">${fmtNum(millasAct)}</div>
-      <div style="font-size:11px;font-weight:600;color:var(--muted);margin-top:3px">de ${fmtNum(metaActual)} millas · objetivo ${nivelLabel}</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--gap);margin-bottom:20px">
+  <!-- Card principal: barra + cifras -->
+  <div class="card">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px">
+      <div>
+        <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px">Millas acumuladas</div>
+        <div style="font-size:28px;font-weight:800;color:var(--text);line-height:1">${fmtNum(millasAct)}</div>
+        <div style="font-size:11px;font-weight:600;color:var(--muted);margin-top:2px">objetivo ${nivelLabel} · ${fmtNum(metaActual)} millas</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px">
+        <span style="background:${nivelColor};color:#fff;font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px">${nivelLabel}</span>
+        ${esSilver?`<span style="background:rgba(245,158,11,.12);color:#d97706;font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px">GOLD ✓</span>`:''}
+      </div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px">
-      <span style="background:${nivelColor};color:#fff;font-size:11px;font-weight:800;padding:4px 12px;border-radius:20px;letter-spacing:.06em">${nivelLabel}</span>
-      ${esSilver?`<span style="background:rgba(245,158,11,.12);color:#d97706;font-size:11px;font-weight:800;padding:4px 12px;border-radius:20px">GOLD ✓</span>`:''}
+
+    <!-- Barra dual 0→35k con marcador en 18k -->
+    <div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;font-size:9px;font-weight:800;color:var(--muted);margin-bottom:5px">
+        <span>0</span>
+        <span style="color:#d97706">GOLD 18.000</span>
+        <span style="color:#6b7280">SILVER 35.000</span>
+      </div>
+      <div style="position:relative;height:16px;background:rgba(27,0,136,.07);border-radius:8px;overflow:hidden">
+        <div style="position:absolute;left:0;top:0;height:100%;width:${pctTotal.toFixed(1)}%;background:${nivelBg};border-radius:8px;transition:width .5s"></div>
+        <div style="position:absolute;left:${(GOLD_META/SILVER_META*100).toFixed(1)}%;top:0;bottom:0;width:2px;background:rgba(255,255,255,.8)"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;margin-top:5px">
+        <span style="color:${nivelColor}">${Math.min(Math.round(millasAct/metaActual*100),100)}% completado</span>
+        <span style="color:var(--muted)">${fmtNum(restantes)} restantes</span>
+      </div>
+    </div>
+
+    <!-- Promedio mensual -->
+    <div style="padding-top:12px;border-top:1px solid var(--border)">
+      <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Ritmo del año</div>
+      <div style="font-size:18px;font-weight:800;color:var(--text)">${fmtNum(Math.round(promMensual))} <span style="font-size:12px;font-weight:600;color:var(--muted)">millas/mes</span></div>
+      <div style="font-size:10px;color:var(--muted);font-weight:600;margin-top:2px">${fmtNum(millasAct)} millas en ${diasAnio} días (${now.getFullYear()})</div>
     </div>
   </div>
 
-  <!-- Barra de progreso con doble tramo -->
-  <div style="margin-bottom:6px">
-    <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:var(--muted);margin-bottom:5px">
-      <span>0</span>
-      ${!esSilver?`<span style="color:#d97706;font-weight:800">GOLD ${fmtNum(GOLD_META)}</span>`:`<span style="color:#d97706">GOLD ${fmtNum(GOLD_META)}</span>`}
-      <span style="color:#9ca3af">SILVER ${fmtNum(SILVER_META)}</span>
-    </div>
-    <!-- Track unificado -->
-    <div style="position:relative;height:14px;background:rgba(27,0,136,.07);border-radius:8px;overflow:hidden">
-      <!-- Relleno principal -->
-      <div style="position:absolute;left:0;top:0;height:100%;width:${Math.min(millasAct/SILVER_META*100,100)}%;background:${nivelBg};border-radius:8px;transition:width .5s"></div>
-      <!-- Marcador GOLD a los 18k (sobre el track) -->
-      <div style="position:absolute;left:${GOLD_META/SILVER_META*100}%;top:0;bottom:0;width:2px;background:#fff;opacity:.7"></div>
-    </div>
-    <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;margin-top:5px">
-      <span style="color:${nivelColor}">${pctActual}% completado (objetivo ${nivelLabel})</span>
-      <span style="color:var(--muted)">${fmtNum(restantes)} millas restantes</span>
-    </div>
-  </div>
+  <!-- Card proyección -->
+  <div class="card">
+    <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px">Proyección de metas</div>
 
-  <!-- Detalle numérico -->
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
-    <div style="text-align:center">
-      <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Promedio mensual</div>
-      <div style="font-size:16px;font-weight:800;color:var(--text)">${promMensual?fmtNum(Math.round(promMensual)):'—'}</div>
-      <div style="font-size:10px;color:var(--muted);font-weight:600">millas / mes</div>
+    <!-- GOLD -->
+    <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <span style="background:rgba(245,158,11,.15);color:#d97706;font-size:10px;font-weight:800;padding:2px 8px;border-radius:12px">GOLD</span>
+        <span style="font-size:11px;font-weight:700;color:var(--muted)">${fmtNum(GOLD_META)} millas</span>
+      </div>
+      ${millasAct>=GOLD_META
+        ?`<div style="font-size:16px;font-weight:800;color:#059669">✓ Alcanzado</div>
+           <div style="font-size:11px;color:var(--muted);font-weight:600;margin-top:2px">${fmtNum(millasAct-GOLD_META)} millas sobre la meta</div>`
+        :`<div style="font-size:16px;font-weight:800;color:#d97706">${fmtFechaCorta(fechaMetaGold)}</div>
+           <div style="font-size:11px;color:var(--muted);font-weight:600;margin-top:2px">${fmtNum(GOLD_META-millasAct)} millas restantes · ${promMensual>0?Math.ceil((GOLD_META-millasAct)/promMensual)+' meses':'—'}</div>`
+      }
     </div>
-    <div style="text-align:center;border-left:1px solid var(--border);border-right:1px solid var(--border)">
-      <div style="font-size:9px;font-weight:800;color:#d97706;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Meta GOLD</div>
-      <div style="font-size:16px;font-weight:800;color:${millasAct>=GOLD_META?'#059669':'#d97706'}">${millasAct>=GOLD_META?'✓ Alcanzado':fmtFechaCorta(fechaMetaGold)}</div>
-      <div style="font-size:10px;color:var(--muted);font-weight:600">${millasAct>=GOLD_META?fmtNum(millasAct-GOLD_META)+' sobre meta':fmtNum(GOLD_META-millasAct)+' restantes'}</div>
-    </div>
-    <div style="text-align:center">
-      <div style="font-size:9px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Meta SILVER</div>
-      <div style="font-size:16px;font-weight:800;color:${millasAct>=SILVER_META?'#059669':'#6b7280'}">${millasAct>=SILVER_META?'✓ Alcanzado':fmtFechaCorta(fechaMetaSilver)}</div>
-      <div style="font-size:10px;color:var(--muted);font-weight:600">${millasAct>=SILVER_META?fmtNum(millasAct-SILVER_META)+' sobre meta':fmtNum(SILVER_META-millasAct)+' restantes'}</div>
-    </div>
-  </div>
-  ${inicioDateMillas?`<div style="margin-top:10px;font-size:10px;color:var(--muted);font-weight:600;text-align:right">Acumulando desde ${inicioDateMillas.toLocaleDateString('es-CL',{day:'numeric',month:'long',year:'numeric'})}</div>`:''}
-</div>`:''}
 
-${UI.sectionLabel('Ahorro Crédito')}
-<div class="widget-grid-2" style="margin-bottom:20px">
-  <div class="widget">
-    <div class="widget-title">Ahorro Crédito acumulado</div>
-    <div class="widget-val widget-green">${fmtM(ahorroCredVal)}</div>
+    <!-- SILVER -->
+    <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <span style="background:rgba(107,114,128,.12);color:#6b7280;font-size:10px;font-weight:800;padding:2px 8px;border-radius:12px">SILVER</span>
+        <span style="font-size:11px;font-weight:700;color:var(--muted)">${fmtNum(SILVER_META)} millas</span>
+      </div>
+      ${millasAct>=SILVER_META
+        ?`<div style="font-size:16px;font-weight:800;color:#059669">✓ Alcanzado</div>
+           <div style="font-size:11px;color:var(--muted);font-weight:600;margin-top:2px">${fmtNum(millasAct-SILVER_META)} millas sobre la meta</div>`
+        :`<div style="font-size:16px;font-weight:800;color:#6b7280">${fmtFechaCorta(fechaMetaSilver)}</div>
+           <div style="font-size:11px;color:var(--muted);font-weight:600;margin-top:2px">${fmtNum(SILVER_META-millasAct)} millas restantes · ${promMensual>0?Math.ceil((SILVER_META-millasAct)/promMensual)+' meses':'—'}</div>`
+      }
+    </div>
+
+    <!-- Dato base -->
+    <div style="font-size:10px;color:var(--muted);font-weight:600;line-height:1.6">
+      📅 Cálculo basado en ${diasAnio} días del año ${now.getFullYear()}<br>
+      📊 Ritmo actual: ${fmtNum(Math.round(promMensual))} millas/mes
+    </div>
   </div>
-  <div class="widget">
-    <div class="widget-title">Inicio del ahorro</div>
-    <div class="widget-val" style="font-size:16px;font-weight:700">${inicioVal||'—'}</div>
-  </div>
-</div>`;
+</div>`:''}`;
 }
-
 // ── NAV ──
 function openSidebar(){document.getElementById('sidebar').classList.add('open');document.getElementById('overlay').classList.add('active');}
 function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('active');}
@@ -1435,7 +1404,7 @@ function setTab(tab,btn){
   document.querySelectorAll('.nav-item').forEach(b=>{b.classList.remove('active');b.dataset.tab='';});
   btn.classList.add('active');btn.dataset.tab=tab;
   closeSidebar();
-  const pages={resumen:renderResumen,tc:renderTC,mensual:renderPage,creditos:renderCreditos,mama:renderMama,pendientes:renderPendientes};
+  const pages={varios:renderVarios,tc:renderTC,mensual:renderPage,creditos:renderCreditos,mama:renderMama,pendientes:renderPendientes};
   if(pages[tab]) pages[tab]();
   else{hideTooltip();document.getElementById('page-content').innerHTML=`<div class="loading-state"><div class="loading-text">Próximamente…</div></div>`;}
 }
