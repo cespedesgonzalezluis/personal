@@ -541,7 +541,7 @@ function buildDropdown(id,options,currentVal,placeholder,onSelect){
     :`<div class="filter-trigger-left"><div class="filter-trigger-val placeholder">${placeholder}</div></div>`;
   const chevron=`<svg class="filter-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
   const opts=options.map(o=>`
-    <div class="filter-option${o.value===currentVal?' selected':''}" onclick="event.stopPropagation();closeAllDropdowns();(${onSelect})(${JSON.stringify(o.value)})">
+    <div class="filter-option${o.value===currentVal?' selected':''}" onclick="event.stopPropagation();closeAllDropdowns();window[${JSON.stringify(onSelect)}]?window[${JSON.stringify(onSelect)}](${JSON.stringify(o.value)}):(new Function('return '+${JSON.stringify(onSelect)})())(${JSON.stringify(o.value)})">
       <div class="filter-option-name">${o.label}</div>
       <div style="display:flex;align-items:center;gap:8px"><div class="filter-option-amt">${o.amt}</div><div class="filter-option-check"></div></div>
     </div>`).join('');
@@ -822,6 +822,9 @@ function renderDist(){
   document.getElementById('dist-bar-wrap').innerHTML=UI.distBar(allSegs, total);
 }
 
+function setTcMes(v){tcFiltroMes=v;renderTC();}
+function setTcMov(v){tcFiltroMov=v;renderTC();}
+function clearTcFiltros(){tcFiltroMes='';tcFiltroMov='';renderTC();}
 // ── PÁGINA: TARJETA CRÉDITO ──
 function renderTC(){
   hideTooltip();
@@ -877,13 +880,13 @@ function renderTC(){
     <div class="filter-row">
       <div class="filter-group">
         <div class="filter-label">Mes de compra</div>
-        ${buildDropdown('dd-mes',opsMeses,tcFiltroMes,'Todos los meses',`v=>{tcFiltroMes=v;renderTC()}`)}
+        ${buildDropdown('dd-mes',opsMeses,tcFiltroMes,'Todos los meses','setTcMes')}
       </div>
       <div class="filter-group">
         <div class="filter-label">Movimiento</div>
-        ${buildDropdown('dd-mov',opsMov,tcFiltroMov,'Todos los movimientos',`v=>{tcFiltroMov=v;renderTC()}`)}
+        ${buildDropdown('dd-mov',opsMov,tcFiltroMov,'Todos los movimientos','setTcMov')}
       </div>
-      ${hasFiltro?btnClear(`()=>{tcFiltroMes='';tcFiltroMov='';renderTC()}`):''}
+      ${hasFiltro?btnClear('clearTcFiltros'):''}
       ${hasFiltro?`<div style="display:flex;flex-direction:column;gap:5px">
         <div class="filter-label">Pendiente filtrado</div>
         <div style="padding:9px 14px;background:rgba(237,22,80,.07);border:1.5px solid rgba(237,22,80,.2);border-radius:10px;font-size:13px;font-weight:800;color:#ED1650">${fmtM(deudaFiltrada)}</div>
@@ -1225,17 +1228,30 @@ ${UI.card('',`<div style="font-size:11px;color:var(--muted)">${proy.length} mese
     const distCanvas=document.getElementById('pend-dist-chart');
     if(distCanvas&&distSegs.length){
       if(charts.pendDist){charts.pendDist.destroy();delete charts.pendDist;}
-      charts.pendDist=new Chart(distCanvas,{type:'bar',
+      const hBarLabels={id:'hBarLabels',afterDatasetsDraw(chart){
+        const{ctx}=chart; ctx.save();
+        chart.getDatasetMeta(0).data.forEach((bar,i)=>{
+          const barW=bar.width; if(barW<36) return;
+          ctx.font=`700 10px ${SF}`;
+          ctx.fillStyle='rgba(255,255,255,.95)';
+          ctx.textAlign='right';ctx.textBaseline='middle';
+          ctx.fillText(fmtM(distSegs[i].amt,true), bar.x-6, bar.y);
+        });
+        ctx.restore();
+      }};
+      const bgColors=distSegs.map(s=>pendDistFiltro&&pendDistFiltro!==s.label?s.color+'33':s.color+'ee');
+      charts.pendDist=new Chart(distCanvas,{type:'bar',plugins:[hBarLabels],
         data:{labels:distSegs.map(s=>s.label),datasets:[{data:distSegs.map(s=>s.amt),
-          backgroundColor:distSegs.map(s=>s.color+'cc'),hoverBackgroundColor:distSegs.map(s=>s.color),
-          borderWidth:0,borderRadius:5,borderSkipped:false}]},
-        options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:{duration:400},
+          backgroundColor:bgColors,hoverBackgroundColor:distSegs.map(s=>s.color),
+          borderWidth:0,borderRadius:6,borderSkipped:false}]},
+        options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:{duration:350},
           plugins:{legend:{display:false},tooltip:{enabled:false,
             external:makeExternalTooltip(i=>distSegs[i].label,i=>[{color:distSegs[i].color,label:'Pendiente',val:fmtM(distSegs[i].amt)}])}},
           onClick:(e,els)=>{if(els.length){const s=distSegs[els[0].index];setPendFiltro(pendDistFiltro===s.label?'':s.label);}},
+          layout:{padding:{right:6}},
           scales:{
-            x:{grid:{color:'rgba(0,0,0,.03)'},border:{display:false},ticks:{font:{family:SF,size:9},color:'#9CA3AF',callback:v=>fmtM(v,true)}},
-            y:{grid:{display:false},border:{display:false},ticks:{font:{family:SF,size:11,weight:'700'},color:'#0F004F'}}
+            x:{display:false,grid:{display:false},border:{display:false}},
+            y:{grid:{display:false},border:{display:false},ticks:{font:{family:SF,size:11,weight:'700'},color:'#0F004F',padding:4}}
           }}});
     }
     const canvas=document.getElementById('pend-proy');
@@ -1263,8 +1279,8 @@ function renderVarios(){
   const hoy=now.toLocaleDateString('es-CL',{day:'numeric',month:'long',year:'numeric'});
 
   // ── DISPONIBLE (una sola card) ──
-  const totalDisp=parseMonto(get('santander',get('total',0)));
-  let finRaw=get('fin',null);
+  const totalDisp=parseMonto(get('_santander',get('santander',0)));
+  let finRaw=get('_fin',get('fin',null));
   let finDate=null;
   if(finRaw!=null){
     const sv=String(finRaw).trim();
