@@ -138,11 +138,11 @@ tbody tr:hover td{background:rgba(99,77,210,.02)}
 .tc-td{padding:9px 8px;font-size:12px}
 
 /* DIST BAR — componente reutilizable */
-.dist-bar{display:flex;height:64px;border-radius:10px;overflow:hidden;gap:2px}
-.dist-seg{display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-weight:800;padding:0 6px;transition:filter .15s,opacity .2s;overflow:hidden;min-width:0}
+.dist-bar{display:flex;height:64px;border-radius:10px;overflow:hidden;gap:2px;align-items:stretch}
+.dist-seg{display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-weight:800;padding:0 8px;transition:filter .15s,opacity .2s;overflow:hidden;min-width:max-content}
 .dist-seg:hover{filter:brightness(1.1)}
-.dist-seg-name{font-size:9px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.dist-seg-info{font-size:9px;font-weight:700;opacity:.88;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;margin-top:1px}
+.dist-seg-name{font-size:9px;font-weight:800;white-space:nowrap}
+.dist-seg-info{font-size:9px;font-weight:700;opacity:.88;white-space:nowrap;margin-top:1px}
 
 /* LEGEND */
 .chart-legend{display:flex;gap:16px;margin-top:12px;flex-wrap:wrap}
@@ -636,14 +636,19 @@ async function loadData(){
         if(tipo&&banco&&(pct||monto)) distAhorro.push({tipo,banco,pct,monto});
       });
       od['_distAhorro']=distAhorro;
-      // Liquidez / IPC
+      // Liquidez / IPC — columnas A-B y cualquier celda con label+valor
       rowsOtros.forEach(row=>{
         const cells=row.c||[];
         const a=String(cells[0]?.v||'').trim();
         const b=cells[1]?.v!=null?cells[1].v:null;
-        if(a&&b!=null){
-          const kn=a.toLowerCase().replace(/\s+/g,' ');
-          od[kn]=b;
+        if(a&&b!=null){ const kn=a.toLowerCase().replace(/\s+/g,' '); od[kn]=b; }
+        // Buscar Santander y Fin en cualquier columna de la fila
+        for(let ci=0;ci<cells.length;ci++){
+          if(!cells[ci]||cells[ci].v==null) continue;
+          const lbl=String(cells[ci].v).trim().toLowerCase();
+          const nxt=cells[ci+1];
+          if(lbl==='santander'&&nxt?.v!=null){ od['santander']=nxt.v; od['total']=nxt.v; }
+          if(lbl==='fin'&&nxt?.v!=null){ od['fin']=nxt.v; }
         }
       });
       otrosData=od;
@@ -729,11 +734,8 @@ ${UI.sectionLabel('Análisis del mes')}
 ${UI.sectionLabel('Evolutivo de distribución')}
 ${UI.card('Distribución del gasto por mes — % sobre ingreso',
   UI.periodToggle(evoRange,[{val:12,label:'12M',fn:'setEvoRange(12,this)'},{val:0,label:'Todo',fn:'setEvoRange(0,this)'}]),
-  `<div class="cat-pills" id="dist-cat-pills">
-    <button class="cat-btn${!distCatFilter?' active':''}" data-cat="" onclick="setDistCat('')">Todas</button>
-    ${CAT_DEF.filter(c=>c.key!=='otros').map(c=>`<button class="cat-btn${distCatFilter===c.key?' active':''}" data-cat="${c.key}" style="--cat-c:${c.color}" onclick="setDistCat('${c.key}')">${c.label}</button>`).join('')}
-  </div>
-  <div style="height:260px"><canvas id="chartDist"></canvas></div>${UI.chartLegend(CAT_DEF.filter(c=>c.key!=='otros').map(c=>({color:c.color,label:c.label})))}`,
+  `<div class="cat-pills" id="dist-cat-pills"></div>
+  <div style="height:260px"><canvas id="chartDist"></canvas></div><div id="dist-legend"></div>`,
   'margin-bottom:20px')}`;
   renderEvoChart();renderDetalle(prevMes);renderDist();renderDistEvo();
 }
@@ -762,16 +764,21 @@ function setDistCat(key){
   document.querySelector(`#dist-cat-pills .cat-btn[data-cat="${key}"]`)?.classList.add('active');
   renderDistEvo();
 }
+function getTiposReales(){
+  const pool={};
+  const tipos=[...new Set(rawData.filter(r=>r.tipo!=='ingreso'&&r.tipo!=='tarjeta credito').map(r=>r.tipo))].sort();
+  return tipos.map(tipo=>({key:tipo,label:capFirst(tipo),color:getTypeColor(tipo,pool),match:r=>r.tipo===tipo}));
+}
 function renderDistEvo(){
   const slice=evoRange===0?months:months.slice(-evoRange);
   const labels=slice.map(m=>{const[mes,año]=m.split('-');return[mes.slice(0,3).toUpperCase(),año];});
   const labelsFmt=slice.map(m=>fmtMesLabel(m));
-  const allCats=CAT_DEF.filter(c=>c.key!=='otros');
+  const allCats=getTiposReales();
   const catsToShow=distCatFilter?allCats.filter(c=>c.key===distCatFilter):allCats;
   const pctData=catsToShow.map(cat=>({...cat,
-    pcts:slice.map(m=>{const ing=sumsFor(m).ing;return!ing?0:Math.round(getCatAmounts(m)[cat.key]/ing*1000)/10;}),
-    amts:slice.map(m=>getCatAmounts(m)[cat.key]||0)
-  }));
+    pcts:slice.map(m=>{const ing=sumsFor(m).ing;if(!ing)return 0;const amt=rawData.filter(r=>r.mes===m&&cat.match(r)).reduce((a,r)=>a+r.monto,0);return Math.round(amt/ing*1000)/10;}),
+    amts:slice.map(m=>rawData.filter(r=>r.mes===m&&cat.match(r)).reduce((a,r)=>a+r.monto,0))
+  })).filter(cat=>cat.amts.some(v=>v>0));
   const tooltipFn=makeExternalTooltip(i=>labelsFmt[i],i=>pctData.filter(c=>c.pcts[i]>0).map(c=>({color:c.color,label:c.label,val:`${c.pcts[i].toFixed(1)}%  ${fmtM(c.amts[i])}`})));
   const yScale=distCatFilter
     ?{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{family:SF,size:10},color:'#9CA3AF',callback:v=>`${v}%`}}
@@ -780,6 +787,13 @@ function renderDistEvo(){
   charts.dist=new Chart(document.getElementById('chartDist'),{type:'line',
     data:{labels,datasets:pctData.map(cat=>({label:cat.label,data:cat.pcts,borderColor:cat.color,backgroundColor:cat.color+'33',borderWidth:2,pointRadius:2.5,pointHoverRadius:5,pointBackgroundColor:cat.color,pointBorderColor:'#fff',pointBorderWidth:1.5,fill:true,tension:.4,...(distCatFilter?{}:{stack:'area'})}))},
     options:{responsive:true,maintainAspectRatio:false,events:['mousemove','mouseout','click'],interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{enabled:false,external:tooltipFn}},scales:{x:{grid:{display:false},ticks:{font:{family:SF,size:10},color:'#9CA3AF',maxTicksLimit:evoRange===0?20:evoRange,maxRotation:0}},y:yScale}}});
+  const legendEl=document.getElementById('dist-legend');
+  if(legendEl) legendEl.innerHTML=UI.chartLegend(pctData.map(c=>({color:c.color,label:c.label})));
+  const pillsEl=document.getElementById('dist-cat-pills');
+  if(pillsEl){
+    const all=[{key:'',label:'Todas',color:''},...allCats];
+    pillsEl.innerHTML=all.map(c=>`<button class="cat-btn${distCatFilter===c.key?' active':''}" data-cat="${c.key}" ${c.color?`style="--cat-c:${c.color}"`:''} onclick="setDistCat('${c.key}')">${c.label}</button>`).join('');
+  }
 }
 
 function renderDetalle(prevMes){
@@ -1169,33 +1183,61 @@ function renderPendientes(){
 
   document.getElementById('page-content').innerHTML=`
 ${UI.hero('Pendientes',fmtM(totalPend),'pendiente','Compromisos y deudas')}
-${UI.sectionLabel('Distribución por responsable')}
-${UI.card('','',`
-  ${UI.distBar(distSegs, totalDist, 'setPendFiltro')}
-  ${pendDistFiltro?`<div style="margin-top:10px"><button class="btn-clear" onclick="setPendFiltro('')">✕ Limpiar filtro · ${pendDistFiltro}</button></div>`:''}
-`,'margin-bottom:var(--gap)')}
-${UI.sectionLabel('Detalle de compromisos')}
-${UI.card('',`<div style="font-size:11px;color:var(--muted)">${filteredItems.length} ítems${pendDistFiltro?' · '+pendDistFiltro:''}</div>`,`
-  <div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:12px;width:100%">
-    <thead><tr style="border-bottom:2px solid var(--border)">
-      <th class="tc-th" style="text-align:left">Responsable</th><th class="tc-th" style="text-align:center">Fecha</th>
-      <th class="tc-th" style="text-align:left">Detalle</th><th class="tc-th" style="text-align:right">$ Total</th>
-      <th class="tc-th" style="text-align:right">$ Pagado</th><th class="tc-th" style="text-align:right">$ Pendiente</th>
-      <th class="tc-th" style="text-align:right">$ Cuota</th><th class="tc-th" style="text-align:center"># Cuotas</th>
-    </tr></thead>
-    <tbody>${tableRows}</tbody>
-    <tfoot><tr style="border-top:2px solid var(--border);background:rgba(0,0,0,.015)">
-      <td colspan="4" style="padding:9px;font-weight:700;color:var(--text)">Total</td>
-      <td style="padding:9px 8px;text-align:right;font-weight:800;color:#059669">${fmtM(filteredItems.reduce((a,i)=>a+(i.total>0?i.total-i.montoPendiente:i.pagadas*i.valorCuota),0))}</td>
-      <td style="padding:9px 8px;text-align:right;font-weight:800;color:#ED1650;font-size:13px">${fmtM(totalPend)}</td>
-      <td style="padding:9px 8px;text-align:right;font-weight:800;color:var(--muted)">${fmtM(filteredItems.reduce((a,i)=>a+i.valorCuota,0))}</td>
-      <td></td>
-    </tr></tfoot>
-  </table></div>`,'margin-bottom:var(--gap)')}
+${UI.sectionLabel('Distribución · Detalle')}
+<div style="display:grid;grid-template-columns:25fr 75fr;gap:var(--gap);margin-bottom:var(--gap);align-items:start">
+  <div class="card" style="padding:14px 12px">
+    <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">Por responsable</div>
+    <div style="position:relative;height:${Math.max(100,distSegs.length*34)}px"><canvas id="pend-dist-chart"></canvas></div>
+    ${pendDistFiltro?`<div style="margin-top:8px"><button class="btn-clear" onclick="setPendFiltro('')">✕ ${pendDistFiltro}</button></div>`:''}
+  </div>
+  <div class="card" style="padding:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:800;color:var(--text)">Detalle de compromisos</div>
+      <div style="font-size:11px;color:var(--muted)">${filteredItems.length} ítems${pendDistFiltro?' · '+pendDistFiltro:''}</div>
+    </div>
+    <div style="overflow-x:auto;max-height:${Math.max(280,distSegs.length*34+60)}px;overflow-y:auto">
+    <table style="border-collapse:collapse;font-size:12px;width:100%">
+      <thead><tr style="border-bottom:2px solid var(--border)">
+        <th class="tc-th" style="text-align:left;position:sticky;top:0;background:#fff;z-index:1">Responsable</th>
+        <th class="tc-th" style="text-align:center;position:sticky;top:0;background:#fff;z-index:1">Fecha</th>
+        <th class="tc-th" style="text-align:left;position:sticky;top:0;background:#fff;z-index:1">Detalle</th>
+        <th class="tc-th" style="text-align:right;position:sticky;top:0;background:#fff;z-index:1">$ Total</th>
+        <th class="tc-th" style="text-align:right;position:sticky;top:0;background:#fff;z-index:1">$ Pagado</th>
+        <th class="tc-th" style="text-align:right;position:sticky;top:0;background:#fff;z-index:1">$ Pendiente</th>
+        <th class="tc-th" style="text-align:right;position:sticky;top:0;background:#fff;z-index:1">$ Cuota</th>
+        <th class="tc-th" style="text-align:center;position:sticky;top:0;background:#fff;z-index:1"># Cuotas</th>
+      </tr></thead>
+      <tbody>${tableRows}</tbody>
+      <tfoot><tr style="border-top:2px solid var(--border);background:rgba(0,0,0,.015)">
+        <td colspan="4" style="padding:9px;font-weight:700;color:var(--text)">Total</td>
+        <td style="padding:9px 8px;text-align:right;font-weight:800;color:#059669">${fmtM(filteredItems.reduce((a,i)=>a+(i.total>0?i.total-i.montoPendiente:i.pagadas*i.valorCuota),0))}</td>
+        <td style="padding:9px 8px;text-align:right;font-weight:800;color:#ED1650;font-size:13px">${fmtM(totalPend)}</td>
+        <td style="padding:9px 8px;text-align:right;font-weight:800;color:var(--muted)">${fmtM(filteredItems.reduce((a,i)=>a+i.valorCuota,0))}</td>
+        <td></td>
+      </tr></tfoot>
+    </table></div>
+  </div>
+</div>
 ${UI.sectionLabel('Proyección de pagos')}
 ${UI.card('',`<div style="font-size:11px;color:var(--muted)">${proy.length} meses</div>`,`<div style="position:relative;height:240px"><canvas id="pend-proy"></canvas></div>`,'margin-bottom:var(--gap)')}`;
 
   requestAnimationFrame(()=>{
+    const distCanvas=document.getElementById('pend-dist-chart');
+    if(distCanvas&&distSegs.length){
+      if(charts.pendDist){charts.pendDist.destroy();delete charts.pendDist;}
+      charts.pendDist=new Chart(distCanvas,{type:'bar',
+        data:{labels:distSegs.map(s=>s.label),datasets:[{data:distSegs.map(s=>s.amt),
+          backgroundColor:distSegs.map(s=>s.color+'cc'),hoverBackgroundColor:distSegs.map(s=>s.color),
+          borderWidth:0,borderRadius:5,borderSkipped:false}]},
+        options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:{duration:400},
+          plugins:{legend:{display:false},tooltip:{enabled:false,
+            external:makeExternalTooltip(i=>distSegs[i].label,i=>[{color:distSegs[i].color,label:'Pendiente',val:fmtM(distSegs[i].amt)}])}},
+          onClick:(e,els)=>{if(els.length){const s=distSegs[els[0].index];setPendFiltro(pendDistFiltro===s.label?'':s.label);}},
+          scales:{
+            x:{grid:{color:'rgba(0,0,0,.03)'},border:{display:false},ticks:{font:{family:SF,size:9},color:'#9CA3AF',callback:v=>fmtM(v,true)}},
+            y:{grid:{display:false},border:{display:false},ticks:{font:{family:SF,size:11,weight:'700'},color:'#0F004F'}}
+          }}});
+    }
     const canvas=document.getElementById('pend-proy');
     if(!canvas||!proy.length) return;
     if(charts.pendProy){charts.pendProy.destroy();delete charts.pendProy;}
@@ -1221,7 +1263,7 @@ function renderVarios(){
   const hoy=now.toLocaleDateString('es-CL',{day:'numeric',month:'long',year:'numeric'});
 
   // ── DISPONIBLE (una sola card) ──
-  const totalDisp=parseMonto(get('total',0));
+  const totalDisp=parseMonto(get('santander',get('total',0)));
   let finRaw=get('fin',null);
   let finDate=null;
   if(finRaw!=null){
