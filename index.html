@@ -167,7 +167,36 @@ tbody tr:hover td{background:rgba(99,77,210,.02)}
 .ct-dot{width:6px;height:6px;border-radius:2px;flex-shrink:0}
 .ct-val{font-size:12px;font-weight:800;color:#fff}
 
-@media(max-width:900px){
+/* RESUMEN WIDGETS */
+.widget-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--gap);margin-bottom:20px}
+.widget-grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--gap);margin-bottom:20px}
+.widget-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--gap);margin-bottom:20px}
+.widget{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow)}
+.widget-title{font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-bottom:10px}
+.widget-val{font-size:22px;font-weight:800;color:var(--text);line-height:1.1}
+.widget-sub{font-size:11px;font-weight:600;color:var(--muted);margin-top:4px}
+.widget-accent{color:var(--accent)}
+.widget-green{color:var(--green)}
+.widget-red{color:var(--red)}
+.widget-teal{color:var(--teal)}
+.dist-ahorro-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px}
+.dist-ahorro-row:last-child{border-bottom:none}
+.dist-ahorro-name{font-weight:700;color:var(--text);flex:1}
+.dist-ahorro-bank{font-size:11px;color:var(--muted);font-weight:600;margin-right:12px}
+.dist-ahorro-pct{font-size:11px;font-weight:800;color:var(--muted);min-width:36px;text-align:right;margin-right:10px}
+.dist-ahorro-monto{font-weight:800;color:var(--text)}
+.prog-bar-wrap{margin-top:8px}
+.prog-bar-track{height:6px;background:rgba(27,0,136,.07);border-radius:6px;overflow:hidden;margin-top:4px}
+.prog-bar-fill{height:100%;border-radius:6px;transition:width .4s}
+.prog-label{display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:var(--muted);margin-top:4px}
+.millas-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;font-size:12px}
+.tc-resumen-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px}
+.tc-resumen-row:last-child{border-bottom:none}
+.tc-resumen-label{font-weight:600;color:var(--muted)}
+.tc-resumen-val{font-weight:800;color:var(--text)}
+@media(max-width:900px){.widget-grid,.widget-grid-4{grid-template-columns:repeat(2,1fr)}.widget-grid-2{grid-template-columns:1fr}}
+@media(max-width:560px){.widget-grid,.widget-grid-2,.widget-grid-4{grid-template-columns:1fr}}
+
   :root{--sidebar:0px}
   .sidebar{transform:translateX(-224px);width:224px}
   .sidebar.open{transform:translateX(0)}
@@ -200,6 +229,11 @@ tbody tr:hover td{background:rgba(99,77,210,.02)}
       </div>
     </div>
     <nav class="sidebar-nav">
+      <div class="nav-section">General</div>
+      <button class="nav-item" onclick="setTab('resumen',this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Resumen
+      </button>
       <div class="nav-section">Reportes</div>
       <button class="nav-item active" onclick="setTab('mensual',this)">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
@@ -252,7 +286,8 @@ const CAT_DEF = [
   {key:'otros',label:'Otros',color:'#c4c0e0',match:()=>false},
 ];
 
-// ── STATE ──
+let otrosData={};
+
 let rawData=[], tcData=[], credData=[], mamaData=[], pendientesData=[];
 let months=[], selMonth='', evoRange=12, mamaEvoRange=12;
 let charts={}, tcFiltroMes='', tcFiltroMov='';
@@ -558,24 +593,53 @@ async function loadData(){
       estado:String(r.c[8]?.v||'').toLowerCase().trim()
     })).filter(r=>r.responsable&&r.mes);
 
-    // Hoja Otros: buscar Ahorro Credito e Inicio
+    // Hoja Otros: parseo completo para Resumen + campos existentes
     if(rowsOtros.length){
-      let ahorroVal=null,inicioVal=null;
-      rowsOtros.forEach(row=>{ const cells=row.c||[];
-        cells.forEach((cell,ci)=>{
-          if(!cell||cell.v==null) return;
+      const od={};
+      rowsOtros.forEach(row=>{
+        const cells=row.c||[];
+        for(let ci=0;ci<cells.length;ci++){
+          const cell=cells[ci]; if(!cell||cell.v==null) continue;
           const v=String(cell.v).trim();
-          if(/ahorro\s*cr[eé]dito/i.test(v)){const nx=cells[ci+1];if(nx?.v!=null)ahorroVal=nx.v;}
-          if(/^inicio$/i.test(v)){const nx=cells[ci+1];if(nx?.v!=null)inicioVal=nx.v;}
-        });
+          const nx=cells[ci+1];
+          const nxv=nx?.v!=null?nx.v:null;
+          // key→valor: buscamos todos los pares clave:siguiente_celda
+          const kn=v.toLowerCase().replace(/\s+/g,' ');
+          if(nxv!=null) od[kn]=nxv;
+          // aliases específicos
+          if(/ahorro\s*cr[eé]dito/i.test(v)){ahorroCredito=parseMonto(nxv)||0; od['ahorro credito']=nxv;}
+          if(/^inicio$/i.test(v)){
+            const sv=String(nxv||'');let d;
+            if(sv.startsWith('Date(')){const p=sv.replace('Date(','').replace(')','').split(',').map(Number);d=new Date(p[0],p[1],p[2]);}
+            else d=new Date(sv);
+            inicioAhorro=isNaN(d)?sv:d.toLocaleDateString('es-CL',{day:'2-digit',month:'long',year:'numeric'});
+            od['inicio']=inicioAhorro;
+          }
+        }
       });
-      if(ahorroVal!=null) ahorroCredito=parseMonto(ahorroVal)||0;
-      if(inicioVal!=null){
-        const sv=String(inicioVal);let d;
-        if(sv.startsWith('Date(')){const p=sv.replace('Date(','').replace(')','').split(',').map(Number);d=new Date(p[0],p[1],p[2]);}
-        else d=new Date(sv);
-        inicioAhorro=isNaN(d)?sv:d.toLocaleDateString('es-CL',{day:'2-digit',month:'long',year:'numeric'});
-      }
+      // Guardar distribución de ahorro (filas con banco y %)
+      const distAhorro=[];
+      rowsOtros.forEach(row=>{
+        const cells=row.c||[];
+        // buscamos patrón: col[D]=Tipo, col[E]=Banco, col[F]=%, col[G]=Monto
+        const tipo=String(cells[3]?.v||'').trim();
+        const banco=String(cells[4]?.v||'').trim();
+        const pct=cells[5]?.v!=null?Number(String(cells[5].v).replace('%',''))||0:0;
+        const monto=parseMonto(cells[6]?.v);
+        if(tipo&&banco&&(pct||monto)) distAhorro.push({tipo,banco,pct,monto});
+      });
+      od['_distAhorro']=distAhorro;
+      // Liquidez / IPC
+      rowsOtros.forEach(row=>{
+        const cells=row.c||[];
+        const a=String(cells[0]?.v||'').trim();
+        const b=cells[1]?.v!=null?cells[1].v:null;
+        if(a&&b!=null){
+          const kn=a.toLowerCase().replace(/\s+/g,' ');
+          od[kn]=b;
+        }
+      });
+      otrosData=od;
     }
 
     months=[...new Set(rawData.map(r=>r.mes))].sort((a,b)=>monthKey(a)-monthKey(b));
@@ -1136,6 +1200,137 @@ ${UI.card('',`<div style="font-size:11px;color:var(--muted)">${proy.length} mese
   });
 }
 
+// ── PÁGINA: RESUMEN ──
+function renderResumen(){
+  hideTooltip();
+  const od=otrosData;
+  const get=(key,fb=null)=>{
+    const k=key.toLowerCase();
+    for(const ok of Object.keys(od)){if(ok===k||ok.includes(k))return od[ok];}
+    return fb;
+  };
+
+  // Liquidez
+  const liquidoOld=parseMonto(get('liquido old',get('líquido old',0)));
+  const ipc=parseMonto(get('ipc',0));
+  const baseNew=parseMonto(get('base new',0));
+  const liquidoNew=parseMonto(get('liquido new',get('líquido new',0)));
+  const aumento=parseMonto(get('aumento',0));
+  const pctLiquido=liquidoOld>0?Math.round(liquidoNew/liquidoOld*100):0;
+
+  // Distribución ahorro
+  const distAhorro=od['_distAhorro']||[];
+
+  // TC resumen (desde tcData)
+  const tcPend=tcData.filter(r=>ESTADO_PENDIENTE.has(r.estado));
+  const totalTC=tcPend.reduce((a,r)=>a+r.total,0)||parseMonto(get('total tc',0));
+  const copecTC=parseMonto(get('copec',0));
+  const pagoTC=parseMonto(get('pago',get('pago tc',0)));
+  const pendienteTC=parseMonto(get('pendiente',totalTC-pagoTC));
+  const deltaTC=pagoTC-totalTC;
+
+  // Tarjeta resumen desde gs (col I-J)
+  const tcGsTotal=parseMonto(get('total',0));
+  const finDia=String(get('fin',get('fin |',get('fin|','')))||'').trim();
+  const diario=parseMonto(get('diario',0));
+
+  // Millas / objetivo
+  const objetivo=parseMonto(get('objetivo',0));
+  const actual=parseMonto(get('actual',0));
+  const avancePct=objetivo>0?Math.round(actual/objetivo*100):0;
+  const proyMillas=parseMonto(get('proy millas',0));
+  const metaMillas=String(get('12.000 millas',get('12000 millas',get('meta','')))||'').trim();
+
+  // Ahorro crédito
+  const ahorroCredVal=ahorroCredito||parseMonto(get('ahorro credito',0));
+  const inicioVal=inicioAhorro||String(get('inicio','')||'');
+
+  const now=new Date();
+  const hoy=now.toLocaleDateString('es-CL',{day:'numeric',month:'long',year:'numeric'});
+
+  document.getElementById('page-content').innerHTML=`
+${UI.hero('Resumen','Mi situación','financiera',hoy)}
+
+${UI.sectionLabel('Liquidez')}
+<div class="widget-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px">
+  <div class="widget">
+    <div class="widget-title">Base Anterior</div>
+    <div class="widget-val">${fmtM(liquidoOld)}</div>
+    <div class="widget-sub">Líquido Old</div>
+  </div>
+  <div class="widget">
+    <div class="widget-title">IPC aplicado</div>
+    <div class="widget-val widget-accent">${ipc>0?(ipc*100).toFixed(1)+'%':get('ipc','—')}</div>
+    <div class="widget-sub">Base New → ${fmtM(baseNew)}</div>
+  </div>
+  <div class="widget">
+    <div class="widget-title">Líquido Nuevo · Aumento</div>
+    <div class="widget-val widget-green">${fmtM(liquidoNew)}</div>
+    <div class="widget-sub">Aumento <strong>${fmtM(aumento)}</strong>${pctLiquido?` · ${pctLiquido}% del anterior`:''}</div>
+  </div>
+</div>
+
+${distAhorro.length?`
+${UI.sectionLabel('Distribución de ahorro')}
+<div class="card" style="margin-bottom:20px">
+  ${distAhorro.map(d=>`
+    <div class="dist-ahorro-row">
+      <span class="dist-ahorro-name">${d.tipo}</span>
+      <span class="dist-ahorro-bank">${d.banco}</span>
+      <span class="dist-ahorro-pct">${d.pct?d.pct+'%':''}</span>
+      <span class="dist-ahorro-monto">${d.monto?fmtM(d.monto):'—'}</span>
+    </div>`).join('')}
+</div>`:''}
+
+${UI.sectionLabel('Tarjeta de Crédito')}
+<div class="widget-grid-2" style="margin-bottom:20px">
+  <div class="widget">
+    <div class="widget-title">Resumen TC</div>
+    <div class="tc-resumen-row"><span class="tc-resumen-label">Total TC</span><span class="tc-resumen-val">${fmtM(totalTC)}</span></div>
+    <div class="tc-resumen-row"><span class="tc-resumen-label">Copec</span><span class="tc-resumen-val">${copecTC?fmtM(copecTC):'—'}</span></div>
+    <div class="tc-resumen-row"><span class="tc-resumen-label">Pago</span><span class="tc-resumen-val widget-green">${fmtM(pagoTC)}</span></div>
+    <div class="tc-resumen-row"><span class="tc-resumen-label">Pendiente</span><span class="tc-resumen-val widget-red">${fmtM(pendienteTC)}</span></div>
+    <div class="tc-resumen-row"><span class="tc-resumen-label">Delta</span><span class="tc-resumen-val ${deltaTC>=0?'widget-green':'widget-red'}">${fmtM(deltaTC)}</span></div>
+  </div>
+  <div class="widget">
+    <div class="widget-title">TC del mes</div>
+    ${tcGsTotal?`<div class="tc-resumen-row"><span class="tc-resumen-label">Total</span><span class="tc-resumen-val">${fmtM(tcGsTotal)}</span></div>`:''}
+    ${finDia?`<div class="tc-resumen-row"><span class="tc-resumen-label">Fin</span><span class="tc-resumen-val">${finDia}</span></div>`:''}
+    ${diario?`<div class="tc-resumen-row"><span class="tc-resumen-label">Diario</span><span class="tc-resumen-val widget-accent">${fmtM(diario)}</span></div>`:''}
+  </div>
+</div>
+
+${objetivo||actual?`
+${UI.sectionLabel('Objetivo Millas')}
+<div class="widget-grid-2" style="margin-bottom:20px">
+  <div class="widget">
+    <div class="widget-title">Avance millas</div>
+    <div class="widget-val">${actual?fmtNum(actual):'—'} <span style="font-size:14px;font-weight:600;color:var(--muted)">/ ${objetivo?fmtNum(objetivo):'—'}</span></div>
+    <div class="prog-bar-wrap">
+      <div class="prog-bar-track"><div class="prog-bar-fill" style="width:${Math.min(avancePct,100)}%;background:${avancePct>=100?'#059669':'#634dd2'}"></div></div>
+      <div class="prog-label"><span>${avancePct}% completado</span><span>${objetivo&&actual?fmtNum(objetivo-actual)+' restantes':''}</span></div>
+    </div>
+  </div>
+  <div class="widget">
+    <div class="widget-title">Proyección</div>
+    ${proyMillas?`<div class="millas-row"><span class="tc-resumen-label">Proy. Millas</span><span style="font-weight:800;font-size:15px">${fmtNum(proyMillas)}</span></div>`:''}
+    ${metaMillas?`<div class="millas-row"><span class="tc-resumen-label">Fecha meta</span><span style="font-weight:700;color:var(--accent)">${metaMillas}</span></div>`:''}
+  </div>
+</div>`:''}
+
+${UI.sectionLabel('Ahorro Crédito')}
+<div class="widget-grid-2">
+  <div class="widget">
+    <div class="widget-title">Ahorro Crédito acumulado</div>
+    <div class="widget-val widget-green">${fmtM(ahorroCredVal)}</div>
+  </div>
+  <div class="widget">
+    <div class="widget-title">Inicio del ahorro</div>
+    <div class="widget-val" style="font-size:16px;font-weight:700">${inicioVal||'—'}</div>
+  </div>
+</div>`;
+}
+
 // ── NAV ──
 function openSidebar(){document.getElementById('sidebar').classList.add('open');document.getElementById('overlay').classList.add('active');}
 function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('active');}
@@ -1143,7 +1338,7 @@ function setTab(tab,btn){
   document.querySelectorAll('.nav-item').forEach(b=>{b.classList.remove('active');b.dataset.tab='';});
   btn.classList.add('active');btn.dataset.tab=tab;
   closeSidebar();
-  const pages={tc:renderTC,mensual:renderPage,creditos:renderCreditos,mama:renderMama,pendientes:renderPendientes};
+  const pages={resumen:renderResumen,tc:renderTC,mensual:renderPage,creditos:renderCreditos,mama:renderMama,pendientes:renderPendientes};
   if(pages[tab]) pages[tab]();
   else{hideTooltip();document.getElementById('page-content').innerHTML=`<div class="loading-state"><div class="loading-text">Próximamente…</div></div>`;}
 }
