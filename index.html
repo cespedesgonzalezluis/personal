@@ -1205,73 +1205,133 @@ function renderResumen(){
   hideTooltip();
   const od=otrosData;
   const get=(key,fb=null)=>{
-    const k=key.toLowerCase();
+    const k=key.toLowerCase().trim();
     for(const ok of Object.keys(od)){if(ok===k||ok.includes(k))return od[ok];}
     return fb;
   };
 
-  // Liquidez
+  // ── LIQUIDEZ (col I-J de Otros) ──
+  const totalDisp=parseMonto(get('total',0));   // disponible en cuenta corriente
+  // Fin: parsear fecha del tipo "29-jun", "29 Jun", "29/06" o número serial de Sheets
+  let finRaw=get('fin',null);
+  let finDate=null;
+  if(finRaw!=null){
+    const sv=String(finRaw).trim();
+    // Sheets serial date
+    if(typeof finRaw==='number'||/^\d{5}$/.test(sv)){
+      const serial=typeof finRaw==='number'?finRaw:Number(sv);
+      finDate=new Date(Date.UTC(1899,11,30)+serial*86400000);
+    } else if(sv.startsWith('Date(')){
+      const p=sv.replace('Date(','').replace(')','').split(',').map(Number);
+      finDate=new Date(p[0],p[1],p[2]);
+    } else {
+      // Intentar parsear "29-jun", "29 jun 2025", etc.
+      const mmap={ene:0,feb:1,mar:2,abr:3,may:4,jun:5,jul:6,ago:7,sep:8,oct:9,nov:10,dic:11,
+                  enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,julio:6,agosto:7,septiembre:8,octubre:9,noviembre:10,diciembre:11};
+      const m=sv.match(/(\d{1,2})[-\/\s]([a-záéíóú]+)/i);
+      if(m){
+        const dia=parseInt(m[1]);const mesK=m[2].toLowerCase().slice(0,3);
+        const mesN=mmap[mesK]??mmap[m[2].toLowerCase()]??-1;
+        if(mesN>=0){const y=new Date();finDate=new Date(y.getFullYear(),mesN,dia);if(finDate<y)finDate.setFullYear(y.getFullYear()+1);}
+      } else finDate=new Date(sv);
+    }
+    if(finDate&&isNaN(finDate)) finDate=null;
+  }
+  const now=new Date();
+  const hoy=now.toLocaleDateString('es-CL',{day:'numeric',month:'long',year:'numeric'});
+  // días entre hoy y fin (inclusive hoy)
+  let diasRestantes=null, diario=0, finLabel='—';
+  if(finDate){
+    const msDay=1000*60*60*24;
+    diasRestantes=Math.max(1,Math.round((finDate-new Date(now.getFullYear(),now.getMonth(),now.getDate()))/msDay)+1);
+    diario=totalDisp>0&&diasRestantes>0?totalDisp/diasRestantes:0;
+    finLabel=finDate.toLocaleDateString('es-CL',{day:'numeric',month:'long'});
+  }
+
+  // ── IPC ──
+  const ipcRaw=get('ipc',null);
+  let ipcPct=0,ipcLabel='—';
+  if(ipcRaw!=null){
+    const n=typeof ipcRaw==='number'?ipcRaw:parseFloat(String(ipcRaw).replace('%','').replace(',','.').trim());
+    if(!isNaN(n)){ipcPct=n<1?n*100:n; ipcLabel=ipcPct.toFixed(1)+'%';}
+  }
   const liquidoOld=parseMonto(get('liquido old',get('líquido old',0)));
-  const ipc=parseMonto(get('ipc',0));
   const baseNew=parseMonto(get('base new',0));
   const liquidoNew=parseMonto(get('liquido new',get('líquido new',0)));
   const aumento=parseMonto(get('aumento',0));
-  const pctLiquido=liquidoOld>0?Math.round(liquidoNew/liquidoOld*100):0;
 
-  // Distribución ahorro
+  // ── DISTRIBUCIÓN AHORRO ──
   const distAhorro=od['_distAhorro']||[];
 
-  // TC resumen (desde tcData)
-  const tcPend=tcData.filter(r=>ESTADO_PENDIENTE.has(r.estado));
-  const totalTC=tcPend.reduce((a,r)=>a+r.total,0)||parseMonto(get('total tc',0));
+  // ── TC RESUMEN ──
   const copecTC=parseMonto(get('copec',0));
-  const pagoTC=parseMonto(get('pago',get('pago tc',0)));
-  const pendienteTC=parseMonto(get('pendiente',totalTC-pagoTC));
-  const deltaTC=pagoTC-totalTC;
+  const pagoTC=parseMonto(get('pago',0));
+  const totalTCGs=parseMonto(get('total tc',0));
+  const pendienteTC=parseMonto(get('pendiente',totalTCGs-pagoTC));
+  const deltaTC=parseMonto(get('delta',pagoTC-totalTCGs));
 
-  // Tarjeta resumen desde gs (col I-J)
-  const tcGsTotal=parseMonto(get('total',0));
-  const finDia=String(get('fin',get('fin |',get('fin|','')))||'').trim();
-  const diario=parseMonto(get('diario',0));
+  // ── LATAM PASS (Millas) ──
+  const GOLD_META=18000, SILVER_META=35000;
+  const millasAct=parseMonto(get('millas latam',get('millas',0)));
+  // Inicio para calcular promedio mensual
+  let inicioDateMillas=null;
+  const inicioRaw=get('inicio',null);
+  if(inicioRaw){
+    const sv=String(inicioRaw);
+    if(sv.startsWith('Date(')){const p=sv.replace('Date(','').replace(')','').split(',').map(Number);inicioDateMillas=new Date(p[0],p[1],p[2]);}
+    else inicioDateMillas=new Date(sv);
+    if(isNaN(inicioDateMillas))inicioDateMillas=null;
+  }
+  // Promedio mensual = millas actuales / meses desde inicio
+  let promMensual=0, fechaMetaGold=null, fechaMetaSilver=null;
+  if(inicioDateMillas&&millasAct>0){
+    const msDiff=now-inicioDateMillas;
+    const mesesTransc=Math.max(1,msDiff/(1000*60*60*24*30.44));
+    promMensual=millasAct/mesesTransc;
+    const addMeses=(base,n)=>{const d=new Date(base);d.setMonth(d.getMonth()+Math.ceil(n));return d;};
+    if(millasAct<GOLD_META) fechaMetaGold=addMeses(now,(GOLD_META-millasAct)/promMensual);
+    fechaMetaSilver=addMeses(now,(SILVER_META-millasAct)/promMensual);
+  }
+  const fmtFechaCorta=d=>d?d.toLocaleDateString('es-CL',{month:'long',year:'numeric'}):'—';
 
-  // Millas / objetivo
-  const objetivo=parseMonto(get('objetivo',0));
-  const actual=parseMonto(get('actual',0));
-  const avancePct=objetivo>0?Math.round(actual/objetivo*100):0;
-  const proyMillas=parseMonto(get('proy millas',0));
-  const metaMillas=String(get('12.000 millas',get('12000 millas',get('meta','')))||'').trim();
+  // Tramo actual: GOLD o SILVER
+  const esSilver=millasAct>=GOLD_META;
+  const metaActual=esSilver?SILVER_META:GOLD_META;
+  const nivelLabel=esSilver?'SILVER':'GOLD';
+  const nivelColor=esSilver?'#9ca3af':'#d97706';
+  const nivelBg=esSilver?'linear-gradient(90deg,#6b7280,#9ca3af)':'linear-gradient(90deg,#f59e0b,#fbbf24)';
+  const pctActual=Math.min(Math.round(millasAct/metaActual*100),100);
+  const pctGoldEnSilver=esSilver?Math.min(Math.round(GOLD_META/SILVER_META*100),100):100; // marcador GOLD en barra SILVER
+  const restantes=Math.max(0,metaActual-millasAct);
 
   // Ahorro crédito
   const ahorroCredVal=ahorroCredito||parseMonto(get('ahorro credito',0));
   const inicioVal=inicioAhorro||String(get('inicio','')||'');
 
-  const now=new Date();
-  const hoy=now.toLocaleDateString('es-CL',{day:'numeric',month:'long',year:'numeric'});
-
   document.getElementById('page-content').innerHTML=`
 ${UI.hero('Resumen','Mi situación','financiera',hoy)}
 
-${UI.sectionLabel('Liquidez')}
-<div class="widget-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px">
+${UI.sectionLabel('Liquidez · Cuenta Corriente')}
+<div class="widget-grid" style="margin-bottom:20px">
   <div class="widget">
-    <div class="widget-title">Base Anterior</div>
-    <div class="widget-val">${fmtM(liquidoOld)}</div>
-    <div class="widget-sub">Líquido Old</div>
+    <div class="widget-title">💰 Disponible</div>
+    <div class="widget-val widget-green">${fmtM(totalDisp)}</div>
+    <div class="widget-sub">Saldo en cuenta corriente</div>
   </div>
   <div class="widget">
-    <div class="widget-title">IPC aplicado</div>
-    <div class="widget-val widget-accent">${ipc>0?(ipc*100).toFixed(1)+'%':get('ipc','—')}</div>
-    <div class="widget-sub">Base New → ${fmtM(baseNew)}</div>
+    <div class="widget-title">📅 Disponible Diario</div>
+    <div class="widget-val widget-accent">${diario?fmtM(diario):'—'}</div>
+    <div class="widget-sub">${diasRestantes!=null?`${diasRestantes} días · hasta ${finLabel}`:'Ingresa la fecha Fin en el Sheet'}</div>
   </div>
   <div class="widget">
-    <div class="widget-title">Líquido Nuevo · Aumento</div>
-    <div class="widget-val widget-green">${fmtM(liquidoNew)}</div>
-    <div class="widget-sub">Aumento <strong>${fmtM(aumento)}</strong>${pctLiquido?` · ${pctLiquido}% del anterior`:''}</div>
+    <div class="widget-title">📈 Variación IPC</div>
+    <div class="widget-val" style="color:#f59e0b">${ipcLabel}</div>
+    <div class="widget-sub">${liquidoOld?`Base anterior ${fmtM(liquidoOld)}`:''} ${aumento?`· Aumento ${fmtM(aumento)}`:''}</div>
   </div>
 </div>
 
 ${distAhorro.length?`
-${UI.sectionLabel('Distribución de ahorro')}
+${UI.sectionLabel('Distribución de Ahorro')}
 <div class="card" style="margin-bottom:20px">
   ${distAhorro.map(d=>`
     <div class="dist-ahorro-row">
@@ -1285,41 +1345,78 @@ ${UI.sectionLabel('Distribución de ahorro')}
 ${UI.sectionLabel('Tarjeta de Crédito')}
 <div class="widget-grid-2" style="margin-bottom:20px">
   <div class="widget">
-    <div class="widget-title">Resumen TC</div>
-    <div class="tc-resumen-row"><span class="tc-resumen-label">Total TC</span><span class="tc-resumen-val">${fmtM(totalTC)}</span></div>
+    <div class="widget-title">Resumen Deuda TC</div>
+    <div class="tc-resumen-row"><span class="tc-resumen-label">Total TC</span><span class="tc-resumen-val">${fmtM(totalTCGs)}</span></div>
     <div class="tc-resumen-row"><span class="tc-resumen-label">Copec</span><span class="tc-resumen-val">${copecTC?fmtM(copecTC):'—'}</span></div>
     <div class="tc-resumen-row"><span class="tc-resumen-label">Pago</span><span class="tc-resumen-val widget-green">${fmtM(pagoTC)}</span></div>
     <div class="tc-resumen-row"><span class="tc-resumen-label">Pendiente</span><span class="tc-resumen-val widget-red">${fmtM(pendienteTC)}</span></div>
-    <div class="tc-resumen-row"><span class="tc-resumen-label">Delta</span><span class="tc-resumen-val ${deltaTC>=0?'widget-green':'widget-red'}">${fmtM(deltaTC)}</span></div>
+    <div class="tc-resumen-row"><span class="tc-resumen-label">Delta</span><span class="tc-resumen-val ${deltaTC>=0?'widget-green':'widget-red'}">${deltaTC>=0?'+':''}${fmtM(Math.abs(deltaTC))}</span></div>
   </div>
   <div class="widget">
-    <div class="widget-title">TC del mes</div>
-    ${tcGsTotal?`<div class="tc-resumen-row"><span class="tc-resumen-label">Total</span><span class="tc-resumen-val">${fmtM(tcGsTotal)}</span></div>`:''}
-    ${finDia?`<div class="tc-resumen-row"><span class="tc-resumen-label">Fin</span><span class="tc-resumen-val">${finDia}</span></div>`:''}
-    ${diario?`<div class="tc-resumen-row"><span class="tc-resumen-label">Diario</span><span class="tc-resumen-val widget-accent">${fmtM(diario)}</span></div>`:''}
+    <div class="widget-title">Disponible diario TC</div>
+    <div class="widget-val widget-accent" style="margin-bottom:6px">${diario?fmtM(diario):'—'}</div>
+    ${finLabel!=='—'?`<div class="widget-sub">Cierre ${finLabel} · ${diasRestantes} días restantes</div>`:''}
   </div>
 </div>
 
-${objetivo||actual?`
-${UI.sectionLabel('Objetivo Millas')}
-<div class="widget-grid-2" style="margin-bottom:20px">
-  <div class="widget">
-    <div class="widget-title">Avance millas</div>
-    <div class="widget-val">${actual?fmtNum(actual):'—'} <span style="font-size:14px;font-weight:600;color:var(--muted)">/ ${objetivo?fmtNum(objetivo):'—'}</span></div>
-    <div class="prog-bar-wrap">
-      <div class="prog-bar-track"><div class="prog-bar-fill" style="width:${Math.min(avancePct,100)}%;background:${avancePct>=100?'#059669':'#634dd2'}"></div></div>
-      <div class="prog-label"><span>${avancePct}% completado</span><span>${objetivo&&actual?fmtNum(objetivo-actual)+' restantes':''}</span></div>
+${millasAct>0?`
+${UI.sectionLabel('LATAM Pass')}
+<div class="card" style="margin-bottom:20px">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px">
+    <div>
+      <div style="font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Millas acumuladas</div>
+      <div style="font-size:28px;font-weight:800;color:var(--text);line-height:1">${fmtNum(millasAct)}</div>
+      <div style="font-size:11px;font-weight:600;color:var(--muted);margin-top:3px">de ${fmtNum(metaActual)} millas · objetivo ${nivelLabel}</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="background:${nivelColor};color:#fff;font-size:11px;font-weight:800;padding:4px 12px;border-radius:20px;letter-spacing:.06em">${nivelLabel}</span>
+      ${esSilver?`<span style="background:rgba(245,158,11,.12);color:#d97706;font-size:11px;font-weight:800;padding:4px 12px;border-radius:20px">GOLD ✓</span>`:''}
     </div>
   </div>
-  <div class="widget">
-    <div class="widget-title">Proyección</div>
-    ${proyMillas?`<div class="millas-row"><span class="tc-resumen-label">Proy. Millas</span><span style="font-weight:800;font-size:15px">${fmtNum(proyMillas)}</span></div>`:''}
-    ${metaMillas?`<div class="millas-row"><span class="tc-resumen-label">Fecha meta</span><span style="font-weight:700;color:var(--accent)">${metaMillas}</span></div>`:''}
+
+  <!-- Barra de progreso con doble tramo -->
+  <div style="margin-bottom:6px">
+    <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:var(--muted);margin-bottom:5px">
+      <span>0</span>
+      ${!esSilver?`<span style="color:#d97706;font-weight:800">GOLD ${fmtNum(GOLD_META)}</span>`:`<span style="color:#d97706">GOLD ${fmtNum(GOLD_META)}</span>`}
+      <span style="color:#9ca3af">SILVER ${fmtNum(SILVER_META)}</span>
+    </div>
+    <!-- Track unificado -->
+    <div style="position:relative;height:14px;background:rgba(27,0,136,.07);border-radius:8px;overflow:hidden">
+      <!-- Relleno principal -->
+      <div style="position:absolute;left:0;top:0;height:100%;width:${Math.min(millasAct/SILVER_META*100,100)}%;background:${nivelBg};border-radius:8px;transition:width .5s"></div>
+      <!-- Marcador GOLD a los 18k (sobre el track) -->
+      <div style="position:absolute;left:${GOLD_META/SILVER_META*100}%;top:0;bottom:0;width:2px;background:#fff;opacity:.7"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;margin-top:5px">
+      <span style="color:${nivelColor}">${pctActual}% completado (objetivo ${nivelLabel})</span>
+      <span style="color:var(--muted)">${fmtNum(restantes)} millas restantes</span>
+    </div>
   </div>
+
+  <!-- Detalle numérico -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+    <div style="text-align:center">
+      <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Promedio mensual</div>
+      <div style="font-size:16px;font-weight:800;color:var(--text)">${promMensual?fmtNum(Math.round(promMensual)):'—'}</div>
+      <div style="font-size:10px;color:var(--muted);font-weight:600">millas / mes</div>
+    </div>
+    <div style="text-align:center;border-left:1px solid var(--border);border-right:1px solid var(--border)">
+      <div style="font-size:9px;font-weight:800;color:#d97706;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Meta GOLD</div>
+      <div style="font-size:16px;font-weight:800;color:${millasAct>=GOLD_META?'#059669':'#d97706'}">${millasAct>=GOLD_META?'✓ Alcanzado':fmtFechaCorta(fechaMetaGold)}</div>
+      <div style="font-size:10px;color:var(--muted);font-weight:600">${millasAct>=GOLD_META?fmtNum(millasAct-GOLD_META)+' sobre meta':fmtNum(GOLD_META-millasAct)+' restantes'}</div>
+    </div>
+    <div style="text-align:center">
+      <div style="font-size:9px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Meta SILVER</div>
+      <div style="font-size:16px;font-weight:800;color:${millasAct>=SILVER_META?'#059669':'#6b7280'}">${millasAct>=SILVER_META?'✓ Alcanzado':fmtFechaCorta(fechaMetaSilver)}</div>
+      <div style="font-size:10px;color:var(--muted);font-weight:600">${millasAct>=SILVER_META?fmtNum(millasAct-SILVER_META)+' sobre meta':fmtNum(SILVER_META-millasAct)+' restantes'}</div>
+    </div>
+  </div>
+  ${inicioDateMillas?`<div style="margin-top:10px;font-size:10px;color:var(--muted);font-weight:600;text-align:right">Acumulando desde ${inicioDateMillas.toLocaleDateString('es-CL',{day:'numeric',month:'long',year:'numeric'})}</div>`:''}
 </div>`:''}
 
 ${UI.sectionLabel('Ahorro Crédito')}
-<div class="widget-grid-2">
+<div class="widget-grid-2" style="margin-bottom:20px">
   <div class="widget">
     <div class="widget-title">Ahorro Crédito acumulado</div>
     <div class="widget-val widget-green">${fmtM(ahorroCredVal)}</div>
