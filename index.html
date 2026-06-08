@@ -540,18 +540,21 @@ function buildDropdown(id,options,currentVal,placeholder,onSelect){
     ?`<div class="filter-trigger-left"><div class="filter-trigger-val">${selected.label}</div><div class="filter-trigger-amt">${selected.amt}</div></div>`
     :`<div class="filter-trigger-left"><div class="filter-trigger-val placeholder">${placeholder}</div></div>`;
   const chevron=`<svg class="filter-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
-  const opts=options.map(o=>{
-    const val=JSON.stringify(o.value);
-    return `<div class="filter-option${o.value===currentVal?' selected':''}" onclick="event.stopPropagation();closeAllDropdowns();window['${onSelect}'](${val})">
+  const opts=options.map(o=>`
+    <div class="filter-option${o.value===currentVal?' selected':''}" data-fn="${onSelect}" data-val="${o.value.replace(/"/g,'&quot;').replace(/'/g,'&#39;')}" onclick="event.stopPropagation();closeAllDropdowns();ddSelect(this)">
       <div class="filter-option-name">${o.label}</div>
       <div style="display:flex;align-items:center;gap:8px"><div class="filter-option-amt">${o.amt}</div><div class="filter-option-check"></div></div>
-    </div>`;}).join('');
+    </div>`).join('');
   return `<div class="filter-trigger" onclick="event.stopPropagation();toggleDropdown('${id}')">${triggerContent}${chevron}</div>
     <div class="filter-dropdown" id="${id}">${opts}</div>`;
 }
+function ddSelect(el){
+  const fn=el.dataset.fn, val=el.dataset.val;
+  if(typeof window[fn]==='function') window[fn](val);
+}
 // Botón limpiar separado (fuera del dropdown)
 function btnClear(onSelect){
-  return `<button class="btn-clear" onclick="event.stopPropagation();closeAllDropdowns();window['${onSelect}']()">
+  return `<button class="btn-clear" data-fn="${onSelect}" onclick="event.stopPropagation();closeAllDropdowns();(typeof window[this.dataset.fn]==='function'?window[this.dataset.fn]:()=>{})()">
     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     Limpiar
   </button>`;
@@ -601,57 +604,19 @@ async function loadData(){
       estado:String(r.c[8]?.v||'').toLowerCase().trim()
     })).filter(r=>r.responsable&&r.mes);
 
-    // Hoja Otros: parseo completo para Resumen + campos existentes
+    // Hoja Otros: formato Tipo|Métrica|Valor (cols A,B,C)
     if(rowsOtros.length){
       const od={};
       rowsOtros.forEach(row=>{
         const cells=row.c||[];
-        for(let ci=0;ci<cells.length;ci++){
-          const cell=cells[ci]; if(!cell||cell.v==null) continue;
-          const v=String(cell.v).trim();
-          const nx=cells[ci+1];
-          const nxv=nx?.v!=null?nx.v:null;
-          // key→valor: buscamos todos los pares clave:siguiente_celda
-          const kn=v.toLowerCase().replace(/\s+/g,' ');
-          if(nxv!=null) od[kn]=nxv;
-          // aliases específicos
-          if(/ahorro\s*cr[eé]dito/i.test(v)){ahorroCredito=parseMonto(nxv)||0; od['ahorro credito']=nxv;}
-          if(/^inicio$/i.test(v)){
-            const sv=String(nxv||'');let d;
-            if(sv.startsWith('Date(')){const p=sv.replace('Date(','').replace(')','').split(',').map(Number);d=new Date(p[0],p[1],p[2]);}
-            else d=new Date(sv);
-            inicioAhorro=isNaN(d)?sv:d.toLocaleDateString('es-CL',{day:'2-digit',month:'long',year:'numeric'});
-            od['inicio']=inicioAhorro;
-          }
-        }
+        const tipo=String(cells[0]?.v||'').trim().toLowerCase();
+        const metrica=String(cells[1]?.v||'').trim().toLowerCase();
+        const valorRaw=cells[2]?.v!=null?cells[2].v:null;
+        if(!tipo||!metrica||valorRaw==null) return;
+        od[tipo+'|'+metrica]=valorRaw;
       });
-      // Guardar distribución de ahorro (filas con banco y %)
-      const distAhorro=[];
-      rowsOtros.forEach(row=>{
-        const cells=row.c||[];
-        // buscamos patrón: col[D]=Tipo, col[E]=Banco, col[F]=%, col[G]=Monto
-        const tipo=String(cells[3]?.v||'').trim();
-        const banco=String(cells[4]?.v||'').trim();
-        const pct=cells[5]?.v!=null?Number(String(cells[5].v).replace('%',''))||0:0;
-        const monto=parseMonto(cells[6]?.v);
-        if(tipo&&banco&&(pct||monto)) distAhorro.push({tipo,banco,pct,monto});
-      });
-      od['_distAhorro']=distAhorro;
-      // Liquidez / IPC — columnas A-B y cualquier celda con label+valor
-      rowsOtros.forEach(row=>{
-        const cells=row.c||[];
-        const a=String(cells[0]?.v||'').trim();
-        const b=cells[1]?.v!=null?cells[1].v:null;
-        if(a&&b!=null){ const kn=a.toLowerCase().replace(/\s+/g,' '); od[kn]=b; }
-        // Buscar Santander y Fin en cualquier columna de la fila
-        for(let ci=0;ci<cells.length;ci++){
-          if(!cells[ci]||cells[ci].v==null) continue;
-          const lbl=String(cells[ci].v).trim().toLowerCase();
-          const nxt=cells[ci+1];
-          if(lbl==='santander'&&nxt?.v!=null){ od['santander']=nxt.v; od['total']=nxt.v; }
-          if(lbl==='fin'&&nxt?.v!=null){ od['fin']=nxt.v; }
-        }
-      });
+      // Helper lookup
+      od['_get']=(t,m)=>{ const k=t.toLowerCase()+'|'+m.toLowerCase(); return od[k]!=null?od[k]:null; };
       otrosData=od;
     }
 
@@ -727,7 +692,7 @@ ${UI.sectionLabel('Análisis del mes')}
 <div style="display:grid;grid-template-columns:30fr 70fr;gap:var(--gap);margin-bottom:20px;align-items:start">
   <div class="card" style="padding:14px 12px">
     <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">Distribución del mes</div>
-    <div style="position:relative;height:200px" id="dist-bar-chart-wrap"><canvas id="dist-bar-chart"></canvas></div>
+    <div style="position:relative;min-height:180px;height:100%" id="dist-bar-chart-wrap"><canvas id="dist-bar-chart"></canvas></div>
   </div>
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
@@ -844,7 +809,9 @@ function renderDist(){
     const distBarLabels={id:'distBarLabels',afterDatasetsDraw(chart){
       const{ctx}=chart; ctx.save();
       chart.getDatasetMeta(0).data.forEach((bar,i)=>{
-        const label=fmtM(allSegs[i].amt,true);
+        const _tot=allSegs.reduce((s,x)=>s+x.amt,0);
+        const _pct=_tot>0?Math.round(allSegs[i].amt/_tot*100):0;
+        const label=fmtM(allSegs[i].amt,true)+' '+_pct+'%';
         ctx.font=`700 10px ${SF}`;
         const tw=ctx.measureText(label).width;
         if(bar.width>tw+14){
@@ -1239,7 +1206,7 @@ ${UI.sectionLabel('Distribución · Detalle')}
 <div style="display:grid;grid-template-columns:25fr 75fr;gap:var(--gap);margin-bottom:var(--gap);align-items:start">
   <div class="card" style="padding:14px 12px">
     <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">Por responsable</div>
-    <div style="position:relative;height:${Math.max(140,filteredItems.length*38+60)}px" id="pend-dist-wrap"><canvas id="pend-dist-chart"></canvas></div>
+    <div style="position:relative;height:${Math.max(140,activos.length*38+60)}px" id="pend-dist-wrap"><canvas id="pend-dist-chart"></canvas></div>
     ${pendDistFiltro?`<div style="margin-top:8px"><button class="btn-clear" onclick="setPendFiltro('')">✕ ${pendDistFiltro}</button></div>`:''}
   </div>
   <div class="card" style="padding:14px">
@@ -1247,7 +1214,7 @@ ${UI.sectionLabel('Distribución · Detalle')}
       <div style="font-size:13px;font-weight:800;color:var(--text)">Detalle de compromisos</div>
       <div style="font-size:11px;color:var(--muted)">${filteredItems.length} ítems${pendDistFiltro?' · '+pendDistFiltro:''}</div>
     </div>
-    <div style="overflow-x:auto;max-height:${Math.max(140,filteredItems.length*38+60)}px;overflow-y:auto">
+    <div style="overflow-x:auto;max-height:${Math.max(140,activos.length*38+60)}px;overflow-y:auto">
     <table style="border-collapse:collapse;font-size:12px;width:100%">
       <thead><tr style="border-bottom:2px solid var(--border)">
         <th class="tc-th" style="text-align:left;position:sticky;top:0;background:#fff;z-index:1">Responsable</th>
@@ -1318,18 +1285,14 @@ ${UI.card('',`<div style="font-size:11px;color:var(--muted)">${proy.length} mese
 function renderVarios(){
   hideTooltip();
   const od=otrosData;
-  const get=(key,fb=null)=>{
-    const k=key.toLowerCase().trim();
-    for(const ok of Object.keys(od)){if(ok===k||ok.includes(k))return od[ok];}
-    return fb;
-  };
+  const g=(t,m,fb=null)=>{ const v=od['_get']?od['_get'](t,m):null; return v!=null?v:fb; };
 
   const now=new Date();
   const hoy=now.toLocaleDateString('es-CL',{day:'numeric',month:'long',year:'numeric'});
 
-  // ── DISPONIBLE (una sola card) ──
-  const totalDisp=parseMonto(get('_santander',get('santander',0)));
-  let finRaw=get('_fin',get('fin',null));
+  // ── DISPONIBLE ──
+  const totalDisp=parseMonto(g('santander','monto',0));
+  let finRaw=g('santander','fecha fin',null);
   let finDate=null;
   if(finRaw!=null){
     const sv=String(finRaw).trim();
@@ -1361,23 +1324,21 @@ function renderVarios(){
   }
 
   // ── IPC ──
-  const ipcRaw=get('ipc',null);
+  const ipcRaw=g('ipc','valor ipc',null);
   let ipcPct=0,ipcLabel='—';
   if(ipcRaw!=null){
     const n=typeof ipcRaw==='number'?ipcRaw:parseFloat(String(ipcRaw).replace('%','').replace(',','.').trim());
     if(!isNaN(n)){ipcPct=n<1?n*100:n;ipcLabel=ipcPct.toFixed(1)+'%';}
   }
-  // Líquido: calcular ingreso total desde rawData para último mes y anterior
-  const mesesConDatos=months.filter(m=>rawData.some(r=>r.mes===m&&r.tipo==='ingreso'));
-  const mesNuevo=mesesConDatos.length>0?mesesConDatos[mesesConDatos.length-1]:null;
-  const mesAnterior=mesesConDatos.length>1?mesesConDatos[mesesConDatos.length-2]:null;
-  const liquidoNew=mesNuevo?rawData.filter(r=>r.mes===mesNuevo&&r.tipo==='ingreso').reduce((a,r)=>a+r.monto,0):0;
-  const liquidoOld=mesAnterior?rawData.filter(r=>r.mes===mesAnterior&&r.tipo==='ingreso').reduce((a,r)=>a+r.monto,0):0;
+  const baseOld=parseMonto(g('ipc','base old',0));
+  const liquidoOld=baseOld;
+  const liquidoNew=Math.round(baseOld*(1+ipcPct/100));
   const aumento=liquidoNew-liquidoOld;
 
   // ── LATAM PASS ──
-  const GOLD_META=18000,SILVER_META=35000;
-  const millasAct=parseMonto(get('millas latam',get('millas',0)));
+  const millasAct=parseMonto(g('latam','millas',0));
+  const GOLD_META=parseMonto(g('latam','gold',18000));
+  const SILVER_META=parseMonto(g('latam','silver',35000));
 
   // Promedio mensual: millas / días transcurridos del año × 30.44
   const ini=new Date(now.getFullYear(),0,1); // 01-ene del año actual
@@ -1406,7 +1367,7 @@ function renderVarios(){
   const fechaMetaSilver=millasAct<SILVER_META?addMeses(mesesHastaMeta(SILVER_META)):null;
 
   document.getElementById('page-content').innerHTML=`
-${UI.hero('Varios','Métricas','& seguimiento',hoy)}
+${UI.hero('Métricas & Seguimiento','Varios','datos',hoy)}
 
 ${UI.sectionLabel('Liquidez · Cuenta Corriente')}
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--gap);margin-bottom:20px;max-width:640px">
@@ -1432,17 +1393,17 @@ ${UI.sectionLabel('Liquidez · Cuenta Corriente')}
     <div style="font-size:24px;font-weight:800;color:#f59e0b;line-height:1.1;margin-bottom:4px">${ipcLabel}</div>
     <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <div>
-        <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px">Líquido anterior</div>
+        <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px">Base anterior</div>
         <div style="font-size:15px;font-weight:800;color:var(--text)">${liquidoOld?fmtM(liquidoOld):'—'}</div>
-        <div style="font-size:10px;color:var(--muted);font-weight:600">${mesAnterior?fmtMesLabel(mesAnterior):''}</div>
+        <div style="font-size:10px;color:var(--muted);font-weight:600">Base Old</div>
       </div>
       <div style="border-left:1px solid var(--border);padding-left:8px">
-        <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px">Líquido nuevo</div>
+        <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px">Líquido ajustado</div>
         <div style="font-size:15px;font-weight:800;color:var(--text)">${liquidoNew?fmtM(liquidoNew):'—'}</div>
-        <div style="font-size:10px;color:var(--muted);font-weight:600">${mesNuevo?fmtMesLabel(mesNuevo):''}</div>
+        <div style="font-size:10px;color:var(--muted);font-weight:600">Base Old × (1 + IPC)</div>
       </div>
     </div>
-    ${aumento?`<div style="margin-top:8px;font-size:13px;font-weight:800;color:${aumento>0?'#059669':'#ED1650'}">${aumento>0?'↑ +':'↓ '}${fmtM(Math.abs(aumento))}</div>`:''}
+    ${aumento?`<div style="margin-top:8px;font-size:13px;font-weight:800;color:${aumento>0?'#059669':'#ED1650'}">${aumento>0?'↑ +':'↓ '}${fmtM(Math.abs(aumento))} de aumento</div>`:''}
   </div>
 </div>
 
