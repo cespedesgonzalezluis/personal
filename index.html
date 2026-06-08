@@ -1331,8 +1331,15 @@ function renderVarios(){
     if(!isNaN(n)){ipcPct=n<1?n*100:n;ipcLabel=ipcPct.toFixed(1)+'%';}
   }
   const baseOld=parseMonto(g('ipc','base old',0));
-  const liquidoOld=baseOld;
-  const liquidoNew=Math.round(baseOld*(1+ipcPct/100));
+  // Porcentaje: puede venir como 0.8527 o 85.27 — normalizar a decimal
+  const pctRaw=g('ipc','porcentaje',null);
+  let pctDec=1;
+  if(pctRaw!=null){
+    const pn=typeof pctRaw==='number'?pctRaw:parseFloat(String(pctRaw).replace('%','').replace(',','.'));
+    if(!isNaN(pn)) pctDec=pn>1?pn/100:pn;
+  }
+  const liquidoOld=Math.round(baseOld*pctDec);
+  const liquidoNew=Math.round(baseOld*(1+ipcPct/100)*pctDec);
   const aumento=liquidoNew-liquidoOld;
 
   // ── LATAM PASS ──
