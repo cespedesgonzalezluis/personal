@@ -1243,10 +1243,13 @@ function renderVarios(){
     if(finDate&&isNaN(finDate))finDate=null;
   }
   const hoyStart=new Date(now.getFullYear(),now.getMonth(),now.getDate());
-  let diasRest=null,diario=0,finLabel='—';
+  let diasRest=null,diario=0,diarioManana=0,finLabel='—';
   if(finDate){
-    diasRest=Math.max(1,Math.round((finDate-hoyStart)/86400000)+1);
-    diario=totalDisp>0?totalDisp/diasRest:0;
+    // días desde HOY hasta finDate: hoy=8jun, fin=29jun → 21 días
+    diasRest=Math.max(1,Math.round((finDate-hoyStart)/86400000));
+    diario=totalDisp>0&&diasRest>0?totalDisp/diasRest:0;
+    // mañana: misma plata, un día menos de plazo
+    diarioManana=totalDisp>0&&diasRest>1?totalDisp/(diasRest-1):diario;
     finLabel=finDate.toLocaleDateString('es-CL',{day:'numeric',month:'long'});
   }
 
@@ -1299,11 +1302,18 @@ ${UI.sectionLabel('Liquidez · Cuenta Corriente')}
   <div class="card">
     <div class="widget-title">💰 Disponible</div>
     <div style="font-size:24px;font-weight:800;color:#059669;line-height:1.1;margin-bottom:4px">${fmtM(totalDisp)}</div>
-    <div style="font-size:11px;font-weight:600;color:var(--muted)">Saldo cuenta corriente</div>
-    ${finDate?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-      <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px">Disponible diario</div>
-      <div style="font-size:18px;font-weight:800;color:var(--accent)">${fmtM(diario)}</div>
-      <div style="font-size:11px;font-weight:600;color:var(--muted);margin-top:2px">${diasRest} días · hasta ${finLabel}</div>
+    <div style="font-size:11px;font-weight:600;color:var(--muted)">${finDate?`Saldo hasta ${finLabel} · ${diasRest} días`:'Saldo cuenta corriente'}</div>
+    ${finDate?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div>
+        <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Disponible hoy</div>
+        <div style="font-size:18px;font-weight:800;color:var(--accent)">${fmtM(diario)}</div>
+        <div style="font-size:10px;font-weight:600;color:var(--muted);margin-top:1px">por día restante</div>
+      </div>
+      <div style="border-left:1px solid var(--border);padding-left:10px">
+        <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Disponible mañana</div>
+        <div style="font-size:18px;font-weight:800;color:#634dd2">${fmtM(diarioManana)}</div>
+        <div style="font-size:10px;font-weight:600;color:var(--muted);margin-top:1px">si no gastas hoy</div>
+      </div>
     </div>`:''}
   </div>
   <div class="card">
@@ -1317,82 +1327,69 @@ ${UI.sectionLabel('Liquidez · Cuenta Corriente')}
 
 ${millasAct>0?`
 ${UI.sectionLabel('LATAM Pass')}
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--gap);margin-bottom:20px">
-  <!-- Card principal: barra + cifras -->
-  <div class="card">
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px">
-      <div>
-        <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px">Millas acumuladas</div>
-        <div style="font-size:28px;font-weight:800;color:var(--text);line-height:1">${fmtNum(millasAct)}</div>
-        <div style="font-size:11px;font-weight:600;color:var(--muted);margin-top:2px">objetivo ${nivelLabel} · ${fmtNum(metaActual)} millas</div>
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px">
-        <span style="background:${nivelColor};color:#fff;font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px">${nivelLabel}</span>
-        ${esSilver?`<span style="background:rgba(245,158,11,.12);color:#d97706;font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px">GOLD ✓</span>`:''}
-      </div>
+<div class="card" style="margin-bottom:20px">
+  <!-- Header: millas + badges -->
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px">
+    <div>
+      <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px">Millas acumuladas</div>
+      <div style="font-size:28px;font-weight:800;color:var(--text);line-height:1">${fmtNum(millasAct)}</div>
+      <div style="font-size:11px;font-weight:600;color:var(--muted);margin-top:2px">objetivo ${nivelLabel} · ${fmtNum(metaActual)} millas</div>
     </div>
-
-    <!-- Barra dual 0→35k con marcador en 18k -->
-    <div style="margin-bottom:14px">
-      <div style="display:flex;justify-content:space-between;font-size:9px;font-weight:800;color:var(--muted);margin-bottom:5px">
-        <span>0</span>
-        <span style="color:#d97706">GOLD 18.000</span>
-        <span style="color:#6b7280">SILVER 35.000</span>
-      </div>
-      <div style="position:relative;height:16px;background:rgba(27,0,136,.07);border-radius:8px;overflow:hidden">
-        <div style="position:absolute;left:0;top:0;height:100%;width:${pctTotal.toFixed(1)}%;background:${nivelBg};border-radius:8px;transition:width .5s"></div>
-        <div style="position:absolute;left:${(GOLD_META/SILVER_META*100).toFixed(1)}%;top:0;bottom:0;width:2px;background:rgba(255,255,255,.8)"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;margin-top:5px">
-        <span style="color:${nivelColor}">${Math.min(Math.round(millasAct/metaActual*100),100)}% completado</span>
-        <span style="color:var(--muted)">${fmtNum(restantes)} restantes</span>
-      </div>
-    </div>
-
-    <!-- Promedio mensual -->
-    <div style="padding-top:12px;border-top:1px solid var(--border)">
-      <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Ritmo del año</div>
-      <div style="font-size:18px;font-weight:800;color:var(--text)">${fmtNum(Math.round(promMensual))} <span style="font-size:12px;font-weight:600;color:var(--muted)">millas/mes</span></div>
-      <div style="font-size:10px;color:var(--muted);font-weight:600;margin-top:2px">${fmtNum(millasAct)} millas en ${diasAnio} días (${now.getFullYear()})</div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px">
+      <span style="background:${nivelColor};color:#fff;font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px">${nivelLabel}</span>
+      ${esSilver?`<span style="background:rgba(245,158,11,.12);color:#d97706;font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px">GOLD ✓</span>`:''}
     </div>
   </div>
 
-  <!-- Card proyección -->
-  <div class="card">
-    <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px">Proyección de metas</div>
+  <!-- Barra dual 0→35k -->
+  <div style="margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;font-size:9px;font-weight:800;color:var(--muted);margin-bottom:5px">
+      <span>0</span><span style="color:#d97706">GOLD 18.000</span><span style="color:#6b7280">SILVER 35.000</span>
+    </div>
+    <div style="position:relative;height:16px;background:rgba(27,0,136,.07);border-radius:8px;overflow:hidden">
+      <div style="position:absolute;left:0;top:0;height:100%;width:${pctTotal.toFixed(1)}%;background:${nivelBg};border-radius:8px;transition:width .5s"></div>
+      <div style="position:absolute;left:${(GOLD_META/SILVER_META*100).toFixed(1)}%;top:0;bottom:0;width:2px;background:rgba(255,255,255,.8)"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;margin-top:5px">
+      <span style="color:${nivelColor}">${Math.min(Math.round(millasAct/metaActual*100),100)}% completado</span>
+      <span style="color:var(--muted)">${fmtNum(restantes)} restantes</span>
+    </div>
+  </div>
 
+  <!-- Grid 3 col: ritmo + GOLD + SILVER -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border-top:1px solid var(--border);padding-top:14px">
+    <!-- Ritmo -->
+    <div style="padding-right:16px">
+      <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px">Ritmo del año</div>
+      <div style="font-size:20px;font-weight:800;color:var(--text)">${fmtNum(Math.round(promMensual))}</div>
+      <div style="font-size:10px;font-weight:600;color:var(--muted)">millas/mes</div>
+      <div style="font-size:10px;font-weight:600;color:var(--muted);margin-top:3px">${fmtNum(millasAct)} en ${diasAnio} días</div>
+    </div>
     <!-- GOLD -->
-    <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
-        <span style="background:rgba(245,158,11,.15);color:#d97706;font-size:10px;font-weight:800;padding:2px 8px;border-radius:12px">GOLD</span>
-        <span style="font-size:11px;font-weight:700;color:var(--muted)">${fmtNum(GOLD_META)} millas</span>
+    <div style="padding:0 16px;border-left:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:5px;margin-bottom:5px">
+        <span style="background:rgba(245,158,11,.15);color:#d97706;font-size:9px;font-weight:800;padding:1px 7px;border-radius:10px">GOLD</span>
+        <span style="font-size:10px;font-weight:600;color:var(--muted)">${fmtNum(GOLD_META)}</span>
       </div>
       ${millasAct>=GOLD_META
         ?`<div style="font-size:16px;font-weight:800;color:#059669">✓ Alcanzado</div>
-           <div style="font-size:11px;color:var(--muted);font-weight:600;margin-top:2px">${fmtNum(millasAct-GOLD_META)} millas sobre la meta</div>`
+           <div style="font-size:10px;color:var(--muted);font-weight:600;margin-top:2px">${fmtNum(millasAct-GOLD_META)} sobre meta</div>`
         :`<div style="font-size:16px;font-weight:800;color:#d97706">${fmtFechaCorta(fechaMetaGold)}</div>
-           <div style="font-size:11px;color:var(--muted);font-weight:600;margin-top:2px">${fmtNum(GOLD_META-millasAct)} millas restantes · ${promMensual>0?Math.ceil((GOLD_META-millasAct)/promMensual)+' meses':'—'}</div>`
+           <div style="font-size:10px;color:var(--muted);font-weight:600;margin-top:2px">${fmtNum(GOLD_META-millasAct)} restantes · ${promMensual>0?Math.ceil((GOLD_META-millasAct)/promMensual)+' meses':'—'}</div>`
       }
     </div>
-
     <!-- SILVER -->
-    <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
-        <span style="background:rgba(107,114,128,.12);color:#6b7280;font-size:10px;font-weight:800;padding:2px 8px;border-radius:12px">SILVER</span>
-        <span style="font-size:11px;font-weight:700;color:var(--muted)">${fmtNum(SILVER_META)} millas</span>
+    <div style="padding-left:16px;border-left:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:5px;margin-bottom:5px">
+        <span style="background:rgba(107,114,128,.12);color:#6b7280;font-size:9px;font-weight:800;padding:1px 7px;border-radius:10px">SILVER</span>
+        <span style="font-size:10px;font-weight:600;color:var(--muted)">${fmtNum(SILVER_META)}</span>
       </div>
       ${millasAct>=SILVER_META
         ?`<div style="font-size:16px;font-weight:800;color:#059669">✓ Alcanzado</div>
-           <div style="font-size:11px;color:var(--muted);font-weight:600;margin-top:2px">${fmtNum(millasAct-SILVER_META)} millas sobre la meta</div>`
+           <div style="font-size:10px;color:var(--muted);font-weight:600;margin-top:2px">${fmtNum(millasAct-SILVER_META)} sobre meta</div>`
         :`<div style="font-size:16px;font-weight:800;color:#6b7280">${fmtFechaCorta(fechaMetaSilver)}</div>
-           <div style="font-size:11px;color:var(--muted);font-weight:600;margin-top:2px">${fmtNum(SILVER_META-millasAct)} millas restantes · ${promMensual>0?Math.ceil((SILVER_META-millasAct)/promMensual)+' meses':'—'}</div>`
+           <div style="font-size:10px;color:var(--muted);font-weight:600;margin-top:2px">${fmtNum(SILVER_META-millasAct)} restantes · ${promMensual>0?Math.ceil((SILVER_META-millasAct)/promMensual)+' meses':'—'}</div>`
       }
-    </div>
-
-    <!-- Dato base -->
-    <div style="font-size:10px;color:var(--muted);font-weight:600;line-height:1.6">
-      📅 Cálculo basado en ${diasAnio} días del año ${now.getFullYear()}<br>
-      📊 Ritmo actual: ${fmtNum(Math.round(promMensual))} millas/mes
     </div>
   </div>
 </div>`:''}`;
