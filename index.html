@@ -319,7 +319,7 @@ let otrosData={};
 let rawData=[], tcData=[], credData=[], mamaData=[], pendientesData=[];
 let months=[], selMonth='', evoRange=12, mamaEvoRange=12;
 let charts={}, tcFiltroMes='', tcFiltroMov='';
-let distCatFilter='', pendDistFiltro='';
+let distCatFilter='', pendDistFiltro='', detalleFiltroTipo='';
 
 // ── TOOLTIP ──
 const tip = document.getElementById('chartTooltip');
@@ -788,6 +788,7 @@ function setMamaRange(n,btn){
 // ── PÁGINA: MENSUAL ──
 function onMonthChange(){
   selMonth=document.getElementById('month-select').value;
+  detalleFiltroTipo='';
   const tab=document.querySelector('.nav-item.active')?.dataset?.tab||'mensual';
   if(tab==='mensual') renderPage();
 }
@@ -801,7 +802,7 @@ function renderPage(){
   const[mes,año]=selMonth.split('-');
   const mesLabel=fmtMesLabel(selMonth);
   document.getElementById('page-content').innerHTML=`
-${UI.hero('Reporte Mensual',capFirst(mes),año,'Resumen Financiero Mensual')}
+${UI.hero('Reporte Mensual',capFirst(mes),año)}
 <div class="kpi-strip">
   ${UI.kpiCard('Ingreso',fmtM(s.ing),deltaKpi(s.ing,prev?.ing))}
   ${UI.kpiCard('Gasto',fmtM(s.gasto),deltaKpi(s.gasto,prev?.gasto,true))}
@@ -810,18 +811,21 @@ ${UI.hero('Reporte Mensual',capFirst(mes),año,'Resumen Financiero Mensual')}
 ${UI.sectionLabel('Evolutivo mensual')}
 ${UI.card('Ingreso · Gasto · Tarjeta Crédito',
   UI.periodToggle(evoRange,[{val:12,label:'12M',fn:'setEvoRange(12,this)'},{val:0,label:'Todo',fn:'setEvoRange(0,this)'}]),
-  `<div style="height:230px"><canvas id="chartEvo"></canvas></div>${UI.chartLegend([{color:'#059669',label:'Ingreso'},{color:'#ED1650',label:'Gasto'},{color:'#f59e0b',label:'Tarjeta Crédito'}])}`,
+  `<div style="height:230px"><canvas id="chartEvo"></canvas></div>${UI.chartLegend([{color:'#059669',label:'Ingreso'},{color:'#ED1650',label:'Gasto'},{color:'#6366f1',label:'Tarjeta Crédito'}])}`,
   'margin-bottom:20px')}
 ${UI.sectionLabel('Análisis del mes')}
-<div style="display:grid;grid-template-columns:30fr 70fr;gap:var(--gap);margin-bottom:20px;align-items:start">
-  <div class="card" style="padding:14px 12px">
+<div style="display:grid;grid-template-columns:30fr 70fr;gap:var(--gap);margin-bottom:20px;align-items:stretch">
+  <div class="card" style="padding:14px 12px;display:flex;flex-direction:column">
     <div class="stat-label" style="margin-bottom:10px">Distribución del mes</div>
-    <div style="position:relative;min-height:180px;height:100%" id="dist-bar-chart-wrap"><canvas id="dist-bar-chart"></canvas></div>
+    <div style="position:relative;flex:1;min-height:180px" id="dist-bar-chart-wrap"><canvas id="dist-bar-chart"></canvas></div>
   </div>
   <div class="card">
     <div class="card-header">
       <div class="card-title">Detalle de gastos</div>
-      ${UI.badge(mesLabel,'navy')}
+      <div style="display:flex;align-items:center;gap:8px">
+        ${UI.badge(mesLabel,'navy')}
+        <span id="detalle-filtro-badge"></span>
+      </div>
     </div>
     <div class="tbl-scroll"><table>
       <thead><tr><th>Tipo</th><th>Detalle</th><th style="text-align:center">vs ant.</th><th>Monto</th></tr></thead>
@@ -852,11 +856,11 @@ function renderEvoChart(){
   const tooltipFn=makeExternalTooltip(i=>labelsFmt[i],i=>[
     {color:'#059669',label:`Ingreso${dlt(ingresos,i)}`,val:fmtM(ingresos[i])},
     {color:'#ED1650',label:`Gasto${dlt(gastos,i)}`,val:fmtM(gastos[i])},
-    {color:'#f59e0b',label:`TC${dlt(tcs,i)}`,val:fmtM(tcs[i])},
+    {color:'#6366f1',label:`TC${dlt(tcs,i)}`,val:fmtM(tcs[i])},
   ]);
   if(charts.evo) charts.evo.destroy();
   charts.evo=new Chart(document.getElementById('chartEvo'),{type:'line',
-    data:{labels,datasets:[lineDataset('Ingreso',ingresos,'#059669'),lineDataset('Gasto',gastos,'#ED1650'),lineDataset('TC',tcs,'#f59e0b',[6,4])]},
+    data:{labels,datasets:[lineDataset('Ingreso',ingresos,'#059669'),lineDataset('Gasto',gastos,'#ED1650'),lineDataset('TC',tcs,'#6366f1')]},
     options:stdLineOptions(tooltipFn,evoRange===0?20:evoRange)});
 }
 
@@ -905,10 +909,25 @@ function renderDistEvo(){
   }
 }
 
-function renderDetalle(prevMes){
-  const rows=rawData.filter(r=>r.mes===selMonth).sort((a,b)=>{const t=a.tipo.localeCompare(b.tipo,'es');return t!==0?t:a.detalle.localeCompare(b.detalle,'es');});
+function setDetalleFiltro(tipo){
+  detalleFiltroTipo=detalleFiltroTipo===tipo?'':tipo;
+  const badge=document.getElementById('detalle-filtro-badge');
+  if(badge) badge.innerHTML=detalleFiltroTipo?`<button class="btn-clear" style="padding:3px 8px;font-size:10px" onclick="setDetalleFiltro('')">✕ ${capFirst(detalleFiltroTipo)}</button>`:'';
+  renderDetalle(null,true);
+}
+
+function renderDetalle(prevMes, soloRefresh=false){
+  // Si soloRefresh=true, recalcula prevMes desde el estado global
+  if(soloRefresh){
+    const selIdx=months.indexOf(selMonth);
+    prevMes=selIdx>0?months[selIdx-1]:null;
+  }
+  const rows=rawData.filter(r=>r.mes===selMonth&&(detalleFiltroTipo?r.tipo===detalleFiltroTipo:true))
+    .sort((a,b)=>{const t=a.tipo.localeCompare(b.tipo,'es');return t!==0?t:a.detalle.localeCompare(b.detalle,'es');});
   const prevRows=prevMes?rawData.filter(r=>r.mes===prevMes):[];
-  document.getElementById('tbody-detalle').innerHTML=rows.map(row=>{
+  const tbody=document.getElementById('tbody-detalle');
+  if(!tbody) return;
+  tbody.innerHTML=rows.map(row=>{
     const prv=prevRows.find(p=>p.detalle===row.detalle);
     let badge='<span style="color:#9CA3AF;font-size:11px;font-weight:700">—</span>';
     if(prv?.monto>0){
@@ -916,7 +935,7 @@ function renderDetalle(prevMes){
       if(Math.abs(d)<1) badge=`<span class="badge badge-gray" style="font-size:10px;padding:2px 7px">≈ igual</span>`;
       else{const good=row.tipo==='ingreso'?d>0:d<0;badge=`<span class="badge ${good?'badge-green':'badge-red'}" style="font-size:10px;padding:2px 7px">${d>0?'↑':'↓'} $${Math.round(Math.abs(d)).toLocaleString('es-CL')}</span>`;}
     }
-    return`<tr><td style="font-size:10px;color:var(--muted);font-weight:700;white-space:nowrap">${capFirst(row.tipo)}</td><td style="font-size:12px">${row.detalle}</td><td style="text-align:center">${badge}</td><td>${fmtM(row.monto)}</td></tr>`;
+    return`<tr><td style="padding:5px 12px;font-size:10px;color:var(--muted);font-weight:700;white-space:nowrap">${capFirst(row.tipo)}</td><td style="padding:5px 12px;font-size:12px">${row.detalle}</td><td style="padding:5px 12px;text-align:center">${badge}</td><td style="padding:5px 12px;text-align:right;font-weight:800">${fmtM(row.monto)}</td></tr>`;
   }).join('')||`<tr><td colspan="4" style="color:#9CA3AF;font-size:12px;padding:20px 0">Sin registros</td></tr>`;
 }
 
@@ -926,7 +945,7 @@ function renderDist(){
   const totalGasto=segs.reduce((a,s)=>a+s.amt,0);
   const disponible=ing-totalGasto;
   const dispColor=disponible>=0?'#16a34a':'#ED1650';
-  const allSegs=[...segs,{label:disponible>=0?'Disponible':'Déficit',color:dispColor,amt:Math.abs(disponible)}]
+  const allSegs=[...segs,{label:disponible>=0?'Disponible':'Déficit',color:dispColor,amt:Math.abs(disponible),esDisp:true}]
     .sort((a,b)=>b.amt-a.amt);
   requestAnimationFrame(()=>{
     const canvas=document.getElementById('dist-bar-chart');
@@ -937,7 +956,7 @@ function renderDist(){
       chart.getDatasetMeta(0).data.forEach((bar,i)=>{
         const _tot=allSegs.reduce((s,x)=>s+x.amt,0);
         const _pct=_tot>0?Math.round(allSegs[i].amt/_tot*100):0;
-        const label=fmtM(allSegs[i].amt,true)+' '+_pct+'%';
+        const label=`${fmtM(allSegs[i].amt,true)} · ${_pct}%`;
         ctx.font=`700 10px ${SF}`;
         const tw=ctx.measureText(label).width;
         if(bar.width>tw+14){
@@ -952,11 +971,18 @@ function renderDist(){
     }};
     charts.distBar=new Chart(canvas,{type:'bar',plugins:[distBarLabels],
       data:{labels:allSegs.map(s=>s.label),datasets:[{data:allSegs.map(s=>s.amt),
-        backgroundColor:allSegs.map(s=>s.color+'dd'),hoverBackgroundColor:allSegs.map(s=>s.color),
+        backgroundColor:allSegs.map(s=>detalleFiltroTipo&&s.label.toLowerCase()!==detalleFiltroTipo?s.color+'55':s.color+'dd'),
+        hoverBackgroundColor:allSegs.map(s=>s.color),
         borderWidth:0,borderRadius:6,borderSkipped:false}]},
       options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:{duration:400},
         plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>fmtM(ctx.raw)}}},
         layout:{padding:{right:50}},
+        onClick:(e,els)=>{
+          if(!els.length) return;
+          const seg=allSegs[els[0].index];
+          if(seg.esDisp) return;
+          setDetalleFiltro(seg.label.toLowerCase());
+        },
         scales:{x:{display:false},y:{grid:{display:false},border:{display:false},
           ticks:{font:{family:SF,size:11,weight:'700'},color:'#0F004F',padding:4}}}}});
     const wrap=document.getElementById('dist-bar-chart-wrap');
@@ -1012,7 +1038,7 @@ function renderTC(){
     ?`<div class="debug-box">⚠ No se cargaron filas de <code>Tarjeta Credito</code>.</div>`
     :pending.length===0?`<div class="debug-box">⚠ ${tcData.length} filas cargadas pero ninguna pendiente.<br>Estados: ${estadosUnicos.map(e=>`<code>${e}</code>`).join(' · ')}</div>`:'';
 
-  const tooltipFn=makeExternalTooltip(i=>fmtMesLabel(proyMeses[i][0]),i=>[{color:'#00b89e',label:'Cuotas',val:fmtM(proyMeses[i][1])}]);
+  const tooltipFn=makeExternalTooltip(i=>fmtMesLabel(proyMeses[i][0]),i=>[{color:'#059669',label:'Cuotas',val:fmtM(proyMeses[i][1])}]);
   const opsMeses=mesesCompra.map(m=>({value:m,label:fmtMesLabel(m),amt:fmtM(todosMovsPend.filter(mv=>mv.mesCompra===m).reduce((a,mv)=>a+mv.pendientesMonto,0))}));
   const opsMov=movNombres.map(n=>({value:n,label:n,amt:fmtM(todosMovsPend.filter(mv=>mv.movimiento===n).reduce((a,mv)=>a+mv.pendientesMonto,0))}));
   const hasFiltro=tcFiltroMes||tcFiltroMov;
@@ -1077,10 +1103,12 @@ ${UI.card('Movimientos Pendientes',`<div style="font-size:11px;color:var(--muted
     if(charts.tc){charts.tc.destroy();delete charts.tc;}
     const ctx=canvas.getContext('2d');
     const grad=ctx.createLinearGradient(0,0,0,260);
-    grad.addColorStop(0,'#00e5c8');grad.addColorStop(1,'#00b89e');
+    grad.addColorStop(0,'rgba(5,150,105,.75)');grad.addColorStop(1,'rgba(5,150,105,.45)');
     charts.tc=new Chart(canvas,{type:'bar',plugins:[BAR_LABELS],
       data:{labels:proyMeses.map(([mes])=>{const[m,y]=mes.split('-');return[m.slice(0,3).toUpperCase(),y];}),
-        datasets:[{label:'Cuotas',data:proyMeses.map(([,v])=>v),backgroundColor:grad,hoverBackgroundColor:'#00e5c8',borderWidth:0,borderRadius:7,borderSkipped:false}]},
+        datasets:[{label:'Cuotas',data:proyMeses.map(([,v])=>v),backgroundColor:grad,
+          hoverBackgroundColor:'rgba(5,150,105,.9)',borderColor:'rgba(5,150,105,.85)',borderWidth:1,
+          borderRadius:{topLeft:4,topRight:4,bottomLeft:0,bottomRight:0},borderSkipped:false}]},
       options:{...stdBarOptions(tooltipFn),layout:{padding:{top:22}}}});
   });
 }
@@ -1126,10 +1154,10 @@ function renderCreditos(){
           <span style="font-size:14px;font-weight:800;color:${pctColor}">${pct}%</span>
         </div>
         <div style="height:12px;background:rgba(99,77,210,.07);border-radius:6px;overflow:hidden;position:relative">
-          <div style="height:100%;width:${pct}%;background:${barGrad};border-radius:6px;position:relative">
-            ${pct>=18?`<span style="position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:9px;font-weight:800;color:#fff;white-space:nowrap">${fmtM(montoTotal-montoPendiente,true)}</span>`:''}
+          <div style="height:100%;width:${pct}%;background:${barGrad};border-radius:6px;position:relative;overflow:hidden">
+            ${pct>=20?`<span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:9px;font-weight:800;color:#fff;white-space:nowrap">${fmtM(montoTotal-montoPendiente,true)}</span>`:''}
           </div>
-          ${pct<18?`<span style="position:absolute;left:${pct+2}%;top:50%;transform:translateY(-50%);font-size:9px;font-weight:800;color:${pctColor};white-space:nowrap">${fmtM(montoTotal-montoPendiente,true)}</span>`:''}
+          ${pct<20?`<span style="position:absolute;left:${pct+1}%;top:50%;transform:translateY(-50%);font-size:9px;font-weight:800;color:${pctColor};white-space:nowrap">${fmtM(montoTotal-montoPendiente,true)}</span>`:''}
         </div>
         <div style="display:flex;justify-content:space-between;margin-top:2px">
           <span class="stat-sub">$0</span>
@@ -1155,7 +1183,7 @@ function renderCreditos(){
   }
 
   document.getElementById('page-content').innerHTML=`
-${UI.hero('Créditos',fmtM(totalPendiente),'pendiente','Resumen de créditos')}
+${UI.hero('Créditos',fmtM(totalPendiente),'pendiente')}
 <div class="kpi-strip" style="grid-template-columns:repeat(2,1fr);margin-bottom:20px">
   ${UI.kpiCard('Cuota mensual total',fmtM(totalCuotaMes))}
   ${UI.kpiCard('Créditos activos',`${activos.length} de ${todos.length}`)}
@@ -1317,12 +1345,12 @@ function renderPendientes(){
   }).join('');
 
   document.getElementById('page-content').innerHTML=`
-${UI.hero('Pendientes',fmtM(totalPend),'pendiente','Compromisos y deudas')}
+${UI.hero('Pendientes',fmtM(totalPend),'pendiente')}
 ${UI.sectionLabel('Distribución · Detalle')}
-<div style="display:grid;grid-template-columns:25fr 75fr;gap:var(--gap);margin-bottom:var(--gap);align-items:start">
-  <div class="card" style="padding:14px 12px">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--gap);margin-bottom:var(--gap);align-items:stretch">
+  <div class="card" style="padding:14px 12px;display:flex;flex-direction:column">
     <div class="stat-label" style="margin-bottom:10px">Por responsable</div>
-    <div style="position:relative;height:${Math.max(140,activos.length*38+60)}px" id="pend-dist-wrap"><canvas id="pend-dist-chart"></canvas></div>
+    <div style="position:relative;flex:1;min-height:160px" id="pend-dist-wrap"><canvas id="pend-dist-chart"></canvas></div>
     ${pendDistFiltro?`<div style="margin-top:8px"><button class="btn-clear" onclick="setPendFiltro('')">✕ ${pendDistFiltro}</button></div>`:''}
   </div>
   <div class="card" style="padding:14px">
@@ -1330,7 +1358,7 @@ ${UI.sectionLabel('Distribución · Detalle')}
       <div class="card-title">Detalle de compromisos</div>
       <div style="font-size:11px;color:var(--muted)">${filteredItems.length} ítems${pendDistFiltro?' · '+pendDistFiltro:''}</div>
     </div>
-    <div style="overflow-x:auto;max-height:${Math.max(140,activos.length*38+60)}px;overflow-y:auto">
+    <div style="overflow-x:auto;overflow-y:auto;max-height:400px">
     <table style="border-collapse:collapse;font-size:12px;width:100%">
       <thead><tr style="border-bottom:2px solid var(--border)">
         <th class="tc-th" style="text-align:left;position:sticky;top:0;background:#fff;z-index:1">Responsable</th>
@@ -1357,28 +1385,57 @@ ${UI.sectionLabel('Proyección de pagos')}
 ${UI.card('',`<div style="font-size:11px;color:var(--muted)">${proy.length} meses</div>`,`<div style="position:relative;height:240px"><canvas id="pend-proy"></canvas></div>`,'margin-bottom:var(--gap)')}`;
 
   requestAnimationFrame(()=>{
-    // Gráfico distribución horizontal
+    // Gráfico distribución horizontal — mismo estilo que Distribución por Mes
     const distCanvas=document.getElementById('pend-dist-chart');
     if(distCanvas&&distSegs.length){
       if(charts.pendDist){charts.pendDist.destroy();delete charts.pendDist;}
-      const bgColors=distSegs.map(s=>pendDistFiltro&&pendDistFiltro!==s.label?s.color+'33':s.color+'ee');
-      charts.pendDist=new Chart(distCanvas,{type:'bar',plugins:[H_BAR_LABELS],
+      const distBarLabels={id:'pendDistBarLabels',afterDatasetsDraw(chart){
+        const{ctx}=chart; ctx.save();
+        chart.getDatasetMeta(0).data.forEach((bar,i)=>{
+          const _tot=distSegs.reduce((s,x)=>s+x.amt,0);
+          const _pct=_tot>0?Math.round(distSegs[i].amt/_tot*100):0;
+          const label=`${fmtM(distSegs[i].amt,true)} · ${_pct}%`;
+          ctx.font=`700 10px ${SF}`;
+          const tw=ctx.measureText(label).width;
+          if(bar.width>tw+14){
+            ctx.fillStyle='rgba(255,255,255,.95)';ctx.textAlign='right';ctx.textBaseline='middle';
+            ctx.fillText(label,bar.x-6,bar.y);
+          } else {
+            ctx.fillStyle=distSegs[i].color;ctx.textAlign='left';ctx.textBaseline='middle';
+            ctx.fillText(label,bar.x+6,bar.y);
+          }
+        });
+        ctx.restore();
+      }};
+      const bgColors=distSegs.map(s=>pendDistFiltro&&pendDistFiltro!==s.label?s.color+'33':s.color+'dd');
+      charts.pendDist=new Chart(distCanvas,{type:'bar',plugins:[distBarLabels],
         data:{labels:distSegs.map(s=>s.label),datasets:[{data:distSegs.map(s=>s.amt),
           backgroundColor:bgColors,hoverBackgroundColor:distSegs.map(s=>s.color),
           borderWidth:0,borderRadius:6,borderSkipped:false}]},
-        options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:{duration:350},
-          plugins:{legend:{display:false},tooltip:{enabled:false,
-            external:makeExternalTooltip(i=>distSegs[i].label,i=>[{color:distSegs[i].color,label:'Pendiente',val:fmtM(distSegs[i].amt)}])}},
+        options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:{duration:400},
+          plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>fmtM(ctx.raw)}}},
+          layout:{padding:{right:50}},
           onClick:(e,els)=>{if(els.length){const s=distSegs[els[0].index];setPendFiltro(pendDistFiltro===s.label?'':s.label);}},
-          layout:{padding:{right:6}},
-          scales:{
-            x:{display:false,grid:{display:false},border:{display:false}},
-            y:{grid:{display:false},border:{display:false},ticks:{font:{family:SF,size:11,weight:'700'},color:'#0F004F',padding:4}}
-          }}});
+          scales:{x:{display:false},y:{grid:{display:false},border:{display:false},
+            ticks:{font:{family:SF,size:11,weight:'700'},color:'#0F004F',padding:4}}}}});
+      // Ajustar alto al contenido
+      const wrap=document.getElementById('pend-dist-wrap');
+      if(wrap) wrap.style.height=Math.max(160,distSegs.length*38)+'px';
     }
-    // Gráfico proyección (patrón compartido)
-    const ttProy=makeExternalTooltip(i=>fmtMesLabel(proy[i][0]),i=>[{color:'#634dd2',label:'Cuotas',val:fmtM(proy[i][1])}]);
-    renderProyeccionChart('pend-proy','pendProy',proy,'#634dd2',ttProy);
+    // Gráfico proyección verde
+    const ttProy=makeExternalTooltip(i=>fmtMesLabel(proy[i][0]),i=>[{color:'#059669',label:'Cuotas',val:fmtM(proy[i][1])}]);
+    const canvas=document.getElementById('pend-proy');
+    if(!canvas||!proy.length) return;
+    if(charts.pendProy){charts.pendProy.destroy();delete charts.pendProy;}
+    const ctxP=canvas.getContext('2d');
+    const gradP=ctxP.createLinearGradient(0,0,0,240);
+    gradP.addColorStop(0,'rgba(5,150,105,.75)');gradP.addColorStop(1,'rgba(5,150,105,.45)');
+    charts.pendProy=new Chart(canvas,{type:'bar',plugins:[BAR_LABELS],
+      data:{labels:proy.map(([mes])=>{const[m,y]=mes.split('-');return[m.slice(0,3).toUpperCase(),y];}),
+        datasets:[{data:proy.map(([,v])=>v),backgroundColor:gradP,
+          hoverBackgroundColor:'rgba(5,150,105,.9)',borderColor:'rgba(5,150,105,.85)',borderWidth:1,
+          borderRadius:{topLeft:4,topRight:4,bottomLeft:0,bottomRight:0},borderSkipped:false}]},
+      options:{...stdBarOptions(ttProy),layout:{padding:{top:22}}}});
   });
 }
 
@@ -1464,7 +1521,7 @@ function renderVarios(){
   const fechaMetaSilver=millasAct<SILVER_META?addMeses(mesesHastaMeta(SILVER_META)):null;
 
   document.getElementById('page-content').innerHTML=`
-${UI.hero('Métricas & Seguimiento','Varios','datos',hoy)}
+${UI.hero('Temas Varios','Temas','Varios')}
 
 ${UI.sectionLabel('Liquidez · Cuenta Corriente')}
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--gap);margin-bottom:20px;max-width:640px">
@@ -1474,15 +1531,15 @@ ${UI.sectionLabel('Liquidez · Cuenta Corriente')}
     <div class="stat-sub">${finDate?`Saldo hasta ${finLabel} · ${diasRest} días`:'Saldo cuenta corriente'}</div>
     ${finDate?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:10px">
       ${UI.statCell('Disponible hoy',fmtM(diario),'var(--accent)','stat-val--lg')}
-      ${UI.statCellDivider('Disponible mañana',fmtM(diarioManana),'#634dd2','si no gastas hoy')}
+      ${UI.statCellDivider('Disponible mañana',fmtM(diarioManana),'#634dd2')}
     </div>`:''}
   </div>
   <div class="card">
     <div class="widget-title">📊 Variación IPC</div>
     <div class="stat-val--xl" style="color:#f59e0b;margin-bottom:4px">${ipcLabel}</div>
     <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      ${UI.statCell('Base anterior',liquidoOld?fmtM(liquidoOld):'—')}
-      ${UI.statCellDivider('Líquido ajustado',liquidoNew?fmtM(liquidoNew):'—','var(--text)','Base Old × (1 + IPC)')}
+      ${UI.statCell('Líquido actual',liquidoOld?fmtM(liquidoOld):'—')}
+      ${UI.statCellDivider('Líquido ajustado',liquidoNew?fmtM(liquidoNew):'—')}
     </div>
     ${aumento?`<div style="margin-top:8px;font-size:13px;font-weight:800;color:${aumento>0?'#059669':'#ED1650'}">${aumento>0?'↑ +':'↓ '}${fmtM(Math.abs(aumento))} de aumento</div>`:''}
   </div>
@@ -1490,6 +1547,7 @@ ${UI.sectionLabel('Liquidez · Cuenta Corriente')}
 
 ${millasAct>0?`
 ${UI.sectionLabel('LATAM Pass')}
+<div style="max-width:50%">
 <div class="card" style="margin-bottom:20px">
   <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px">
     <div>
@@ -1549,6 +1607,7 @@ ${UI.sectionLabel('LATAM Pass')}
       }
     </div>
   </div>
+</div>
 </div>`:''}`;
 }
 
