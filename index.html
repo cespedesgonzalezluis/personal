@@ -913,6 +913,18 @@ function setDetalleFiltro(tipo){
   detalleFiltroTipo=detalleFiltroTipo===tipo?'':tipo;
   const badge=document.getElementById('detalle-filtro-badge');
   if(badge) badge.innerHTML=detalleFiltroTipo?`<button class="btn-clear" style="padding:3px 8px;font-size:10px" onclick="setDetalleFiltro('')">✕ ${capFirst(detalleFiltroTipo)}</button>`:'';
+  // Actualizar colores del chart SIN recrearlo
+  if(charts.distBar){
+    const segs=charts.distBar._allSegs;
+    if(segs){
+      const hasFilt=!!detalleFiltroTipo;
+      charts.distBar.data.datasets[0].backgroundColor=segs.map(s=>{
+        if(!hasFilt) return s.color+'dd';
+        return s.label.toLowerCase()===detalleFiltroTipo?s.color+'ee':s.color+'22';
+      });
+      charts.distBar.update('none');
+    }
+  }
   renderDetalle(null,true);
 }
 
@@ -994,6 +1006,7 @@ function renderDist(){
         },
         scales:{x:{display:false},y:{grid:{display:false},border:{display:false},
           ticks:{font:{family:SF,size:11,weight:'700'},color:'#0F004F',padding:4}}}}});
+    charts.distBar._allSegs=allSegs; // referencia para dim sin recrear
     const wrap=document.getElementById('dist-bar-chart-wrap');
     if(wrap) wrap.style.height=Math.max(100,allSegs.length*34)+'px';
   });
@@ -1198,7 +1211,8 @@ function renderCreditos(){
   const ahorroCreditoVal=parseMonto(_getOtros('credito','ahorro')??0);
   const itauKey='💰 ITAU | Consumo';
   const itauCred=Object.values(creditosMap).find(c=>c.detalle===itauKey);
-  const itauMeta=itauCred?itauCred.valorCuota*itauCred.pendientes:0;
+  const itauPendienteTotal=itauCred?itauCred.valorCuota*itauCred.pendientes:0;
+  const itauMeta=Math.round(itauPendienteTotal*0.10); // 10% del pendiente
   const ahorroPct=itauMeta>0?Math.min(ahorroCreditoVal/itauMeta*100,100):0;
   const ahorroFaltaSobra=ahorroCreditoVal-itauMeta;
   const ahorroCardHTML=ahorroCreditoVal>0||itauMeta>0?`
@@ -1225,7 +1239,7 @@ function renderCreditos(){
   </div>
   <div style="display:flex;align-items:center;gap:8px;padding-top:8px;border-top:1px solid var(--border)">
     <span style="font-size:12px;font-weight:700;color:var(--muted)">${ahorroFaltaSobra>=0?'Sobra':'Falta'}</span>
-    <span style="font-size:15px;font-weight:800;color:${ahorroFaltaSobra>=0?'#059669':'#ED1650'}">${ahorroFaltaSobra>=0?'':'-'}${fmtM(Math.abs(ahorroFaltaSobra))}</span>
+    <span style="font-size:15px;font-weight:800;color:${ahorroFaltaSobra>=0?'#059669':'#ED1650'}">${fmtM(Math.abs(ahorroFaltaSobra))}</span>
   </div>`:''}
 </div>`:'';
 
@@ -1332,7 +1346,88 @@ function renderMamaChart(saldoPorMes){
 }
 
 // ── PÁGINA: PENDIENTES ──
-function setPendFiltro(resp){pendDistFiltro=pendDistFiltro===resp?'':resp;renderPendientes();}
+function setPendFiltro(resp){
+  pendDistFiltro=pendDistFiltro===resp?'':resp;
+  // Si el chart y el DOM ya existen, solo actualizar colores + tabla/badge sin recrear todo
+  if(charts.pendDist&&document.getElementById('pend-dist-chart')){
+    if(charts.pendDist._distSegs){
+      const segs=charts.pendDist._distSegs;
+      charts.pendDist.data.datasets[0].backgroundColor=segs.map(s=>
+        pendDistFiltro&&pendDistFiltro!==s.label?s.color+'22':s.color+'dd'
+      );
+      charts.pendDist.update('none');
+    }
+    // Actualizar solo badge y tabla sin recrear page-content
+    _updatePendientesTabla();
+  } else {
+    renderPendientes();
+  }
+}
+
+function _updatePendientesTabla(){
+  // Recalcula items filtrados y actualiza solo los elementos de texto
+  const itemsMap={};
+  pendientesData.forEach(r=>{
+    const k=r.responsable+'|'+r.detalle+'|'+r.fecha;
+    if(!itemsMap[k]) itemsMap[k]={responsable:r.responsable,detalle:r.detalle,fecha:r.fecha,
+      total:r.total,cuotas:r.cuotas,valorCuota:r.monto,pendientesCount:0,montoPendiente:0,mesFin:''};
+    const it=itemsMap[k];
+    if(ESTADO_PENDIENTE.has(r.estado)){
+      it.pendientesCount++;it.montoPendiente+=r.monto;
+      if(!it.mesFin||monthKey(r.mes)>monthKey(it.mesFin))it.mesFin=r.mes;
+    }
+    if(r.monto>0) it.valorCuota=r.monto;
+  });
+  Object.values(itemsMap).forEach(it=>{it.pagadas=Math.max(0,it.cuotas-it.pendientesCount);});
+  const todosItems=Object.values(itemsMap).filter(i=>i.cuotas>0).sort((a,b)=>{
+    const rc=a.responsable.localeCompare(b.responsable,'es');if(rc!==0)return rc;
+    const fd=parseFechaNum(a.fecha)-parseFechaNum(b.fecha);if(fd!==0)return fd;
+    return a.detalle.localeCompare(b.detalle,'es');
+  });
+  const activos=todosItems.filter(i=>i.pendientesCount>0);
+  const respUnicos=[...new Set(pendientesData.map(r=>r.responsable))].sort();
+  const respColorMap=Object.fromEntries(respUnicos.map((r,i)=>[r,RESP_COLORS[i%RESP_COLORS.length]]));
+  const filteredItems=pendDistFiltro?activos.filter(i=>i.responsable===pendDistFiltro):activos;
+  const totalPend=filteredItems.reduce((a,i)=>a+i.montoPendiente,0);
+
+  // Actualizar badge del chart
+  const badgeEl=document.getElementById('pend-dist-badge');
+  if(badgeEl) badgeEl.innerHTML=pendDistFiltro
+    ?`<div style="margin-top:8px"><button class="btn-clear" onclick="setPendFiltro('')">✕ ${pendDistFiltro}</button></div>`:''
+
+  // Actualizar header tabla
+  const hdrEl=document.getElementById('pend-tabla-hdr');
+  if(hdrEl) hdrEl.textContent=`${filteredItems.length} ítems${pendDistFiltro?' · '+pendDistFiltro:''}`;
+
+  // Actualizar tbody
+  const tbody=document.getElementById('pend-tbody');
+  if(tbody){
+    tbody.innerHTML=filteredItems.map((it,i)=>{
+      const pagadoMonto=it.total>0?it.total-it.montoPendiente:it.pagadas*it.valorCuota;
+      const isUlt=it.pendientesCount===1;
+      const bg=i%2===0?'transparent':'rgba(0,0,0,.012)';
+      const color=respColorMap[it.responsable]||'#634dd2';
+      return`<tr style="border-bottom:1px solid var(--border);background:${bg}">
+        <td class="tc-td" style="font-weight:700;white-space:nowrap"><span style="display:inline-block;width:6px;height:6px;border-radius:2px;background:${color};margin-right:5px;vertical-align:middle"></span><span style="color:${color}">${it.responsable}</span></td>
+        <td class="tc-td" style="text-align:center;color:var(--muted);white-space:nowrap">${fmtFecha(it.fecha)}</td>
+        <td class="tc-td" style="max-width:260px;font-weight:600">${it.detalle}${isUlt?UI.pillUltima():''}</td>
+        <td class="tc-td" style="text-align:right;color:var(--muted)">${it.total>0?fmtM(it.total):'—'}</td>
+        <td class="tc-td" style="text-align:right;color:#059669">${fmtM(pagadoMonto)}</td>
+        <td class="tc-td" style="text-align:right;color:#ED1650;font-weight:700">${fmtM(it.montoPendiente)}</td>
+        <td class="tc-td" style="text-align:right;color:var(--muted)">${fmtM(it.valorCuota)}</td>
+        <td class="tc-td" style="text-align:center;color:${isUlt?'#007a72':'var(--muted)'};font-weight:${isUlt?700:400}">${it.cuotas>0?`${it.pagadas}/${it.cuotas}`:'—'}</td>
+      </tr>`;
+    }).join('');
+  }
+  // Actualizar tfoot total
+  const tfootTotal=document.getElementById('pend-tfoot-total');
+  if(tfootTotal) tfootTotal.innerHTML=`
+    <td colspan="4" style="padding:9px;font-weight:700;color:var(--text)">Total</td>
+    <td style="padding:9px 8px;text-align:right;font-weight:800;color:#059669">${fmtM(filteredItems.reduce((a,i)=>a+(i.total>0?i.total-i.montoPendiente:i.pagadas*i.valorCuota),0))}</td>
+    <td style="padding:9px 8px;text-align:right;font-weight:800;color:#ED1650;font-size:13px">${fmtM(totalPend)}</td>
+    <td style="padding:9px 8px;text-align:right;font-weight:800;color:var(--muted)">${fmtM(filteredItems.reduce((a,i)=>a+i.valorCuota,0))}</td>
+    <td></td>`;
+}
 
 function renderPendientes(){
   hideTooltip();
@@ -1399,12 +1494,12 @@ ${UI.sectionLabel('Distribución · Detalle')}
   <div class="card" style="padding:14px 12px;display:flex;flex-direction:column">
     <div class="stat-label" style="margin-bottom:10px">Por responsable</div>
     <div style="position:relative;flex:1;min-height:160px" id="pend-dist-wrap"><canvas id="pend-dist-chart"></canvas></div>
-    ${pendDistFiltro?`<div style="margin-top:8px"><button class="btn-clear" onclick="setPendFiltro('')">✕ ${pendDistFiltro}</button></div>`:''}
+    <div id="pend-dist-badge">${pendDistFiltro?`<div style="margin-top:8px"><button class="btn-clear" onclick="setPendFiltro('')">✕ ${pendDistFiltro}</button></div>`:''}</div>
   </div>
   <div class="card" style="padding:14px">
     <div class="card-header">
       <div class="card-title">Detalle de compromisos</div>
-      <div style="font-size:11px;color:var(--muted)">${filteredItems.length} ítems${pendDistFiltro?' · '+pendDistFiltro:''}</div>
+      <div id="pend-tabla-hdr" style="font-size:11px;color:var(--muted)">${filteredItems.length} ítems${pendDistFiltro?' · '+pendDistFiltro:''}</div>
     </div>
     <div style="overflow-x:auto;overflow-y:auto;max-height:400px">
     <table style="border-collapse:collapse;font-size:12px;width:100%">
@@ -1418,8 +1513,8 @@ ${UI.sectionLabel('Distribución · Detalle')}
         <th class="tc-th" style="text-align:right;position:sticky;top:0;background:#fff;z-index:1">$ Cuota</th>
         <th class="tc-th" style="text-align:center;position:sticky;top:0;background:#fff;z-index:1"># Cuotas</th>
       </tr></thead>
-      <tbody>${tableRows}</tbody>
-      <tfoot><tr style="border-top:2px solid var(--border);background:rgba(0,0,0,.015)">
+      <tbody id="pend-tbody">${tableRows}</tbody>
+      <tfoot><tr id="pend-tfoot-total" style="border-top:2px solid var(--border);background:rgba(0,0,0,.015)">
         <td colspan="4" style="padding:9px;font-weight:700;color:var(--text)">Total</td>
         <td style="padding:9px 8px;text-align:right;font-weight:800;color:#059669">${fmtM(filteredItems.reduce((a,i)=>a+(i.total>0?i.total-i.montoPendiente:i.pagadas*i.valorCuota),0))}</td>
         <td style="padding:9px 8px;text-align:right;font-weight:800;color:#ED1650;font-size:13px">${fmtM(totalPend)}</td>
@@ -1432,44 +1527,58 @@ ${UI.sectionLabel('Distribución · Detalle')}
 ${UI.sectionLabel('Proyección de pagos')}
 ${UI.card('',`<div style="font-size:11px;color:var(--muted)">${proy.length} meses</div>`,`<div style="position:relative;height:240px"><canvas id="pend-proy"></canvas></div>`,'margin-bottom:var(--gap)')}`;
 
+  // Destruir chart previo si existe (navegación entre tabs)
+  if(charts.pendDist){charts.pendDist.destroy();delete charts.pendDist;}
+
   requestAnimationFrame(()=>{
-    // Gráfico distribución horizontal — mismo estilo que Distribución por Mes
+    // Gráfico distribución — crear solo si no existe, actualizar colores si ya existe
     const distCanvas=document.getElementById('pend-dist-chart');
     if(distCanvas&&distSegs.length){
-      if(charts.pendDist){charts.pendDist.destroy();delete charts.pendDist;}
-      const distBarLabels={id:'pendDistBarLabels',afterDatasetsDraw(chart){
-        const{ctx}=chart; ctx.save();
-        chart.getDatasetMeta(0).data.forEach((bar,i)=>{
-          const _tot=distSegs.reduce((s,x)=>s+x.amt,0);
-          const _pct=_tot>0?Math.round(distSegs[i].amt/_tot*100):0;
-          const label=`${fmtM(distSegs[i].amt,true)} · ${_pct}%`;
-          ctx.font=`700 10px ${SF}`;
-          const tw=ctx.measureText(label).width;
-          if(bar.width>tw+14){
-            ctx.fillStyle='rgba(255,255,255,.95)';ctx.textAlign='right';ctx.textBaseline='middle';
-            ctx.fillText(label,bar.x-6,bar.y);
-          } else {
-            ctx.fillStyle=distSegs[i].color;ctx.textAlign='left';ctx.textBaseline='middle';
-            ctx.fillText(label,bar.x+6,bar.y);
-          }
-        });
-        ctx.restore();
-      }};
-      const bgColors=distSegs.map(s=>pendDistFiltro&&pendDistFiltro!==s.label?s.color+'22':s.color+'dd');
-      charts.pendDist=new Chart(distCanvas,{type:'bar',plugins:[distBarLabels],
-        data:{labels:distSegs.map(s=>s.label),datasets:[{data:distSegs.map(s=>s.amt),
-          backgroundColor:bgColors,hoverBackgroundColor:distSegs.map(s=>s.color),
-          borderWidth:0,borderRadius:5,borderSkipped:false,
-          barThickness:20}]},
-        options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:{duration:300},
-          plugins:{legend:{display:false},tooltip:{enabled:false}},
-          layout:{padding:{right:50}},
-          onClick:(e,els)=>{if(els.length){const s=distSegs[els[0].index];setPendFiltro(pendDistFiltro===s.label?'':s.label);}},
-          scales:{x:{display:false},y:{grid:{display:false},border:{display:false},
-            ticks:{font:{family:SF,size:11,weight:'700'},color:'#0F004F',padding:4}}}}});
-      // Altura proporcional estándar: barThickness 20 + gap ~14 = 34px/item
-      const wrap=document.getElementById('pend-dist-wrap');
-      if(wrap) wrap.style.height=Math.max(100,distSegs.length*34)+'px';
+      if(!charts.pendDist){
+        // Primera vez: crear chart completo
+        const distBarLabels={id:'pendDistBarLabels',afterDatasetsDraw(chart){
+          const{ctx}=chart; ctx.save();
+          const segsRef=chart._distSegs||distSegs;
+          chart.getDatasetMeta(0).data.forEach((bar,i)=>{
+            const _tot=segsRef.reduce((s,x)=>s+x.amt,0);
+            const _pct=_tot>0?Math.round(segsRef[i].amt/_tot*100):0;
+            const label=`${fmtM(segsRef[i].amt,true)} · ${_pct}%`;
+            ctx.font=`700 10px ${SF}`;
+            const tw=ctx.measureText(label).width;
+            if(bar.width>tw+14){
+              ctx.fillStyle='rgba(255,255,255,.95)';ctx.textAlign='right';ctx.textBaseline='middle';
+              ctx.fillText(label,bar.x-6,bar.y);
+            } else {
+              ctx.fillStyle=segsRef[i].color;ctx.textAlign='left';ctx.textBaseline='middle';
+              ctx.fillText(label,bar.x+6,bar.y);
+            }
+          });
+          ctx.restore();
+        }};
+        const bgColors=distSegs.map(s=>pendDistFiltro&&pendDistFiltro!==s.label?s.color+'22':s.color+'dd');
+        charts.pendDist=new Chart(distCanvas,{type:'bar',plugins:[distBarLabels],
+          data:{labels:distSegs.map(s=>s.label),datasets:[{data:distSegs.map(s=>s.amt),
+            backgroundColor:bgColors,hoverBackgroundColor:distSegs.map(s=>s.color),
+            borderWidth:0,borderRadius:5,borderSkipped:false,
+            barThickness:20}]},
+          options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:{duration:300},
+            plugins:{legend:{display:false},tooltip:{enabled:false}},
+            layout:{padding:{right:50}},
+            onClick:(e,els)=>{if(els.length){const s=distSegs[els[0].index];setPendFiltro(pendDistFiltro===s.label?'':s.label);}},
+            scales:{x:{display:false},y:{grid:{display:false},border:{display:false},
+              ticks:{font:{family:SF,size:11,weight:'700'},color:'#0F004F',padding:4}}}}});
+        charts.pendDist._distSegs=distSegs;
+        // Altura proporcional estándar
+        const wrap=document.getElementById('pend-dist-wrap');
+        if(wrap) wrap.style.height=Math.max(100,distSegs.length*34)+'px';
+      } else {
+        // Ya existe: solo actualizar colores (dim) sin recrear
+        charts.pendDist._distSegs=distSegs;
+        charts.pendDist.data.datasets[0].backgroundColor=distSegs.map(s=>
+          pendDistFiltro&&pendDistFiltro!==s.label?s.color+'22':s.color+'dd'
+        );
+        charts.pendDist.update('none');
+      }
     }
     // Gráfico proyección verde
     const ttProy=makeExternalTooltip(i=>fmtMesLabel(proy[i][0]),i=>[{color:'#059669',label:'Cuotas',val:fmtM(proy[i][1])}]);
@@ -1561,43 +1670,41 @@ function renderVarios(){
   const fmtFechaCorta=d=>d?d.toLocaleDateString('es-CL',{month:'long',year:'numeric'}):'—';
   // Colores modernos GOLD/SILVER
   // ── TC PAGO SUGERIDO ──
+  // Monto Objetivo = suma de cuotas del primer mes con pendientes en tcData
+  const pendByMes={};
+  tcData.filter(r=>ESTADO_PENDIENTE.has(r.estado)).forEach(r=>{
+    pendByMes[r.mes]=(pendByMes[r.mes]||0)+r.valorCuota;
+  });
+  const primerMesPend=Object.keys(pendByMes).sort((a,b)=>monthKey(a)-monthKey(b))[0]||'';
+  const tcMontoObjetivo=primerMesPend?pendByMes[primerMesPend]:0;
   const tcAhorro=parseMonto(_getOtros('tc','ahorro')??0);
-  const tcMinimo=parseMonto(_getOtros('tc','minimo')??0);
   const RESERVA=40000;
-  // Lógica: disponible real = ahorro - 40k; pago = MIN(minimo, disponible_real); redondeado a miles hacia abajo
   const dispReal=Math.max(0,tcAhorro-RESERVA);
-  const pagoBruto=Math.min(tcMinimo,dispReal);
-  // Redondeo hacia abajo al múltiplo de 1000 más cercano
+  const pagoBruto=Math.min(tcMontoObjetivo,dispReal);
   const pagoSugerido=Math.floor(pagoBruto/1000)*1000;
-  const pctPago=tcMinimo>0?Math.min(pagoSugerido/tcMinimo*100,100):0;
-  const tcFaltaSobra=pagoSugerido-tcMinimo;
-  const tcCardHTML=(tcAhorro>0||tcMinimo>0)?`
+  const pctPago=tcMontoObjetivo>0?Math.min(pagoSugerido/tcMontoObjetivo*100,100):0;
+  const tcCardHTML=(tcAhorro>0||tcMontoObjetivo>0)?`
 <div class="card" style="margin-bottom:20px">
   <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">
     <div>
       <div class="stat-label">Pago sugerido · TC</div>
       <div style="font-size:26px;font-weight:800;color:${pagoSugerido>0?'#059669':'#ED1650'};line-height:1.1">${fmtM(pagoSugerido)}</div>
-      <div class="stat-sub" style="margin-top:3px">redondeado a miles · reserva ${fmtM(RESERVA,true)}</div>
     </div>
     <div style="text-align:right">
-      <div class="stat-label">Mínimo a pagar</div>
-      <div style="font-size:15px;font-weight:800;color:var(--text)">${tcMinimo>0?fmtM(tcMinimo):'—'}</div>
+      <div class="stat-label">Monto Objetivo</div>
+      <div style="font-size:15px;font-weight:800;color:var(--text)">${tcMontoObjetivo>0?fmtM(tcMontoObjetivo):'—'}</div>
       <div class="stat-sub" style="margin-top:2px">Ahorro disponible ${fmtM(tcAhorro)}</div>
     </div>
   </div>
-  ${tcMinimo>0?`
-  <div style="margin-bottom:10px">
+  ${tcMontoObjetivo>0?`
+  <div style="margin-bottom:4px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
-      <span class="stat-label--sm" style="margin-bottom:0">Cobertura del mínimo</span>
-      <span style="font-size:13px;font-weight:800;color:${pctPago>=100?'#059669':'#ED1650'}">${Math.round(pctPago)}%</span>
+      <span class="stat-label--sm" style="margin-bottom:0">Avance sobre objetivo</span>
+      <span style="font-size:13px;font-weight:800;color:${pctPago>=100?'#059669':pctPago>0?'var(--accent)':'var(--muted)'}">${Math.round(pctPago)}%</span>
     </div>
     <div style="height:10px;background:rgba(99,77,210,.08);border-radius:6px;overflow:hidden">
       <div style="height:100%;width:${pctPago.toFixed(1)}%;background:${pctPago>=100?'linear-gradient(90deg,#059669,#22c55e)':'linear-gradient(90deg,#634dd2,#a855f7)'};border-radius:6px;transition:width .4s"></div>
     </div>
-  </div>
-  <div style="display:flex;align-items:center;gap:8px;padding-top:8px;border-top:1px solid var(--border)">
-    <span style="font-size:12px;font-weight:700;color:var(--muted)">${tcFaltaSobra>=0?'Cubre mínimo':'Falta para cubrir'}</span>
-    <span style="font-size:15px;font-weight:800;color:${tcFaltaSobra>=0?'#059669':'#ED1650'}">${tcFaltaSobra>=0?'':'-'}${fmtM(Math.abs(tcFaltaSobra))}</span>
   </div>`:''}
 </div>`:'';
 
@@ -1623,7 +1730,6 @@ function renderVarios(){
   document.getElementById('page-content').innerHTML=`
 ${UI.hero('Temas Varios','Temas','Varios')}
 
-${tcCardHTML}
 ${UI.sectionLabel('Varios')}
 ${millasAct>0?`
 <div style="display:grid;grid-template-columns:1fr 1fr 2fr;gap:var(--gap);margin-bottom:20px;align-items:start">
@@ -1723,7 +1829,8 @@ ${millasAct>0?`
     </div>
   </div>
 `:''}
-</div>`;
+</div>
+${tcCardHTML}`;
 }
 
 // ── NAV ──
@@ -1733,6 +1840,8 @@ function setTab(tab,btn){
   document.querySelectorAll('.nav-item').forEach(b=>{b.classList.remove('active');b.dataset.tab='';});
   btn.classList.add('active');btn.dataset.tab=tab;
   closeSidebar();
+  // Limpiar chart de pendientes al salir (necesita recrea fresca al volver)
+  if(tab!=='pendientes'&&charts.pendDist){charts.pendDist.destroy();delete charts.pendDist;}
   const pages={varios:renderVarios,tc:renderTC,mensual:renderPage,creditos:renderCreditos,mama:renderMama,pendientes:renderPendientes};
   if(pages[tab]) pages[tab]();
   else{hideTooltip();document.getElementById('page-content').innerHTML=`<div class="loading-state"><div class="loading-text">Próximamente…</div></div>`;}
