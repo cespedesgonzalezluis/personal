@@ -978,11 +978,12 @@ function renderDist(){
       data:{labels:allSegs.map(s=>s.label),datasets:[{data:allSegs.map(s=>s.amt),
         backgroundColor:allSegs.map(s=>{
           if(!hasFiltDist) return s.color+'dd';
-          return s.label.toLowerCase()===detalleFiltroTipo?s.color+'ee':s.color+'28';
+          return s.label.toLowerCase()===detalleFiltroTipo?s.color+'ee':s.color+'22';
         }),
         hoverBackgroundColor:allSegs.map(s=>s.esDisp?s.color+'dd':s.color),
-        borderWidth:0,borderRadius:6,borderSkipped:false}]},
-      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:{duration:400},
+        borderWidth:0,borderRadius:5,borderSkipped:false,
+        barThickness:20}]},
+      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:{duration:300},
         plugins:{legend:{display:false},tooltip:{enabled:false}},
         layout:{padding:{right:50}},
         onClick:(e,els)=>{
@@ -994,9 +995,12 @@ function renderDist(){
         scales:{x:{display:false},y:{grid:{display:false},border:{display:false},
           ticks:{font:{family:SF,size:11,weight:'700'},color:'#0F004F',padding:4}}}}});
     const wrap=document.getElementById('dist-bar-chart-wrap');
-    if(wrap) wrap.style.height=Math.max(120,allSegs.length*38)+'px';
+    if(wrap) wrap.style.height=Math.max(100,allSegs.length*34)+'px';
   });
 }
+
+// ── HELPER otrosData lookup (global) ──
+const _getOtros=(t,m)=>{const od=otrosData;return od['_get']?od['_get'](t,m):null;};
 
 // ── PÁGINA: TARJETA CRÉDITO ──
 function setTcMes(v){tcFiltroMes=v;renderTC();}
@@ -1190,12 +1194,48 @@ function renderCreditos(){
     </div>`;
   }
 
+  // ── Card Ahorro Crédito ──
+  const ahorroCreditoVal=parseMonto(_getOtros('credito','ahorro')??0);
+  const itauKey='💰 ITAU | Consumo';
+  const itauCred=Object.values(creditosMap).find(c=>c.detalle===itauKey);
+  const itauMeta=itauCred?itauCred.valorCuota*itauCred.pendientes:0;
+  const ahorroPct=itauMeta>0?Math.min(ahorroCreditoVal/itauMeta*100,100):0;
+  const ahorroFaltaSobra=ahorroCreditoVal-itauMeta;
+  const ahorroCardHTML=ahorroCreditoVal>0||itauMeta>0?`
+<div class="card" style="margin-bottom:20px;padding:16px 20px">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">
+    <div>
+      <div class="stat-label">Ahorro · Crédito</div>
+      <div style="font-size:26px;font-weight:800;color:#059669;line-height:1.1">${fmtM(ahorroCreditoVal)}</div>
+    </div>
+    <div style="text-align:right">
+      <div class="stat-label">Meta · ${itauKey}</div>
+      <div style="font-size:15px;font-weight:800;color:var(--text)">${itauMeta>0?fmtM(itauMeta):'—'}</div>
+    </div>
+  </div>
+  ${itauMeta>0?`
+  <div style="margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+      <span class="stat-label--sm" style="margin-bottom:0">Progreso</span>
+      <span style="font-size:13px;font-weight:800;color:${ahorroPct>=100?'#059669':'var(--accent)'}">${Math.round(ahorroPct)}%</span>
+    </div>
+    <div style="height:10px;background:rgba(5,150,105,.1);border-radius:6px;overflow:hidden">
+      <div style="height:100%;width:${ahorroPct.toFixed(1)}%;background:linear-gradient(90deg,#059669,#22c55e);border-radius:6px;transition:width .4s"></div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;padding-top:8px;border-top:1px solid var(--border)">
+    <span style="font-size:12px;font-weight:700;color:var(--muted)">${ahorroFaltaSobra>=0?'Sobra':'Falta'}</span>
+    <span style="font-size:15px;font-weight:800;color:${ahorroFaltaSobra>=0?'#059669':'#ED1650'}">${ahorroFaltaSobra>=0?'':'-'}${fmtM(Math.abs(ahorroFaltaSobra))}</span>
+  </div>`:''}
+</div>`:'';
+
   document.getElementById('page-content').innerHTML=`
 ${UI.hero('Créditos',fmtM(totalPendiente),'pendiente')}
 <div class="kpi-strip" style="grid-template-columns:repeat(2,1fr);margin-bottom:20px">
   ${UI.kpiCard('Cuota mensual total',fmtM(totalCuotaMes))}
   ${UI.kpiCard('Créditos activos',`${activos.length} de ${todos.length}`)}
 </div>
+${ahorroCardHTML}
 ${UI.sectionLabel('Créditos Activos')}
 <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:var(--gap);margin-bottom:20px">
   ${activos.length?activos.map(cardHTML).join(''):'<div style="color:#9CA3AF;font-size:13px;padding:20px 0">Sin créditos activos</div>'}
@@ -1415,20 +1455,21 @@ ${UI.card('',`<div style="font-size:11px;color:var(--muted)">${proy.length} mese
         });
         ctx.restore();
       }};
-      const bgColors=distSegs.map(s=>pendDistFiltro&&pendDistFiltro!==s.label?s.color+'33':s.color+'dd');
+      const bgColors=distSegs.map(s=>pendDistFiltro&&pendDistFiltro!==s.label?s.color+'22':s.color+'dd');
       charts.pendDist=new Chart(distCanvas,{type:'bar',plugins:[distBarLabels],
         data:{labels:distSegs.map(s=>s.label),datasets:[{data:distSegs.map(s=>s.amt),
           backgroundColor:bgColors,hoverBackgroundColor:distSegs.map(s=>s.color),
-          borderWidth:0,borderRadius:6,borderSkipped:false}]},
-        options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:{duration:400},
+          borderWidth:0,borderRadius:5,borderSkipped:false,
+          barThickness:20}]},
+        options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:{duration:300},
           plugins:{legend:{display:false},tooltip:{enabled:false}},
           layout:{padding:{right:50}},
           onClick:(e,els)=>{if(els.length){const s=distSegs[els[0].index];setPendFiltro(pendDistFiltro===s.label?'':s.label);}},
           scales:{x:{display:false},y:{grid:{display:false},border:{display:false},
             ticks:{font:{family:SF,size:11,weight:'700'},color:'#0F004F',padding:4}}}}});
-      // Ajustar alto al contenido
+      // Altura proporcional estándar: barThickness 20 + gap ~14 = 34px/item
       const wrap=document.getElementById('pend-dist-wrap');
-      if(wrap) wrap.style.height=Math.max(160,distSegs.length*38)+'px';
+      if(wrap) wrap.style.height=Math.max(100,distSegs.length*34)+'px';
     }
     // Gráfico proyección verde
     const ttProy=makeExternalTooltip(i=>fmtMesLabel(proy[i][0]),i=>[{color:'#059669',label:'Cuotas',val:fmtM(proy[i][1])}]);
@@ -1519,7 +1560,49 @@ function renderVarios(){
   };
   const fmtFechaCorta=d=>d?d.toLocaleDateString('es-CL',{month:'long',year:'numeric'}):'—';
   // Colores modernos GOLD/SILVER
-  const GOLD_COLOR='#B8860B';   // dark goldenrod — más sofisticado
+  // ── TC PAGO SUGERIDO ──
+  const tcAhorro=parseMonto(_getOtros('tc','ahorro')??0);
+  const tcMinimo=parseMonto(_getOtros('tc','minimo')??0);
+  const RESERVA=40000;
+  // Lógica: disponible real = ahorro - 40k; pago = MIN(minimo, disponible_real); redondeado a miles hacia abajo
+  const dispReal=Math.max(0,tcAhorro-RESERVA);
+  const pagoBruto=Math.min(tcMinimo,dispReal);
+  // Redondeo hacia abajo al múltiplo de 1000 más cercano
+  const pagoSugerido=Math.floor(pagoBruto/1000)*1000;
+  const pctPago=tcMinimo>0?Math.min(pagoSugerido/tcMinimo*100,100):0;
+  const tcFaltaSobra=pagoSugerido-tcMinimo;
+  const tcCardHTML=(tcAhorro>0||tcMinimo>0)?`
+<div class="card" style="margin-bottom:20px">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">
+    <div>
+      <div class="stat-label">Pago sugerido · TC</div>
+      <div style="font-size:26px;font-weight:800;color:${pagoSugerido>0?'#059669':'#ED1650'};line-height:1.1">${fmtM(pagoSugerido)}</div>
+      <div class="stat-sub" style="margin-top:3px">redondeado a miles · reserva ${fmtM(RESERVA,true)}</div>
+    </div>
+    <div style="text-align:right">
+      <div class="stat-label">Mínimo a pagar</div>
+      <div style="font-size:15px;font-weight:800;color:var(--text)">${tcMinimo>0?fmtM(tcMinimo):'—'}</div>
+      <div class="stat-sub" style="margin-top:2px">Ahorro disponible ${fmtM(tcAhorro)}</div>
+    </div>
+  </div>
+  ${tcMinimo>0?`
+  <div style="margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+      <span class="stat-label--sm" style="margin-bottom:0">Cobertura del mínimo</span>
+      <span style="font-size:13px;font-weight:800;color:${pctPago>=100?'#059669':'#ED1650'}">${Math.round(pctPago)}%</span>
+    </div>
+    <div style="height:10px;background:rgba(99,77,210,.08);border-radius:6px;overflow:hidden">
+      <div style="height:100%;width:${pctPago.toFixed(1)}%;background:${pctPago>=100?'linear-gradient(90deg,#059669,#22c55e)':'linear-gradient(90deg,#634dd2,#a855f7)'};border-radius:6px;transition:width .4s"></div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;padding-top:8px;border-top:1px solid var(--border)">
+    <span style="font-size:12px;font-weight:700;color:var(--muted)">${tcFaltaSobra>=0?'Cubre mínimo':'Falta para cubrir'}</span>
+    <span style="font-size:15px;font-weight:800;color:${tcFaltaSobra>=0?'#059669':'#ED1650'}">${tcFaltaSobra>=0?'':'-'}${fmtM(Math.abs(tcFaltaSobra))}</span>
+  </div>`:''}
+</div>`:'';
+
+  const _getOtros_local=(t,m)=>_getOtros(t,m); // alias local por compatibilidad con g()
+  const GOLD_COLOR='#B8860B';
   const GOLD_BG='linear-gradient(135deg,#B8860B,#DAA520)';
   const GOLD_SOFT='rgba(184,134,11,.12)';
   const SILVER_COLOR='#4B5563'; // slate oscuro — moderno neutro
@@ -1540,7 +1623,8 @@ function renderVarios(){
   document.getElementById('page-content').innerHTML=`
 ${UI.hero('Temas Varios','Temas','Varios')}
 
-${UI.sectionLabel('Liquidez · Cuenta Corriente')}
+${tcCardHTML}
+${UI.sectionLabel('Varios')}
 ${millasAct>0?`
 <div style="display:grid;grid-template-columns:1fr 1fr 2fr;gap:var(--gap);margin-bottom:20px;align-items:start">
 `:`
@@ -1572,7 +1656,6 @@ ${millasAct>0?`
       <div>
         <div class="stat-label">Millas acumuladas</div>
         <div style="font-size:26px;font-weight:800;color:var(--text);line-height:1">${fmtNum(millasAct)}</div>
-        <div class="stat-sub" style="margin-top:2px">objetivo ${nivelLabel} · ${fmtNum(metaActual)} millas</div>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px">
         <span style="background:${nivelBg};color:#fff;font-size:10px;font-weight:800;padding:3px 12px;border-radius:20px;letter-spacing:.05em">${nivelLabel}</span>
@@ -1609,8 +1692,10 @@ ${millasAct>0?`
       <!-- Ritmo -->
       <div style="padding-right:14px">
         <div class="stat-label">Ritmo del año</div>
-        <div class="stat-val--lg">${fmtNum(Math.round(promMensual))}</div>
-        <div class="stat-sub">millas/mes</div>
+        <div style="display:flex;align-items:baseline;gap:6px">
+          <div class="stat-val--lg">${fmtNum(Math.round(promMensual))}</div>
+          <div class="stat-sub">millas/mes</div>
+        </div>
       </div>
       <!-- GOLD -->
       <div style="padding:0 14px;border-left:1px solid var(--border)">
@@ -1619,10 +1704,8 @@ ${millasAct>0?`
           <span class="stat-sub">${fmtNum(GOLD_META)}</span>
         </div>
         ${millasAct>=GOLD_META
-          ?`<div style="font-size:15px;font-weight:800;color:#059669">✓ Alcanzado</div>
-             <div class="stat-sub" style="margin-top:2px">${fmtNum(millasAct-GOLD_META)} sobre meta</div>`
-          :`<div style="font-size:15px;font-weight:800;color:${GOLD_COLOR}">${fmtFechaCorta(fechaMetaGold)}</div>
-             <div class="stat-sub" style="margin-top:2px">${fmtNum(GOLD_META-millasAct)} restantes · ${promMensual>0?Math.ceil((GOLD_META-millasAct)/promMensual)+' meses':'—'}</div>`
+          ?`<div style="font-size:15px;font-weight:800;color:#059669">✓ Alcanzado</div>`
+          :`<div style="font-size:15px;font-weight:800;color:${GOLD_COLOR}">${fmtFechaCorta(fechaMetaGold)}</div>`
         }
       </div>
       <!-- SILVER — solo si ya alcanzó GOLD -->
@@ -1633,10 +1716,8 @@ ${millasAct>0?`
           <span class="stat-sub">${fmtNum(SILVER_META)}</span>
         </div>
         ${millasAct>=SILVER_META
-          ?`<div style="font-size:15px;font-weight:800;color:#059669">✓ Alcanzado</div>
-             <div class="stat-sub" style="margin-top:2px">${fmtNum(millasAct-SILVER_META)} sobre meta</div>`
-          :`<div style="font-size:15px;font-weight:800;color:${SILVER_COLOR}">${fmtFechaCorta(fechaMetaSilver)}</div>
-             <div class="stat-sub" style="margin-top:2px">${fmtNum(SILVER_META-millasAct)} restantes · ${promMensual>0?Math.ceil((SILVER_META-millasAct)/promMensual)+' meses':'—'}</div>`
+          ?`<div style="font-size:15px;font-weight:800;color:#059669">✓ Alcanzado</div>`
+          :`<div style="font-size:15px;font-weight:800;color:${SILVER_COLOR}">${fmtFechaCorta(fechaMetaSilver)}</div>`
         }
       </div>`:''}
     </div>
