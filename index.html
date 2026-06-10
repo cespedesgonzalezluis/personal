@@ -567,8 +567,8 @@ const UI = {
     `<div><div class="stat-label">${label}</div><div class="${valClass}" style="color:${valColor}">${val}</div></div>`,
 
   // Stat cell con borde izquierdo (columnas internas)
-  statCellDivider: (label, val, valColor='var(--text)', note='') =>
-    `<div class="stat-divider"><div class="stat-label">${label}</div><div class="stat-val" style="color:${valColor}">${val}</div>${note?`<div class="stat-sub">${note}</div>`:''}</div>`,
+  statCellDivider: (label, val, valColor='var(--text)', note='', valClass='stat-val') =>
+    `<div class="stat-divider"><div class="stat-label">${label}</div><div class="${valClass}" style="color:${valColor}">${val}</div>${note?`<div class="stat-sub">${note}</div>`:''}</div>`,
 
   // Mini stat para grids pequeños (creditos cards)
   statMini: (label, val, valColor='var(--text)') =>
@@ -1799,8 +1799,11 @@ ${millasAct>0?`
     <div class="stat-sub">${finDate?`Saldo hasta ${finLabel} · ${diasRest} días`:'Saldo cuenta corriente'}</div>
     ${finDate?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:10px">
       ${UI.statCell('Disponible hoy',fmtM(diario),'var(--accent)','stat-val--lg')}
-      ${UI.statCellDivider('Disponible mañana',fmtM(diarioManana),'#634dd2')}
-    </div>`:''}
+      ${UI.statCellDivider('Disponible mañana',fmtM(diarioManana),'#634dd2','','stat-val--lg')}
+    </div>
+    ${finDate&&diarioManana!==diario?`<div style="margin-top:6px;font-size:12px;font-weight:700;color:${diarioManana>diario?'#ED1650':'#059669'}">
+      ${diarioManana>diario?'↑':'↓'} diferencia: ${fmtM(Math.abs(diarioManana-diario))}
+    </div>`:''}`:''}
   </div>
   <div class="card">
     <div class="widget-title">📊 Variación IPC</div>
