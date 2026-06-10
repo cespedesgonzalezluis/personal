@@ -229,6 +229,10 @@ tbody tr:hover td{background:rgba(99,77,210,.02)}
   .mama-grid{grid-template-columns:1fr}
   .filter-row{flex-direction:column}
   .filter-trigger{min-width:100%}
+  .grid-analisis{grid-template-columns:1fr!important}
+  .grid-creditos{grid-template-columns:1fr!important}
+  .grid-varios-3,.grid-varios-2{grid-template-columns:1fr!important;max-width:100%!important}
+  .card-pago-sugerido{width:100%!important}
 }
 @media(max-width:560px){
   .content{padding:14px 16px}
@@ -236,6 +240,10 @@ tbody tr:hover td{background:rgba(99,77,210,.02)}
   .hero-title{font-size:26px}
   .kpi-strip{grid-template-columns:1fr}
   .widget-grid,.widget-grid-2,.widget-grid-4{grid-template-columns:1fr}
+  .tbl-mobile-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .card-pago-sugerido{width:100%!important}
+  .mama-chart-wrap{height:240px!important}
+  .kpi-strip-2{grid-template-columns:1fr!important}
 }
 </style>
 </head>
@@ -814,7 +822,7 @@ ${UI.card('Ingreso · Gasto · Tarjeta Crédito',
   `<div style="height:230px"><canvas id="chartEvo"></canvas></div>${UI.chartLegend([{color:'#059669',label:'Ingreso'},{color:'#ED1650',label:'Gasto'},{color:'#6366f1',label:'Tarjeta Crédito'}])}`,
   'margin-bottom:20px')}
 ${UI.sectionLabel('Análisis del mes')}
-<div style="display:grid;grid-template-columns:30fr 70fr;gap:var(--gap);margin-bottom:20px;align-items:stretch">
+<div class="grid-analisis" style="display:grid;grid-template-columns:30fr 70fr;gap:var(--gap);margin-bottom:20px;align-items:stretch">
   <div class="card" style="padding:14px 12px;display:flex;flex-direction:column">
     <div class="stat-label" style="margin-bottom:10px">Distribución del mes</div>
     <div style="position:relative;flex:1;min-height:180px" id="dist-bar-chart-wrap"><canvas id="dist-bar-chart"></canvas></div>
@@ -1106,7 +1114,7 @@ ${UI.hero('Tarjeta Crédito',fmtM(deudaTotal),'pendiente')}
 ${debugBox}
 ${UI.card('Proyección Mensual',`<div style="font-size:11px;color:var(--muted);font-weight:600">${proyMeses.length} meses</div>`,`<div style="position:relative;height:260px"><canvas id="tc-chart"></canvas></div>`,'margin-bottom:var(--gap)')}
 ${UI.card('Movimientos Pendientes',`<div style="font-size:11px;color:var(--muted)">${movsFiltrados.length} movimientos</div>`,`${filtrosHTML}
-<div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:12px">
+<div class="tbl-mobile-scroll"><table style="border-collapse:collapse;font-size:12px">
   <thead><tr style="border-bottom:2px solid var(--border)">
     <th class="tc-th" style="text-align:left">Movimiento</th><th class="tc-th" style="text-align:center">Fecha</th>
     <th class="tc-th" style="text-align:right">$ Total</th><th class="tc-th" style="text-align:right">$ Pagado</th>
@@ -1245,17 +1253,17 @@ function renderCreditos(){
 
   document.getElementById('page-content').innerHTML=`
 ${UI.hero('Créditos',fmtM(totalPendiente),'pendiente')}
-<div class="kpi-strip" style="grid-template-columns:repeat(2,1fr);margin-bottom:20px">
+<div class="kpi-strip kpi-strip-2" style="grid-template-columns:repeat(2,1fr);margin-bottom:20px">
   ${UI.kpiCard('Cuota mensual total',fmtM(totalCuotaMes))}
   ${UI.kpiCard('Créditos activos',`${activos.length} de ${todos.length}`)}
 </div>
 ${ahorroCardHTML}
 ${UI.sectionLabel('Créditos Activos')}
-<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:var(--gap);margin-bottom:20px">
+<div class="grid-creditos" style="display:grid;grid-template-columns:repeat(2,1fr);gap:var(--gap);margin-bottom:20px">
   ${activos.length?activos.map(cardHTML).join(''):'<div style="color:#9CA3AF;font-size:13px;padding:20px 0">Sin créditos activos</div>'}
 </div>
 ${UI.sectionLabel('Créditos Pagados')}
-<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:var(--gap);margin-bottom:20px">
+<div class="grid-creditos" style="display:grid;grid-template-columns:repeat(2,1fr);gap:var(--gap);margin-bottom:20px">
   ${pagados.length?pagados.map(cardHTML).join(''):'<div style="color:#9CA3AF;font-size:13px;padding:20px 0">Sin créditos pagados</div>'}
 </div>`;
 }
@@ -1309,7 +1317,7 @@ ${UI.sectionLabel('Ahorro Mamá')}
 <div class="mama-grid" style="margin-bottom:24px">
   ${UI.card('Ingresos · Gastos · Saldo acumulado',
     UI.periodToggle(mamaEvoRange,[{val:12,label:'12M',fn:'setMamaRange(12,this)'},{val:0,label:'Todo',fn:'setMamaRange(0,this)'}]),
-    `<div style="position:relative;height:340px"><canvas id="mama-chart"></canvas></div>${UI.chartLegend([{color:'#059669',label:'Ingresos'},{color:'#ED1650',label:'Gastos'},{color:'#1B0088',label:'Saldo acumulado'}])}`)}
+    `<div class="mama-chart-wrap" style="position:relative;height:340px"><canvas id="mama-chart"></canvas></div>${UI.chartLegend([{color:'#059669',label:'Ingresos'},{color:'#ED1650',label:'Gastos'},{color:'#1B0088',label:'Saldo acumulado'}])}`)}
   ${UI.card('Movimientos por Mes','',`<div class="tbl-scroll" style="max-height:380px"><table style="width:100%">
     <thead><tr style="border-bottom:2px solid var(--border)">
       <th style="padding:8px 10px;font-size:10px;font-weight:800;color:var(--accent);text-align:left;position:sticky;top:0;background:var(--card);z-index:1">Detalle</th>
@@ -1490,7 +1498,7 @@ function renderPendientes(){
   document.getElementById('page-content').innerHTML=`
 ${UI.hero('Pendientes',fmtM(totalPend),'pendiente')}
 ${UI.sectionLabel('Distribución · Detalle')}
-<div style="display:grid;grid-template-columns:25fr 75fr;gap:var(--gap);margin-bottom:var(--gap);align-items:stretch">
+<div class="grid-analisis" style="display:grid;grid-template-columns:25fr 75fr;gap:var(--gap);margin-bottom:var(--gap);align-items:stretch">
   <div class="card" style="padding:14px 12px;display:flex;flex-direction:column">
     <div class="stat-label" style="margin-bottom:10px">Por responsable</div>
     <div style="position:relative;flex:1;min-height:160px" id="pend-dist-wrap"><canvas id="pend-dist-chart"></canvas></div>
@@ -1686,7 +1694,7 @@ function renderVarios(){
   const pagoSugerido=Math.max(0,tcMontoObjetivo-remanenteRedondeado);
   const pctPago=tcMontoObjetivo>0?Math.min(pagoSugerido/tcMontoObjetivo*100,100):0;
   const tcCardHTML=(tcAhorro>0||tcMontoObjetivo>0)?`
-<div style="width:50%">
+<div class="card-pago-sugerido" style="width:50%">
 <div class="card" style="margin-bottom:20px">
   <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">
     <div>
@@ -1739,9 +1747,9 @@ ${UI.hero('Temas Varios','Temas','Varios')}
 
 ${UI.sectionLabel('Varios')}
 ${millasAct>0?`
-<div style="display:grid;grid-template-columns:1fr 1fr 2fr;gap:var(--gap);margin-bottom:20px;align-items:start">
+<div class="grid-varios-3" style="display:grid;grid-template-columns:1fr 1fr 2fr;gap:var(--gap);margin-bottom:20px;align-items:start">
 `:`
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--gap);margin-bottom:20px;max-width:640px">
+<div class="grid-varios-2" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--gap);margin-bottom:20px;max-width:640px">
 `}
   <div class="card">
     <div class="widget-title">💰 Disponible</div>
