@@ -1895,8 +1895,17 @@ let ahorroMonto=0, ahorroPct=25;
 
 function setAhorroPct(pct,btn){
   ahorroPct=pct;
-  document.querySelectorAll('.ahorro-pct-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
+  document.querySelectorAll('.ahorro-pct-btn').forEach(b=>{
+    b.style.background='var(--bg)';
+    b.style.color='var(--text)';
+    b.style.borderColor='var(--border)';
+  });
+  btn.style.background='#059669';
+  btn.style.color='#fff';
+  btn.style.borderColor='#059669';
+  // actualizar total visible
+  const totalEl=document.getElementById('ahorro-total-label');
+  if(totalEl) totalEl.textContent=fmtM(Math.round(ahorroMonto*pct/100));
   renderAhorroCalc();
 }
 
@@ -1904,82 +1913,63 @@ function renderAhorroCalc(){
   const totalDisp=Math.round(ahorroMonto*ahorroPct/100);
   const totalPcts=ahorroData.reduce((a,r)=>a+r.pct,0);
 
-  // Agrupar por banco
+  // Calcular monto por categoría
+  const rows=ahorroData.map(cat=>({
+    ...cat,
+    monto:totalPcts>0?Math.round(totalDisp*(cat.pct/totalPcts)):0
+  }));
+
+  // Agrupar por banco — manteniendo orden de aparición
+  const bancoOrder=[];
   const bancoMap={};
-  const rows=ahorroData.map(cat=>{
-    const monto=totalPcts>0?Math.round(totalDisp*(cat.pct/totalPcts)):0;
-    if(!bancoMap[cat.banco]) bancoMap[cat.banco]=0;
-    bancoMap[cat.banco]+=monto;
-    return{...cat,monto};
+  rows.forEach(cat=>{
+    if(!bancoMap[cat.banco]){bancoMap[cat.banco]=[];bancoOrder.push(cat.banco);}
+    bancoMap[cat.banco].push(cat);
   });
 
   const catColors=['#1B0088','#634dd2','#a855f7','#059669','#00b89e','#f59e0b','#ED1650','#4257E8'];
 
-  const tablaHTML=rows.map((cat,i)=>{
-    const color=catColors[i%catColors.length];
-    const pctDisplay=Math.round(cat.pct*100);
-    const barW=totalDisp>0?Math.min((cat.monto/totalDisp)*100,100):0;
-    return`<div style="padding:10px 0;border-bottom:1px solid var(--border)">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <div style="display:flex;align-items:center;gap:10px">
-          <div style="width:10px;height:10px;border-radius:3px;background:${color};flex-shrink:0"></div>
-          <div>
+  // Una card por banco
+  const bancoCards=bancoOrder.map((banco,bi)=>{
+    const cats=bancoMap[banco];
+    const bancoTotal=cats.reduce((a,c)=>a+c.monto,0);
+    const detalleHTML=cats.map((cat,ci)=>{
+      const color=catColors[(bi*4+ci)%catColors.length];
+      const pctDisplay=Math.round(cat.pct*100);
+      const barW=bancoTotal>0?Math.min((cat.monto/bancoTotal)*100,100):0;
+      return`<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:8px;height:8px;border-radius:2px;background:${color};flex-shrink:0"></div>
             <div style="font-size:13px;font-weight:700;color:var(--text)">${cat.tipo}</div>
-            <div style="font-size:11px;color:var(--muted);font-weight:600">${cat.banco}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:14px;font-weight:800;color:${color}">${fmtM(cat.monto)}</div>
+            <div style="font-size:10px;font-weight:700;color:var(--muted)">${pctDisplay}%</div>
           </div>
         </div>
-        <div style="text-align:right">
-          <div style="font-size:15px;font-weight:800;color:${color}">${fmtM(cat.monto)}</div>
-          <div style="font-size:10px;font-weight:700;color:var(--muted)">${pctDisplay}% del total</div>
+        <div style="height:5px;background:rgba(27,0,136,.07);border-radius:4px;overflow:hidden">
+          <div style="height:100%;width:${barW.toFixed(1)}%;background:${color};border-radius:4px;transition:width .4s"></div>
         </div>
+      </div>`;
+    }).join('');
+    return`<div class="card" style="padding:16px 20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:800;color:var(--text)">${banco}</div>
+        <div style="font-size:17px;font-weight:800;color:var(--accent)">${fmtM(bancoTotal)}</div>
       </div>
-      <div style="height:6px;background:rgba(27,0,136,.07);border-radius:6px;overflow:hidden">
-        <div style="height:100%;width:${barW.toFixed(1)}%;background:${color};border-radius:6px;transition:width .4s"></div>
-      </div>
+      ${detalleHTML}
     </div>`;
   }).join('');
 
-  const bancoRows=Object.entries(bancoMap).sort((a,b)=>b[1]-a[1]).map(([banco,monto])=>`
-    <div class="tc-resumen-row">
-      <div class="tc-resumen-label">${banco}</div>
-      <div class="tc-resumen-val">${fmtM(monto)}</div>
-    </div>`).join('');
-
   const el=document.getElementById('ahorro-calc-area');
   if(!el) return;
-  el.innerHTML=`
-<div class="grid-creditos" style="margin-bottom:20px">
-  <!-- Card categorías -->
-  <div class="card" style="padding:18px 20px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div class="card-title">Distribución por categoría</div>
-      <div style="font-size:13px;font-weight:800;color:var(--accent)">${fmtM(totalDisp)}</div>
-    </div>
-    ${tablaHTML||'<div style="color:var(--muted);font-size:13px">Sin categorías definidas</div>'}
-    <div style="padding-top:12px;margin-top:4px;display:flex;justify-content:space-between;align-items:center">
-      <div style="font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Total distribuido</div>
-      <div style="font-size:18px;font-weight:800;color:var(--text)">${fmtM(rows.reduce((a,r)=>a+r.monto,0))}</div>
-    </div>
-  </div>
-  <!-- Card resumen por banco -->
-  <div class="card" style="padding:18px 20px">
-    <div class="card-title" style="margin-bottom:16px">Resumen por banco</div>
-    ${bancoRows||'<div style="color:var(--muted);font-size:13px">—</div>'}
-    <div style="margin-top:16px;padding-top:12px;border-top:2px solid var(--border)">
-      ${Object.entries(bancoMap).map(([banco,monto])=>{
-        const pct=totalDisp>0?Math.round(monto/totalDisp*100):0;
-        const color=catColors[Object.keys(bancoMap).indexOf(banco)%catColors.length];
-        return`<div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:var(--muted);margin-bottom:3px"><span>${banco}</span><span>${pct}%</span></div>`;
-      }).join('')}
-      <div style="height:12px;background:rgba(27,0,136,.07);border-radius:6px;overflow:hidden;display:flex;margin-top:6px">
-        ${Object.entries(bancoMap).map(([banco,monto],i)=>{
-          const pct=totalDisp>0?(monto/totalDisp*100):0;
-          return`<div style="height:100%;width:${pct.toFixed(1)}%;background:${catColors[i%catColors.length]};transition:width .4s"></div>`;
-        }).join('')}
-      </div>
-    </div>
-  </div>
-</div>`;
+
+  // Grid dinámico según cantidad de bancos
+  const nBancos=bancoOrder.length;
+  const gridCols=nBancos===1?'1fr':nBancos===2?'1fr 1fr':'repeat(3,1fr)';
+
+  el.innerHTML=`<div style="display:grid;grid-template-columns:${gridCols};gap:var(--gap);margin-bottom:20px">${bancoCards}</div>`;
 }
 
 function renderAhorro(){
@@ -1989,34 +1979,37 @@ function renderAhorro(){
     return;
   }
 
+  const totalInicial=Math.round(ahorroMonto*ahorroPct/100);
+
   document.getElementById('page-content').innerHTML=`
 ${UI.hero('Calculadora de','Distribución','Ahorro')}
 ${UI.sectionLabel('Configuración')}
 <div class="card" style="margin-bottom:20px;padding:20px 24px">
-  <div class="grid-varios-2" style="align-items:end">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
+    <!-- Monto -->
     <div>
-      <div class="stat-label" style="margin-bottom:8px">Monto base a distribuir</div>
-      <div style="display:flex;align-items:center;gap:0">
-        <span style="font-size:18px;font-weight:800;color:var(--muted);padding:10px 12px;background:var(--bg);border:1.5px solid var(--border);border-right:none;border-radius:10px 0 0 10px">$</span>
+      <div class="stat-label" style="margin-bottom:8px">Monto a Distribuir</div>
+      <div style="display:flex;align-items:center">
+        <span style="font-size:18px;font-weight:800;color:var(--muted);padding:10px 12px;background:var(--bg);border:1.5px solid var(--border);border-right:none;border-radius:10px 0 0 10px;line-height:1">$</span>
         <input id="ahorro-monto-input" type="text" inputmode="numeric"
           placeholder="0"
-          style="font-size:18px;font-weight:800;color:var(--text);font-family:var(--font);border:1.5px solid var(--border);border-left:none;border-radius:0 10px 10px 0;padding:10px 14px;outline:none;width:100%;background:var(--card)"
+          style="font-size:18px;font-weight:800;color:var(--text);font-family:var(--font);border:1.5px solid var(--border);border-left:none;border-radius:0 10px 10px 0;padding:10px 14px;outline:none;width:100%;background:var(--card);line-height:1"
           value="${ahorroMonto>0?Math.round(ahorroMonto).toLocaleString('es-CL'):''}"
-          oninput="ahorroMonto=parseMonto(this.value.replace(/\./g,''));renderAhorroCalc()"
+          oninput="ahorroMonto=parseMonto(this.value.replace(/\\./g,''));document.getElementById('ahorro-total-label').textContent=fmtM(Math.round(ahorroMonto*ahorroPct/100));renderAhorroCalc()"
           onfocus="this.style.borderColor='var(--accent)'"
           onblur="this.style.borderColor='var(--border)'">
       </div>
-      <div style="margin-top:6px;font-size:11px;color:var(--muted);font-weight:600">Puede ser sueldo, bono, venta, etc.</div>
     </div>
+    <!-- Porcentaje -->
     <div>
-      <div class="stat-label" style="margin-bottom:8px">Porcentaje a ahorrar</div>
-      <div style="display:flex;gap:8px">
-        <button class="ahorro-pct-btn period-btn${ahorroPct===25?' active':''}" style="flex:1;padding:10px 0;font-size:15px;font-weight:800;border-radius:10px;border:1.5px solid var(--border);background:var(--bg);font-family:var(--font);cursor:pointer;transition:all .15s" onclick="setAhorroPct(25,this)">25%</button>
-        <button class="ahorro-pct-btn period-btn${ahorroPct===90?' active':''}" style="flex:1;padding:10px 0;font-size:15px;font-weight:800;border-radius:10px;border:1.5px solid var(--border);background:var(--bg);font-family:var(--font);cursor:pointer;transition:all .15s" onclick="setAhorroPct(90,this)">90%</button>
+      <div class="stat-label" style="margin-bottom:8px">Porcentaje a Ahorrar</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button class="ahorro-pct-btn" style="flex:1;padding:10px 0;font-size:15px;font-weight:800;border-radius:10px;border:1.5px solid ${ahorroPct===25?'#059669':'var(--border)'};background:${ahorroPct===25?'#059669':'var(--bg)'};color:${ahorroPct===25?'#fff':'var(--text)'};font-family:var(--font);cursor:pointer;transition:all .15s" onclick="setAhorroPct(25,this)">25%</button>
+        <button class="ahorro-pct-btn" style="flex:1;padding:10px 0;font-size:15px;font-weight:800;border-radius:10px;border:1.5px solid ${ahorroPct===90?'#059669':'var(--border)'};background:${ahorroPct===90?'#059669':'var(--bg)'};color:${ahorroPct===90?'#fff':'var(--text)'};font-family:var(--font);cursor:pointer;transition:all .15s" onclick="setAhorroPct(90,this)">90%</button>
       </div>
-      <div style="margin-top:8px;display:flex;align-items:center;justify-content:space-between">
-        <span style="font-size:11px;color:var(--muted);font-weight:600">Total a distribuir</span>
-        <span style="font-size:17px;font-weight:800;color:var(--accent)">${fmtM(Math.round(ahorroMonto*ahorroPct/100))}</span>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(5,150,105,.07);border-radius:8px">
+        <span style="font-size:11px;color:var(--muted);font-weight:700">Total a distribuir</span>
+        <span id="ahorro-total-label" style="font-size:17px;font-weight:800;color:#059669">${fmtM(totalInicial)}</span>
       </div>
     </div>
   </div>
