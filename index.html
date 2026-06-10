@@ -1696,9 +1696,9 @@ function renderVarios(){
     <div style="text-align:right">
       <div class="stat-label">Monto Objetivo</div>
       <div style="font-size:15px;font-weight:800;color:var(--text)">${tcMontoObjetivo>0?fmtM(tcMontoObjetivo):'—'}</div>
-      ${(()=>{const delta=pagoSugerido-tcMontoObjetivo;const ok=delta>=0;return`<div style="margin-top:6px;display:inline-flex;align-items:center;gap:5px;background:${ok?'rgba(5,150,105,.1)':'rgba(237,22,80,.08)'};border-radius:8px;padding:4px 10px">
+      ${(()=>{const delta=dispReal-tcMontoObjetivo;const ok=delta>=0;return`<div style="margin-top:6px;display:inline-flex;align-items:center;gap:5px;background:${ok?'rgba(5,150,105,.1)':'rgba(237,22,80,.08)'};border-radius:8px;padding:4px 10px">
         <span style="font-size:11px;font-weight:800;color:var(--muted)">Delta</span>
-        <span style="font-size:13px;font-weight:800;color:${ok?'#059669':'#ED1650'}">${ok?'▲ +':'▼ '}${fmtM(Math.abs(delta))}</span>
+        <span style="font-size:13px;font-weight:800;color:${ok?'#059669':'#ED1650'}">${ok?'+':''}${fmtM(delta)}</span>
       </div>`;})()}
     </div>
   </div>
