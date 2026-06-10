@@ -1680,7 +1680,10 @@ function renderVarios(){
   const tcAhorro=parseMonto(_getOtros('tc','ahorro')??0);
   const RESERVA=40000;
   const dispReal=Math.max(0,tcAhorro-RESERVA);
-  const pagoSugerido=Math.min(tcMontoObjetivo,dispReal);
+  const pagoMaximo=Math.min(tcMontoObjetivo,dispReal);
+  const remanente=tcMontoObjetivo-pagoMaximo;
+  const remanenteRedondeado=Math.ceil(remanente/1000)*1000;
+  const pagoSugerido=Math.max(0,tcMontoObjetivo-remanenteRedondeado);
   const pctPago=tcMontoObjetivo>0?Math.min(pagoSugerido/tcMontoObjetivo*100,100):0;
   const tcCardHTML=(tcAhorro>0||tcMontoObjetivo>0)?`
 <div style="width:50%">
