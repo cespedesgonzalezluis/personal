@@ -25,8 +25,8 @@ body{background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-d
 
 /* ── LAYOUT ── */
 .app{display:flex;flex:1;min-height:100vh}
-.main{margin-left:var(--sidebar);flex:1;display:flex;flex-direction:column;min-width:0}
-.content{padding:24px 28px;flex:1}
+.main{margin-left:var(--sidebar);flex:1;display:flex;flex-direction:column;min-width:0;overflow-x:hidden}
+.content{padding:24px 28px;flex:1;overflow-x:hidden;width:100%;box-sizing:border-box}
 
 /* ── SIDEBAR ── */
 .sidebar{width:var(--sidebar);background:#0F004F;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:200;transition:transform .25s;border-right:1px solid rgba(255,255,255,.06)}
@@ -140,7 +140,7 @@ body{background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-d
 @media(hover:none){.chart-tooltip{display:none!important}}
 
 /* ── TABLES ── */
-.tbl-scroll{overflow-y:auto;max-height:340px;scrollbar-width:thin;scrollbar-color:#c4c0e0 transparent}
+.tbl-scroll{overflow-y:auto;overflow-x:auto;max-height:340px;scrollbar-width:thin;scrollbar-color:#c4c0e0 transparent}
 table{width:100%;border-collapse:separate;border-spacing:0}
 thead th{padding:9px 12px;font-size:10px;font-weight:800;color:var(--accent);text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;position:sticky;top:0;background:var(--card);z-index:1;letter-spacing:.04em}
 thead th:last-child{text-align:right}
@@ -217,10 +217,15 @@ tbody tr:hover td{background:rgba(99,77,210,.02)}
 
 /* ── GRIDS RESPONSIVOS — columnas definidas en CSS, no inline ── */
 .grid-analisis{display:grid;grid-template-columns:30fr 70fr;gap:var(--gap);margin-bottom:20px;align-items:stretch}
+.grid-analisis>*{min-width:0}
 .grid-pend{display:grid;grid-template-columns:25fr 75fr;gap:var(--gap);margin-bottom:var(--gap);align-items:stretch}
+.grid-pend>*{min-width:0}
 .grid-creditos{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--gap);margin-bottom:20px}
+.grid-creditos>*{min-width:0}
 .grid-varios-3{display:grid;grid-template-columns:1fr 1fr 2fr;gap:var(--gap);margin-bottom:20px;align-items:start}
+.grid-varios-3>*{min-width:0}
 .grid-varios-2{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap);margin-bottom:20px;max-width:640px}
+.grid-varios-2>*{min-width:0}
 .card-pago-sugerido{width:50%}
 
 /* ── RESPONSIVE ── */
