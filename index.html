@@ -215,7 +215,7 @@ tbody tr:hover td{background:rgba(99,77,210,.02)}
 .tc-resumen-label{font-weight:600;color:var(--muted)}
 .tc-resumen-val{font-weight:800;color:var(--text)}
 
-/* ── GRIDS RESPONSIVOS — columnas definidas en CSS, no inline ── */
+/* ── GRIDS RESPONSIVOS ── */
 .grid-analisis{display:grid;grid-template-columns:30fr 70fr;gap:var(--gap);margin-bottom:20px;align-items:stretch}
 .grid-analisis>*{min-width:0}
 .grid-pend{display:grid;grid-template-columns:25fr 75fr;gap:var(--gap);margin-bottom:var(--gap);align-items:stretch}
@@ -228,7 +228,31 @@ tbody tr:hover td{background:rgba(99,77,210,.02)}
 .grid-varios-2>*{min-width:0}
 .card-pago-sugerido{width:50%}
 
-/* ── RESPONSIVE ── */
+/* ── FORZADO MOBILE VÍA JS CLASS (mayor especificidad que media queries) ── */
+body.is-mobile .grid-analisis,
+body.is-mobile .grid-pend{grid-template-columns:1fr}
+body.is-mobile .grid-creditos{grid-template-columns:1fr}
+body.is-mobile .grid-varios-3,
+body.is-mobile .grid-varios-2{grid-template-columns:1fr;max-width:100%}
+body.is-mobile .card-pago-sugerido{width:100%}
+body.is-mobile .widget-grid,
+body.is-mobile .widget-grid-4{grid-template-columns:repeat(2,1fr)}
+body.is-mobile .mama-grid{grid-template-columns:1fr}
+body.is-mobile .filter-row{flex-direction:column}
+body.is-mobile .filter-trigger{min-width:100%}
+body.is-xs .kpi-strip,
+body.is-xs .widget-grid,
+body.is-xs .widget-grid-2,
+body.is-xs .widget-grid-4{grid-template-columns:1fr}
+body.is-xs .card-pago-sugerido{width:100%}
+body.is-xs .kpi-strip-2{grid-template-columns:1fr}
+body.is-xs .tbl-mobile-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+@media(max-width:1024px){
+  .grid-analisis,.grid-pend{grid-template-columns:1fr}
+  .grid-creditos{grid-template-columns:1fr}
+  .grid-varios-3,.grid-varios-2{grid-template-columns:1fr;max-width:100%}
+  .card-pago-sugerido{width:100%}
+}
 @media(max-width:900px){
   .widget-grid,.widget-grid-4{grid-template-columns:repeat(2,1fr)}
   .widget-grid-2{grid-template-columns:1fr}
@@ -242,10 +266,6 @@ tbody tr:hover td{background:rgba(99,77,210,.02)}
   .mama-grid{grid-template-columns:1fr}
   .filter-row{flex-direction:column}
   .filter-trigger{min-width:100%}
-  .grid-analisis,.grid-pend{grid-template-columns:1fr}
-  .grid-creditos{grid-template-columns:1fr}
-  .grid-varios-3,.grid-varios-2{grid-template-columns:1fr;max-width:100%}
-  .card-pago-sugerido{width:100%}
 }
 @media(max-width:560px){
   .content{padding:14px 16px}
@@ -1876,6 +1896,18 @@ function setTab(tab,btn){
 }
 
 loadData();
+
+// ── RESPONSIVE HELPER ──
+// Las media queries a veces no alcanzan en webviews móviles con sidebar.
+// Este helper agrega clase 'is-mobile' al body cuando el ancho real < 900px
+// y la usa como selector CSS de mayor especificidad.
+function applyMobileClass(){
+  const w=window.innerWidth;
+  document.body.classList.toggle('is-mobile', w<900);
+  document.body.classList.toggle('is-xs', w<560);
+}
+applyMobileClass();
+window.addEventListener('resize', applyMobileClass);
 </script>
 </body>
 </html>
