@@ -1680,10 +1680,10 @@ function renderVarios(){
   const tcAhorro=parseMonto(_getOtros('tc','ahorro')??0);
   const RESERVA=40000;
   const dispReal=Math.max(0,tcAhorro-RESERVA);
-  const pagoBruto=Math.min(tcMontoObjetivo,dispReal);
-  const pagoSugerido=Math.floor(pagoBruto/1000)*1000;
+  const pagoSugerido=Math.min(tcMontoObjetivo,dispReal);
   const pctPago=tcMontoObjetivo>0?Math.min(pagoSugerido/tcMontoObjetivo*100,100):0;
   const tcCardHTML=(tcAhorro>0||tcMontoObjetivo>0)?`
+<div style="width:50%">
 <div class="card" style="margin-bottom:20px">
   <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">
     <div>
@@ -1706,6 +1706,7 @@ function renderVarios(){
       <div style="height:100%;width:${pctPago.toFixed(1)}%;background:${pctPago>=100?'linear-gradient(90deg,#059669,#22c55e)':'linear-gradient(90deg,#634dd2,#a855f7)'};border-radius:6px;transition:width .4s"></div>
     </div>
   </div>`:''}
+</div>
 </div>`:'';
 
   const _getOtros_local=(t,m)=>_getOtros(t,m); // alias local por compatibilidad con g()
