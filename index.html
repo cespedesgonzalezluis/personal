@@ -1002,8 +1002,7 @@ function renderDist(){
   const totalGasto=segs.reduce((a,s)=>a+s.amt,0);
   const disponible=ing-totalGasto;
   const dispColor=disponible>=0?'#16a34a':'#ED1650';
-  const allSegs=[...segs,{label:disponible>=0?'Disponible':'Déficit',color:dispColor,amt:Math.abs(disponible),esDisp:true}]
-    .sort((a,b)=>b.amt-a.amt);
+  const allSegs=[...segs.sort((a,b)=>b.amt-a.amt),{label:disponible>=0?'Disponible':'Déficit',color:dispColor,amt:Math.abs(disponible),esDisp:true}];
   requestAnimationFrame(()=>{
     const canvas=document.getElementById('dist-bar-chart');
     if(!canvas) return;
@@ -1038,7 +1037,7 @@ function renderDist(){
         barThickness:20}]},
       options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:{duration:300},
         plugins:{legend:{display:false},tooltip:{enabled:false}},
-        layout:{padding:{right:50}},
+        layout:{padding:{right:8}},
         onClick:(e,els)=>{
           if(!els.length) return;
           const seg=allSegs[els[0].index];
@@ -1046,7 +1045,7 @@ function renderDist(){
           setDetalleFiltro(seg.label.toLowerCase());
         },
         scales:{x:{display:false},y:{grid:{display:false},border:{display:false},
-          ticks:{font:{family:SF,size:11,weight:'700'},color:'#0F004F',padding:4}}}}});
+          ticks:{font:{family:SF,size:11,weight:'700'},color:'#0F004F',padding:2}}}}});
     charts.distBar._allSegs=allSegs; // referencia para dim sin recrear
     const wrap=document.getElementById('dist-bar-chart-wrap');
     if(wrap) wrap.style.height=Math.max(100,allSegs.length*34)+'px';
@@ -1604,10 +1603,10 @@ ${UI.card('',`<div style="font-size:11px;color:var(--muted)">${proy.length} mese
             barThickness:20}]},
           options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:{duration:300},
             plugins:{legend:{display:false},tooltip:{enabled:false}},
-            layout:{padding:{right:50}},
+            layout:{padding:{right:8}},
             onClick:(e,els)=>{if(els.length){const s=distSegs[els[0].index];setPendFiltro(pendDistFiltro===s.label?'':s.label);}},
             scales:{x:{display:false},y:{grid:{display:false},border:{display:false},
-              ticks:{font:{family:SF,size:11,weight:'700'},color:'#0F004F',padding:4}}}}});
+              ticks:{font:{family:SF,size:11,weight:'700'},color:'#0F004F',padding:2}}}}});
         charts.pendDist._distSegs=distSegs;
         // Altura proporcional estándar
         const wrap=document.getElementById('pend-dist-wrap');
