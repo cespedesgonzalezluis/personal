@@ -124,7 +124,7 @@ body{background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-d
 .cat-btn:hover{border-color:var(--accent);color:var(--accent)}
 .cat-btn.active{background:var(--navy);color:#fff;border-color:var(--navy);box-shadow:0 2px 6px rgba(27,0,136,.25)}
 .cat-btn.active[data-cat]:not([data-cat=""]){background:var(--cat-c,var(--navy));border-color:var(--cat-c,var(--navy))}
-@media(hover:none){.chart-tooltip{display:none!important}}
+@media(hover:none){.chart-tooltip{pointer-events:none}}
 
 /* TABLE */
 .tbl-scroll{overflow-y:auto;overflow-x:auto;max-height:340px;scrollbar-width:thin;scrollbar-color:#c4c0e0 transparent}
@@ -197,7 +197,7 @@ tbody tr:hover td{background:rgba(99,77,210,.02)}
 .tc-resumen-val{font-weight:800;color:var(--text)}
 /* RESPONSIVE GRIDS — usados en HTML dinámico */
 .r-grid-1-2{display:grid;grid-template-columns:1fr 2fr;gap:var(--gap);margin-bottom:20px;align-items:stretch}
-.r-grid-liq{display:grid;grid-template-columns:1fr 1fr 2fr;gap:var(--gap);margin-bottom:20px}
+.r-grid-liq{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--gap);margin-bottom:20px}
 .r-grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--gap);margin-bottom:20px}
 
 @media(max-width:900px){
@@ -448,10 +448,9 @@ const UI = {
   // Barra de distribución estándar — segs: [{label,color,amt}], total para %, clickFn opcional
   distBar: (segs, total, clickFn='') => {
     const pct = (amt,tot) => tot>0?(amt/tot*100):0;
-    return `<div class="dist-bar">
+    return `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:10px"><div class="dist-bar" style="min-width:max-content">
       ${segs.map(s => {
         const p = pct(s.amt, total);
-        // min-width: mínimo para mostrar texto legible (~80px), si la dimensión es pequeña se achica
         const key = s.key !== undefined ? s.key : s.label;
         const onclick = clickFn ? `onclick="${clickFn}('${key.replace(/'/g,"\\'")}')"`:'';
         const cursor = clickFn ? 'cursor:pointer;' : '';
@@ -460,7 +459,7 @@ const UI = {
           <div class="dist-seg-info">${p.toFixed(0)}% · ${fmtM(s.amt,true)}</div>
         </div>`;
       }).join('')}
-    </div>`;
+    </div></div>`;
   },
 
   // Pill ÚLTIMA cuota
@@ -1378,6 +1377,19 @@ function renderVarios(){
 
   const deltaDiario=diarioManana-diario;
 
+  // ── PAGO TC ──
+  const tcTotalRaw=g('tc','total',null);
+  const tcAvanceRaw=g('tc','copec',null);
+  const tcAvance=tcAvanceRaw!=null?parseMonto(tcAvanceRaw):0;
+  let tcObjetivo=tcTotalRaw!=null?parseMonto(tcTotalRaw):0;
+  if(!tcObjetivo){
+    const proyTCMap={};
+    tcData.filter(r=>ESTADO_PENDIENTE.has(r.estado)).forEach(r=>{proyTCMap[r.mes]=(proyTCMap[r.mes]||0)+r.valorCuota;});
+    const primMes=Object.entries(proyTCMap).sort((a,b)=>monthKey(a[0])-monthKey(b[0]))[0];
+    if(primMes) tcObjetivo=primMes[1];
+  }
+  const pctTC=tcObjetivo>0?Math.min(Math.round(tcAvance/tcObjetivo*100),100):0;
+
   document.getElementById('page-content').innerHTML=`
 ${UI.hero('Varios','Varios','datos')}
 
@@ -1463,6 +1475,24 @@ ${UI.sectionLabel('Liquidez · Cuenta Corriente')}
     </div>
   </div>
 </div>`:`<div class="card" style="display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;font-weight:600">Sin datos LATAM Pass</div>`}
+  <div class="card">
+    <div class="widget-title">Pago Tarjeta Crédito</div>
+    <div style="font-size:24px;font-weight:800;color:#ED1650;line-height:1.1;margin-bottom:10px">${tcObjetivo?fmtM(tcObjetivo):'—'}</div>
+    ${tcObjetivo?`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <span style="font-size:11px;font-weight:700;color:var(--muted)">Pagado <strong style="color:#059669">${fmtM(tcAvance)}</strong></span>
+      <span style="font-size:16px;font-weight:800;color:${pctTC>=100?'#059669':'#ED1650'}">${pctTC}%</span>
+    </div>
+    <div style="height:12px;background:rgba(237,22,80,.1);border-radius:6px;overflow:hidden;position:relative">
+      <div style="height:100%;width:${pctTC}%;background:linear-gradient(90deg,#ED1650,#f97316);border-radius:6px;position:relative">
+        ${pctTC>=18?`<span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:9px;font-weight:800;color:#fff;white-space:nowrap">${fmtM(tcAvance,true)}</span>`:''}
+      </div>
+      ${pctTC<18?`<span style="position:absolute;left:${pctTC+2}%;top:50%;transform:translateY(-50%);font-size:9px;font-weight:800;color:#ED1650;white-space:nowrap">${fmtM(tcAvance,true)}</span>`:''}
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:10px;font-weight:600;color:var(--muted)">
+      <span>$0</span><span>${fmtM(tcObjetivo,true)}</span>
+    </div>`:`<div style="font-size:12px;color:var(--muted);font-weight:600">Sin datos</div>`}
+  </div>
 </div>`;
 }
 // ── NAV ──
