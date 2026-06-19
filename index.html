@@ -127,7 +127,7 @@ body{background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-d
 @media(hover:none){.chart-tooltip{display:none!important}}
 
 /* TABLE */
-.tbl-scroll{overflow-y:auto;max-height:340px;scrollbar-width:thin;scrollbar-color:#c4c0e0 transparent}
+.tbl-scroll{overflow-y:auto;overflow-x:auto;max-height:340px;scrollbar-width:thin;scrollbar-color:#c4c0e0 transparent}
 table{width:100%;border-collapse:separate;border-spacing:0}
 thead th{padding:9px 12px;font-size:10px;font-weight:800;color:var(--accent);text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;position:sticky;top:0;background:var(--card);z-index:1;letter-spacing:.04em}
 thead th:last-child{text-align:right}
@@ -195,6 +195,11 @@ tbody tr:hover td{background:rgba(99,77,210,.02)}
 .tc-resumen-row:last-child{border-bottom:none}
 .tc-resumen-label{font-weight:600;color:var(--muted)}
 .tc-resumen-val{font-weight:800;color:var(--text)}
+/* RESPONSIVE GRIDS — usados en HTML dinámico */
+.r-grid-1-2{display:grid;grid-template-columns:1fr 2fr;gap:var(--gap);margin-bottom:20px;align-items:stretch}
+.r-grid-liq{display:grid;grid-template-columns:1fr 1fr 2fr;gap:var(--gap);margin-bottom:20px}
+.r-grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--gap);margin-bottom:20px}
+
 @media(max-width:900px){
   .widget-grid,.widget-grid-4{grid-template-columns:repeat(2,1fr)}
   .widget-grid-2{grid-template-columns:1fr}
@@ -208,13 +213,17 @@ tbody tr:hover td{background:rgba(99,77,210,.02)}
   .mama-grid{grid-template-columns:1fr}
   .filter-row{flex-direction:column}
   .filter-trigger{min-width:100%}
+  .r-grid-1-2,.r-grid-liq,.r-grid-2{grid-template-columns:1fr}
 }
 @media(max-width:560px){
   .content{padding:14px 16px}
   .hero{padding:20px 18px}
-  .hero-title{font-size:26px}
+  .hero-title{font-size:22px}
   .kpi-strip{grid-template-columns:1fr}
   .widget-grid,.widget-grid-2,.widget-grid-4{grid-template-columns:1fr}
+  .dist-bar{height:48px}
+  .dist-seg-name{font-size:9px}
+  .dist-seg-info{font-size:8px}
 }
 </style>
 </head>
@@ -1030,44 +1039,34 @@ function renderCreditos(){
 
   document.getElementById('page-content').innerHTML=`
 ${UI.hero('Créditos',fmtM(totalPendiente),'pendiente')}
-<div style="display:grid;grid-template-columns:1fr 2fr;gap:var(--gap);margin-bottom:20px;align-items:stretch">
+<div class="r-grid-1-2">
   <div class="kpi-card"><div class="kpi-label">Cuota mensual total</div><div class="kpi-val">${fmtM(totalCuotaMes)}</div><div class="kpi-delta"></div></div>
-  ${itauConsumo?`<div class="card" style="position:relative;overflow:hidden;padding:10px 14px">
-    <div style="margin-bottom:8px">
+  ${itauConsumo?`<div class="card" style="padding:14px 16px">
+    <div style="margin-bottom:10px">
       <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:2px">Meta de Ahorro</div>
       <div style="font-size:10px;color:var(--muted);font-weight:600">${esc(itauConsumo.detalle)}</div>
     </div>
-    <div style="margin-bottom:8px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-        <span style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Progreso</span>
-        <span style="font-size:14px;font-weight:800;color:${pctAhorro>=100?'#059669':ACCENT}">${pctAhorro}%</span>
-      </div>
-      <div style="height:12px;background:rgba(99,77,210,.07);border-radius:6px;overflow:hidden;position:relative">
-        <div style="height:100%;width:${pctAhorro}%;background:linear-gradient(90deg,${ACCENT},#a855f7);border-radius:6px;position:relative">
-          ${pctAhorro>=18?`<span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:9px;font-weight:800;color:#fff;white-space:nowrap">${fmtM(ahorroActual,true)}</span>`:''}
-        </div>
-        ${pctAhorro<18?`<span style="position:absolute;left:${pctAhorro+2}%;top:50%;transform:translateY(-50%);font-size:9px;font-weight:800;color:${ACCENT};white-space:nowrap">${fmtM(ahorroActual,true)}</span>`:''}
-      </div>
-      <div style="display:flex;justify-content:space-between;margin-top:2px">
-        <span style="font-size:9px;font-weight:600;color:var(--muted)">$0</span>
-        <span style="font-size:9px;font-weight:600;color:var(--muted)">${fmtM(metaAhorro,true)}</span>
-      </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <span style="font-size:11px;font-weight:700;color:var(--muted)">Acumulado <strong style="color:#059669">${fmtM(ahorroActual)}</strong></span>
+      <span style="font-size:16px;font-weight:800;color:${pctAhorro>=100?'#059669':'#0d9488'}">${pctAhorro}%</span>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:4px">
-      ${[['Meta',fmtM(metaAhorro,true),'var(--text)'],['Acumulado',fmtM(ahorroActual,true),'#059669'],['Restante',fmtM(Math.max(0,metaAhorro-ahorroActual),true),pctAhorro>=100?'#9CA3AF':'#ED1650'],['Avance',pctAhorro+'%',pctAhorro>=100?'#059669':ACCENT]].map(([l,v,col])=>
-        `<div style="background:rgba(99,77,210,.04);border-radius:6px;padding:5px 8px">
-          <div style="font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:1px">${l}</div>
-          <div style="font-size:13px;font-weight:800;color:${col}">${v}</div>
-        </div>`).join('')}
+    <div style="height:12px;background:rgba(13,148,136,.1);border-radius:6px;overflow:hidden;position:relative">
+      <div style="height:100%;width:${pctAhorro}%;background:linear-gradient(90deg,#0d9488,#10b981);border-radius:6px;position:relative">
+        ${pctAhorro>=18?`<span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:9px;font-weight:800;color:#fff;white-space:nowrap">${fmtM(ahorroActual,true)}</span>`:''}
+      </div>
+      ${pctAhorro<18?`<span style="position:absolute;left:${pctAhorro+2}%;top:50%;transform:translateY(-50%);font-size:9px;font-weight:800;color:#0d9488;white-space:nowrap">${fmtM(ahorroActual,true)}</span>`:''}
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:10px;font-weight:600;color:var(--muted)">
+      <span>$0</span><span>${fmtM(metaAhorro,true)}</span>
     </div>
   </div>`:`<div></div>`}
 </div>
 ${UI.sectionLabel('Créditos Activos')}
-<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:var(--gap);margin-bottom:20px">
+<div class="r-grid-2">
   ${activos.length?activos.map(cardHTML).join(''):'<div style="color:#9CA3AF;font-size:13px;padding:20px 0">Sin créditos activos</div>'}
 </div>
 ${UI.sectionLabel('Créditos Pagados')}
-<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:var(--gap);margin-bottom:20px">
+<div class="r-grid-2">
   ${pagados.length?pagados.map(cardHTML).join(''):'<div style="color:#9CA3AF;font-size:13px;padding:20px 0">Sin créditos pagados</div>'}
 </div>`;
 }
@@ -1383,7 +1382,7 @@ function renderVarios(){
 ${UI.hero('Varios','Varios','datos')}
 
 ${UI.sectionLabel('Liquidez · Cuenta Corriente')}
-<div style="display:grid;grid-template-columns:1fr 1fr 2fr;gap:var(--gap);margin-bottom:20px">
+<div class="r-grid-liq">
   <div class="card">
     <div class="widget-title">Disponible</div>
     <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px">
