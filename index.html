@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mi Portal</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%230F004F'/%3E%3Cpolyline points='22 12 18 12 15 21 9 3 6 12 2 12' fill='none' stroke='%2300e5c8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Sofia+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
@@ -442,7 +443,8 @@ const UI = {
       ${segs.map(s => {
         const p = pct(s.amt, total);
         // min-width: mínimo para mostrar texto legible (~80px), si la dimensión es pequeña se achica
-        const onclick = clickFn ? `onclick="${clickFn}('${s.label.replace(/'/g,"\\'")}')"`:'';
+        const key = s.key !== undefined ? s.key : s.label;
+        const onclick = clickFn ? `onclick="${clickFn}('${key.replace(/'/g,"\\'")}')"`:'';
         const cursor = clickFn ? 'cursor:pointer;' : '';
         return `<div class="dist-seg" style="background:${s.color};flex:${s.amt};${cursor}${s.opacity!==undefined?`opacity:${s.opacity};`:''}" ${onclick} title="${s.label}: ${fmtM(s.amt)} · ${p.toFixed(1)}%">
           <div class="dist-seg-name">${s.label}</div>
@@ -636,7 +638,7 @@ async function loadData(){
     selMonth=months[months.length-1];
     document.getElementById('month-select').innerHTML=months.map(m=>`<option value="${m}"${m===selMonth?' selected':''}>${fmtMesLabel(m)}</option>`).join('');
     const now=new Date();
-    document.getElementById('sidebar-ts').textContent=now.toLocaleDateString('es-CL',{day:'2-digit',month:'long',year:'numeric'})+' · '+now.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('sidebar-ts').textContent=now.toLocaleDateString('es-CL',{day:'2-digit',month:'long',year:'numeric'})+' · '+now.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit',hour12:false});
     renderPage();
   }catch(e){
     document.getElementById('page-content').innerHTML=`<div class="error-box">Error al cargar datos.<br><small style="opacity:.7">${e.message}</small></div>`;
@@ -665,7 +667,7 @@ function buildDistSegs(mes){
   const tipoMap={};
   rows.forEach(r=>{
     const t=r.tipo;
-    if(!tipoMap[t]) tipoMap[t]={label:capFirst(t),color:getTypeColor(t,TIPO_COLOR_POOL),amt:0};
+    if(!tipoMap[t]) tipoMap[t]={label:capFirst(t),key:t,color:getTypeColor(t,TIPO_COLOR_POOL),amt:0};
     tipoMap[t].amt+=r.monto;
   });
   return Object.values(tipoMap).filter(s=>s.amt>0).sort((a,b)=>b.amt-a.amt);
@@ -674,7 +676,8 @@ function buildDistSegs(mes){
 // ── PÁGINA: MENSUAL ──
 function onMonthChange(){selMonth=document.getElementById('month-select').value; const tab=document.querySelector('.nav-item.active')?.dataset?.tab||'mensual'; if(tab==='mensual') renderPage();}
 function setMes(m){selMonth=m;renderPage();}
-function setDetCat(cat){detCatFiltro=cat;renderDetalle(prevMesGlobal);}
+function setDetCat(cat){detCatFiltro=cat;renderDetalle(prevMesGlobal);renderDist();}
+function setDistFiltro(key){detCatFiltro=detCatFiltro===key?'':key;renderDetalle(prevMesGlobal);renderDist();}
 function setEvoRange(n,btn){
   evoRange=n;
   document.querySelectorAll('[data-scope="evo"] .period-btn').forEach(b=>b.classList.remove('active'));
@@ -690,7 +693,7 @@ function renderPage(){
   const[mes,año]=selMonth.split('-');
   const mesLabel=fmtMesLabel(selMonth);
   document.getElementById('page-content').innerHTML=`
-${UI.hero('Reporte Mensual',capFirst(mes),año,'Resumen Financiero Mensual')}
+${UI.hero('Reporte Mensual',capFirst(mes),año)}
 <div class="kpi-strip">
   ${UI.kpiCard('Ingreso',fmtM(s.ing),deltaKpi(s.ing,prev?.ing))}
   ${UI.kpiCard('Gasto',fmtM(s.gasto),deltaKpi(s.gasto,prev?.gasto,true))}
@@ -702,9 +705,9 @@ ${UI.card('Ingreso · Gasto · Tarjeta Crédito',
   `<div style="height:230px"><canvas id="chartEvo"></canvas></div>${UI.chartLegend([{color:'#10b981',label:'Ingreso'},{color:'#f43f5e',label:'Gasto'},{color:'#f59e0b',label:'Tarjeta Crédito'}])}<div style="font-size:10px;color:var(--muted);margin-top:6px">* Excluye el mes en curso</div>`,
   'margin-bottom:20px')}
 ${UI.sectionLabel('Distribución del mes')}
-${UI.card('',`<span style="font-size:11px;font-weight:600;color:var(--muted)">${mesLabel}</span>`,`<div id="dist-bar-wrap" style="margin-top:4px"></div>`,'margin-bottom:var(--gap)')}
+${UI.card('','',`<div id="dist-bar-wrap" style="margin-top:4px"></div>`,'margin-bottom:var(--gap)')}
 ${UI.sectionLabel('Detalle de gastos')}
-${UI.card('',UI.badge(mesLabel,'navy'),`<div id="det-cat-pills" class="cat-pills" style="margin-bottom:12px"></div><div class="tbl-scroll"><table>
+${UI.card('','',`<div class="tbl-scroll"><table>
   <thead><tr><th>Categoría</th><th>Detalle</th><th style="text-align:center">vs ant.</th><th>Monto</th></tr></thead>
   <tbody id="tbody-detalle"></tbody>
 </table></div>`,'margin-bottom:20px')}`;
@@ -786,12 +789,6 @@ function renderDistEvo(){
 function renderDetalle(prevMes){
   const allRows=rawData.filter(r=>r.mes===selMonth).sort((a,b)=>{const t=a.tipo.localeCompare(b.tipo,'es');return t!==0?t:a.detalle.localeCompare(b.detalle,'es');});
   const tipos=[...new Set(allRows.map(r=>r.tipo))].sort();
-  // Llenar pills de categoría
-  const pillsEl=document.getElementById('det-cat-pills');
-  if(pillsEl){
-    const all=[{key:'',label:'Todas',color:''},...tipos.map(t=>({key:t,label:capFirst(t),color:getTypeColor(t,TIPO_COLOR_POOL)}))];
-    pillsEl.innerHTML=all.map(c=>`<button class="cat-btn${detCatFiltro===c.key?' active':''}" data-cat="${c.key}" ${c.color?`style="--cat-c:${c.color}"`:''} onclick="setDetCat('${c.key}')">${c.label}</button>`).join('');
-  }
   const rows=detCatFiltro?allRows.filter(r=>r.tipo===detCatFiltro):allRows;
   const prevRows=prevMes?rawData.filter(r=>r.mes===prevMes):[];
   document.getElementById('tbody-detalle').innerHTML=rows.map(row=>{
@@ -814,11 +811,12 @@ function renderDist(){
   const disponible=ing-totalGasto;
   const dispColor=disponible>=0?'#10b981':'#f43f5e';
   const allSegs=[...segs];
-  if(Math.abs(disponible)>0) allSegs.push({label:disponible>=0?'Disponible':'Déficit',color:dispColor,amt:Math.abs(disponible)});
-  const total=allSegs.reduce((s,x)=>s+x.amt,0);
-  destroyChart('distBar');
+  if(Math.abs(disponible)>0) allSegs.push({label:disponible>=0?'Disponible':'Déficit',key:'',color:dispColor,amt:Math.abs(disponible)});
+  // Aplica opacidad si hay filtro activo
+  const segsF=allSegs.map(s=>({...s,opacity:detCatFiltro&&s.key!==detCatFiltro?0.3:1}));
+  const total=segsF.reduce((s,x)=>s+x.amt,0);
   const wrap=document.getElementById('dist-bar-wrap');
-  if(wrap) wrap.innerHTML=UI.distBar(allSegs,total);
+  if(wrap) wrap.innerHTML=UI.distBar(segsF,total,'setDistFiltro');
 }
 
 function setTcMes(v){tcFiltroMes=v;renderTC();}
@@ -946,10 +944,12 @@ ${UI.card('Movimientos Pendientes',`<div style="font-size:11px;color:var(--muted
     const ctx=canvas.getContext('2d');
     const grad=ctx.createLinearGradient(0,0,0,260);
     grad.addColorStop(0,'#00e5c8');grad.addColorStop(1,'#00b89e');
+    const tcOpts={...stdBarOptions(tooltipFn),layout:{padding:{top:22}}};
+    tcOpts.scales={...tcOpts.scales,y:{...tcOpts.scales.y,ticks:{...tcOpts.scales.y.ticks,callback:v=>{const a=Math.abs(v);if(a>=1e6)return`$${(a/1e6).toFixed(1).replace('.',',')}M`;if(a>=1e3)return`$${Math.round(a/1e3).toLocaleString('es-CL')}K`;return`$${Math.round(a).toLocaleString('es-CL')}`;}}}};
     charts.tc=new Chart(canvas,{type:'bar',plugins:[BAR_LABELS],
       data:{labels:proyMeses.map(([mes])=>{const[m,y]=mes.split('-');return[m.slice(0,3).toUpperCase(),y];}),
         datasets:[{label:'Cuotas',data:proyMeses.map(([,v])=>v),backgroundColor:grad,hoverBackgroundColor:'#00e5c8',borderWidth:0,borderRadius:7,borderSkipped:false}]},
-      options:{...stdBarOptions(tooltipFn),layout:{padding:{top:22}}}});
+      options:tcOpts});
   });
 }
 
@@ -1029,20 +1029,36 @@ function renderCreditos(){
   }
 
   document.getElementById('page-content').innerHTML=`
-${UI.hero('Créditos',fmtM(totalPendiente),'pendiente','Resumen de créditos')}
+${UI.hero('Créditos',fmtM(totalPendiente),'pendiente')}
 <div style="display:grid;grid-template-columns:1fr 2fr;gap:var(--gap);margin-bottom:20px;align-items:stretch">
   <div class="kpi-card"><div class="kpi-label">Cuota mensual total</div><div class="kpi-val">${fmtM(totalCuotaMes)}</div><div class="kpi-delta"></div></div>
-  ${itauConsumo?`<div class="card" style="padding:14px 16px">
-    <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">Meta de ahorro · ${esc(itauConsumo.detalle)}</div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <div style="font-size:12px;font-weight:700;color:var(--muted)">Objetivo <strong style="color:var(--text)">${fmtM(metaAhorro)}</strong> · 10% del pendiente</div>
-      <div style="font-size:18px;font-weight:800;color:${pctAhorro>=100?'#059669':ACCENT}">${pctAhorro}%</div>
+  ${itauConsumo?`<div class="card" style="position:relative;overflow:hidden;padding:10px 14px">
+    <div style="margin-bottom:8px">
+      <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:2px">Meta de Ahorro</div>
+      <div style="font-size:10px;color:var(--muted);font-weight:600">${esc(itauConsumo.detalle)}</div>
     </div>
-    <div style="height:10px;background:rgba(99,77,210,.07);border-radius:6px;overflow:hidden;margin-bottom:4px">
-      <div style="height:100%;width:${pctAhorro}%;background:linear-gradient(90deg,${ACCENT},#a855f7);border-radius:6px;transition:width .5s"></div>
+    <div style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <span style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Progreso</span>
+        <span style="font-size:14px;font-weight:800;color:${pctAhorro>=100?'#059669':ACCENT}">${pctAhorro}%</span>
+      </div>
+      <div style="height:12px;background:rgba(99,77,210,.07);border-radius:6px;overflow:hidden;position:relative">
+        <div style="height:100%;width:${pctAhorro}%;background:linear-gradient(90deg,${ACCENT},#a855f7);border-radius:6px;position:relative">
+          ${pctAhorro>=18?`<span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:9px;font-weight:800;color:#fff;white-space:nowrap">${fmtM(ahorroActual,true)}</span>`:''}
+        </div>
+        ${pctAhorro<18?`<span style="position:absolute;left:${pctAhorro+2}%;top:50%;transform:translateY(-50%);font-size:9px;font-weight:800;color:${ACCENT};white-space:nowrap">${fmtM(ahorroActual,true)}</span>`:''}
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:2px">
+        <span style="font-size:9px;font-weight:600;color:var(--muted)">$0</span>
+        <span style="font-size:9px;font-weight:600;color:var(--muted)">${fmtM(metaAhorro,true)}</span>
+      </div>
     </div>
-    <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:var(--muted)">
-      <span>Acumulado ${fmtM(ahorroActual)}</span><span>${fmtM(metaAhorro,true)}</span>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:4px">
+      ${[['Meta',fmtM(metaAhorro,true),'var(--text)'],['Acumulado',fmtM(ahorroActual,true),'#059669'],['Restante',fmtM(Math.max(0,metaAhorro-ahorroActual),true),pctAhorro>=100?'#9CA3AF':'#ED1650'],['Avance',pctAhorro+'%',pctAhorro>=100?'#059669':ACCENT]].map(([l,v,col])=>
+        `<div style="background:rgba(99,77,210,.04);border-radius:6px;padding:5px 8px">
+          <div style="font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:1px">${l}</div>
+          <div style="font-size:13px;font-weight:800;color:${col}">${v}</div>
+        </div>`).join('')}
     </div>
   </div>`:`<div></div>`}
 </div>
@@ -1121,7 +1137,7 @@ ${UI.sectionLabel('Ahorro Mamá')}
 <div class="mama-grid" style="margin-bottom:24px">
   ${UI.card('Ingresos · Gastos · Saldo acumulado',
     UI.periodToggle(mamaEvoRange,[{val:12,label:'12M',fn:'setMamaRange(12,this)'},{val:0,label:'Todo',fn:'setMamaRange(0,this)'}],'mama'),
-    `<div style="position:relative;height:340px"><canvas id="mama-chart"></canvas></div>${UI.chartLegend([{color:'#059669',label:'Ingresos'},{color:'#ED1650',label:'Gastos'},{color:'#1B0088',label:'Saldo acumulado'}])}`)}
+    `<div style="position:relative;height:340px"><canvas id="mama-chart"></canvas></div>${UI.chartLegend([{color:'#059669',label:'Ingresos'},{color:'#ED1650',label:'Gastos'},{color:'#00e5c8',label:'Acumulado'}])}`)}
   ${UI.card('Movimientos por Mes','',`<div class="tbl-scroll" style="max-height:380px"><table style="width:100%">
     <thead><tr style="border-bottom:2px solid var(--border)">
       <th style="padding:8px 10px;font-size:10px;font-weight:800;color:var(--accent);text-align:left;position:sticky;top:0;background:var(--card);z-index:1">Detalle</th>
@@ -1139,20 +1155,20 @@ function renderMamaChart(saldoPorMes){
   const labelsFmt=slice.map(s=>fmtMesLabel(s.mes));
   const tooltipFn=makeExternalTooltip(i=>labelsFmt[i],i=>{
     const s=slice[i],fmtS=v=>v<0?`-${fmtM(Math.abs(v))}`:fmtM(v);
-    return[{color:'#1B0088',label:'Saldo acum.',val:fmtS(s.saldo)},{color:'#059669',label:'Ingresos',val:fmtM(s.ingresos)},{color:'#ED1650',label:'Gastos',val:fmtM(s.gastos)},{color:'#6b6a8a',label:'Neto mes',val:fmtS(s.neto)}];
+    return[{color:'#00e5c8',label:'Acumulado',val:fmtS(s.saldo)},{color:'#059669',label:'Ingresos',val:fmtM(s.ingresos)},{color:'#ED1650',label:'Gastos',val:fmtM(s.gastos)},{color:'#6b6a8a',label:'Neto mes',val:fmtS(s.neto)}];
   });
   charts.mama=new Chart(canvas,{type:'bar',plugins:[MAMA_BAR_LABELS],
     data:{labels,datasets:[
       {label:'Ingresos',data:slice.map(s=>s.ingresos),backgroundColor:'rgba(5,150,105,.6)',borderColor:'rgba(5,150,105,.85)',borderWidth:1,borderRadius:{topLeft:4,topRight:4,bottomLeft:0,bottomRight:0},stack:'stack',order:2},
       {label:'Gastos',data:slice.map(s=>-s.gastos),backgroundColor:'rgba(237,22,80,.5)',borderColor:'rgba(237,22,80,.75)',borderWidth:1,borderRadius:{topLeft:0,topRight:0,bottomLeft:4,bottomRight:4},stack:'stack',order:2},
-      {label:'Saldo acumulado',data:slice.map(s=>s.saldo),type:'line',borderColor:'#1B0088',borderWidth:2.5,pointRadius:3.5,pointHoverRadius:6,pointBackgroundColor:'#1B0088',pointBorderColor:'#fff',pointBorderWidth:2,fill:false,tension:.3,order:1,yAxisID:'ySaldo'}
+      {label:'Acumulado',data:slice.map(s=>s.saldo),type:'line',borderColor:'#00e5c8',borderWidth:2.5,pointRadius:3.5,pointHoverRadius:6,pointBackgroundColor:'#00e5c8',pointBorderColor:'#fff',pointBorderWidth:2,fill:false,tension:.3,order:1,yAxisID:'ySaldo'}
     ]},
     options:{responsive:true,maintainAspectRatio:false,events:['mousemove','mouseout','click'],interaction:{mode:'index',intersect:false},
       plugins:{legend:{display:false},tooltip:{enabled:false,external:tooltipFn}},
       scales:{
         x:{grid:{display:false},ticks:{font:{family:SF,size:10},color:'#9CA3AF',maxRotation:0}},
         y:{stacked:true,grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{family:SF,size:10},color:'#9CA3AF',callback:v=>fmtM(v,true)}},
-        ySaldo:{position:'right',grid:{display:false},ticks:{font:{family:SF,size:10},color:'#1B0088',callback:v=>fmtM(v,true)}}
+        ySaldo:{position:'right',grid:{display:false},ticks:{font:{family:SF,size:10},color:'#00876a',callback:v=>fmtM(v,true)}}
       }}});
 }
 
@@ -1220,7 +1236,7 @@ function renderPendientes(){
   const proyColor=pendDistFiltro?(respColorMap[pendDistFiltro]||'#00b89e'):'#00b89e';
 
   document.getElementById('page-content').innerHTML=`
-${UI.hero('Pendientes',fmtM(totalPend),'pendiente','Compromisos y deudas')}
+${UI.hero('Pendientes',fmtM(totalPend),'pendiente')}
 ${UI.sectionLabel('Distribución por responsable')}
 <div class="card" style="margin-bottom:var(--gap)">
   ${UI.distBar(distSegs,totalDist,'setPendFiltro')}
@@ -1364,7 +1380,7 @@ function renderVarios(){
   const deltaDiario=diarioManana-diario;
 
   document.getElementById('page-content').innerHTML=`
-${UI.hero('Métricas & Seguimiento','Varios','datos',hoy)}
+${UI.hero('Varios','Varios','datos')}
 
 ${UI.sectionLabel('Liquidez · Cuenta Corriente')}
 <div style="display:grid;grid-template-columns:1fr 1fr 2fr;gap:var(--gap);margin-bottom:20px">
@@ -1384,7 +1400,7 @@ ${UI.sectionLabel('Liquidez · Cuenta Corriente')}
         <div style="font-size:18px;font-weight:800;color:#634dd2">${fmtM(diarioManana)}</div>
       </div>
     </div>
-    ${deltaDiario!==0?`<div style="margin-top:8px;font-size:13px;font-weight:800;color:${deltaDiario>0?'#059669':'#ED1650'}">${deltaDiario>0?'↑ +':'↓ '}${fmtM(Math.abs(deltaDiario),true)} por día</div>`:''}`:''}
+    ${deltaDiario!==0?`<div style="margin-top:8px;font-size:13px;font-weight:800;color:${deltaDiario>0?'#059669':'#ED1650'}">${deltaDiario>0?'↑ +':'↓ '}${fmtM(Math.abs(deltaDiario))} por día</div>`:''}`:''}
   </div>
   <div class="card">
     <div class="widget-title">Variación IPC</div>
@@ -1406,7 +1422,7 @@ ${UI.sectionLabel('Liquidez · Cuenta Corriente')}
   <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px">
     <div>
       <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px">Millas acumuladas</div>
-      <div style="font-size:28px;font-weight:800;color:var(--text);line-height:1">${fmtNum(millasAct)}</div>
+      <div style="font-size:28px;font-weight:800;color:#1B0088;line-height:1">${fmtNum(millasAct)}</div>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px">
       <span style="background:${nivelColor};color:#fff;font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px">${nivelLabel}</span>
@@ -1420,47 +1436,31 @@ ${UI.sectionLabel('Liquidez · Cuenta Corriente')}
       <span>0</span><span style="color:#d97706">GOLD 18.000</span><span style="color:#6b7280">SILVER 35.000</span>
     </div>
     <div style="position:relative;height:16px;background:rgba(27,0,136,.07);border-radius:8px;overflow:hidden">
-      <div style="position:absolute;left:0;top:0;height:100%;width:${pctTotal.toFixed(1)}%;background:${nivelBg};border-radius:8px;transition:width .5s"></div>
+      <div style="position:absolute;left:0;top:0;height:100%;width:${pctTotal.toFixed(1)}%;background:${nivelBg};border-radius:8px;transition:width .5s;display:flex;align-items:center;justify-content:flex-end;padding-right:6px">
+        ${pctTotal>12?`<span style="font-size:9px;font-weight:800;color:#fff;white-space:nowrap">${Math.min(Math.round(millasAct/metaActual*100),100)}%</span>`:''}
+      </div>
       <div style="position:absolute;left:${(GOLD_META/SILVER_META*100).toFixed(1)}%;top:0;bottom:0;width:2px;background:rgba(255,255,255,.8)"></div>
-    </div>
-    <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;margin-top:5px">
-      <span style="color:${nivelColor}">${Math.min(Math.round(millasAct/metaActual*100),100)}% completado</span>
-      <span style="color:var(--muted)">${fmtNum(restantes)} restantes</span>
+      ${pctTotal<=12?`<span style="position:absolute;left:${pctTotal+1}%;top:50%;transform:translateY(-50%);font-size:9px;font-weight:800;color:${nivelColor};white-space:nowrap">${Math.min(Math.round(millasAct/metaActual*100),100)}%</span>`:''}
     </div>
   </div>
 
-  <!-- Grid 3 col: ritmo + GOLD + SILVER -->
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border-top:1px solid var(--border);padding-top:14px">
+  <!-- Grid 2 col: ritmo + pendiente -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid var(--border);padding-top:14px">
     <!-- Ritmo -->
     <div style="padding-right:16px">
       <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px">Ritmo del año</div>
-      <div style="font-size:20px;font-weight:800;color:var(--text)">${fmtNum(Math.round(promSemanal))}</div>
-      <div style="font-size:10px;font-weight:600;color:var(--muted)">millas/sem</div>
-      <div style="font-size:10px;font-weight:600;color:var(--muted);margin-top:3px">${fmtNum(millasAct)} en ${diasAnio} días</div>
-    </div>
-    <!-- GOLD -->
-    <div style="padding:0 16px;border-left:1px solid var(--border)">
-      <div style="display:flex;align-items:center;gap:5px;margin-bottom:5px">
-        <span style="background:rgba(245,158,11,.15);color:#d97706;font-size:9px;font-weight:800;padding:1px 7px;border-radius:10px">GOLD</span>
-        <span style="font-size:10px;font-weight:600;color:var(--muted)">${fmtNum(GOLD_META)}</span>
+      <div style="display:flex;align-items:baseline;gap:5px">
+        <div style="font-size:20px;font-weight:800;color:var(--text)">${fmtNum(Math.round(promSemanal))}</div>
+        <div style="font-size:10px;font-weight:600;color:var(--muted)">millas/sem</div>
       </div>
-      ${millasAct>=GOLD_META
-        ?`<div style="font-size:16px;font-weight:800;color:#059669">✓ Alcanzado</div>`
-        :`<div style="font-size:16px;font-weight:800;color:#d97706">${fmtFechaCorta(fechaMetaGold)}</div>
-           <div style="font-size:10px;color:var(--muted);font-weight:600;margin-top:2px">${fmtNum(GOLD_META-millasAct)} restantes · ${promSemanal>0?Math.ceil((GOLD_META-millasAct)/promSemanal)+' sem':'—'}</div>`
-      }
     </div>
-    <!-- SILVER -->
+    <!-- Pendiente -->
     <div style="padding-left:16px;border-left:1px solid var(--border)">
-      <div style="display:flex;align-items:center;gap:5px;margin-bottom:5px">
-        <span style="background:rgba(107,114,128,.12);color:#6b7280;font-size:9px;font-weight:800;padding:1px 7px;border-radius:10px">SILVER</span>
-        <span style="font-size:10px;font-weight:600;color:var(--muted)">${fmtNum(SILVER_META)}</span>
+      <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px">Pendiente</div>
+      <div style="display:flex;align-items:baseline;gap:5px">
+        <div style="font-size:20px;font-weight:800;color:${nivelColor}">${fmtNum(restantes)}</div>
+        <div style="font-size:10px;font-weight:600;color:var(--muted)">${promSemanal>0?Math.ceil(restantes/promSemanal)+' sem':'—'}</div>
       </div>
-      ${millasAct>=SILVER_META
-        ?`<div style="font-size:16px;font-weight:800;color:#059669">✓ Alcanzado</div>`
-        :`<div style="font-size:16px;font-weight:800;color:#6b7280">${fmtFechaCorta(fechaMetaSilver)}</div>
-           <div style="font-size:10px;color:var(--muted);font-weight:600;margin-top:2px">${fmtNum(SILVER_META-millasAct)} restantes · ${promSemanal>0?Math.ceil((SILVER_META-millasAct)/promSemanal)+' sem':'—'}</div>`
-      }
     </div>
   </div>
 </div>`:`<div class="card" style="display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;font-weight:600">Sin datos LATAM Pass</div>`}
