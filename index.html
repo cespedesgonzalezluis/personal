@@ -445,7 +445,7 @@ const UI = {
         const cursor = clickFn ? 'cursor:pointer;' : '';
         return `<div class="dist-seg" style="background:${s.color};flex:${s.amt};${cursor}${s.opacity!==undefined?`opacity:${s.opacity};`:''}" ${onclick} title="${s.label}: ${fmtM(s.amt)} · ${p.toFixed(1)}%">
           <div class="dist-seg-name">${s.label}</div>
-          <div class="dist-seg-info">${fmtM(s.amt)} · ${p.toFixed(1)}%</div>
+          <div class="dist-seg-info">${p.toFixed(0)}% · ${fmtM(s.amt,true)}</div>
         </div>`;
       }).join('')}
     </div>`;
@@ -677,7 +677,7 @@ function setEvoRange(n,btn){
   evoRange=n;
   document.querySelectorAll('[data-scope="evo"] .period-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  renderEvoChart();renderDistEvo();
+  renderEvoChart();
 }
 function renderPage(){
   hideTooltip();
@@ -694,38 +694,19 @@ ${UI.hero('Reporte Mensual',capFirst(mes),año,'Resumen Financiero Mensual')}
   ${UI.kpiCard('Gasto',fmtM(s.gasto),deltaKpi(s.gasto,prev?.gasto,true))}
   ${UI.kpiCard('Tarjeta Crédito',fmtM(s.tc),deltaKpi(s.tc,prev?.tc,true))}
 </div>
-<div class="cat-pills" id="month-pills" style="margin-bottom:20px">
-  ${months.map(m=>`<button class="cat-btn${m===selMonth?' active':''}" onclick="setMes('${m}')">${fmtMesCorto(m)}</button>`).join('')}
-</div>
 ${UI.sectionLabel('Evolutivo mensual')}
 ${UI.card('Ingreso · Gasto · Tarjeta Crédito',
   UI.periodToggle(evoRange,[{val:12,label:'12M',fn:'setEvoRange(12,this)'},{val:0,label:'Todo',fn:'setEvoRange(0,this)'}],'evo'),
   `<div style="height:230px"><canvas id="chartEvo"></canvas></div>${UI.chartLegend([{color:'#10b981',label:'Ingreso'},{color:'#f43f5e',label:'Gasto'},{color:'#f59e0b',label:'Tarjeta Crédito'}])}<div style="font-size:10px;color:var(--muted);margin-top:6px">* Excluye el mes en curso</div>`,
   'margin-bottom:20px')}
-${UI.sectionLabel('Análisis del mes')}
-<div style="display:grid;grid-template-columns:30fr 70fr;gap:var(--gap);margin-bottom:20px;align-items:start">
-  <div class="card" style="padding:14px 12px">
-    <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">Distribución del mes</div>
-    <div style="position:relative;height:260px" id="dist-bar-chart-wrap"><canvas id="dist-bar-chart"></canvas></div>
-  </div>
-  <div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div style="font-size:13px;font-weight:800;color:var(--text)">Detalle de gastos</div>
-      ${UI.badge(mesLabel,'navy')}
-    </div>
-    <div class="tbl-scroll"><table>
-      <thead><tr><th>Tipo</th><th>Detalle</th><th style="text-align:center">vs ant.</th><th>Monto</th></tr></thead>
-      <tbody id="tbody-detalle"></tbody>
-    </table></div>
-  </div>
-</div>
-${UI.sectionLabel('Evolutivo de distribución')}
-${UI.card('Distribución del gasto por mes — % sobre ingreso',
-  UI.periodToggle(evoRange,[{val:12,label:'12M',fn:'setEvoRange(12,this)'},{val:0,label:'Todo',fn:'setEvoRange(0,this)'}],'evo'),
-  `<div class="cat-pills" id="dist-cat-pills"></div>
-  <div style="height:260px"><canvas id="chartDist"></canvas></div><div id="dist-legend"></div>`,
-  'margin-bottom:20px')}`;
-  renderEvoChart();renderDetalle(prevMes);renderDist();renderDistEvo();
+${UI.sectionLabel('Distribución del mes')}
+${UI.card('',`<span style="font-size:11px;font-weight:600;color:var(--muted)">${mesLabel}</span>`,`<div id="dist-bar-wrap" style="margin-top:4px"></div>`,'margin-bottom:var(--gap)')}
+${UI.sectionLabel('Detalle de gastos')}
+${UI.card('',UI.badge(mesLabel,'navy'),`<div class="tbl-scroll"><table>
+  <thead><tr><th>Tipo</th><th>Detalle</th><th style="text-align:center">vs ant.</th><th>Monto</th></tr></thead>
+  <tbody id="tbody-detalle"></tbody>
+</table></div>`,'margin-bottom:20px')}`;
+  renderEvoChart();renderDetalle(prevMes);renderDist();
 }
 
 function renderEvoChart(){
@@ -738,11 +719,11 @@ function renderEvoChart(){
   const ingresos=slice.map(m=>sumsFor(m).ing);
   const gastos=slice.map(m=>sumsFor(m).gasto);
   const tcs=slice.map(m=>sumsFor(m).tc);
-  const dlt=(arr,i)=>{if(i===0)return'';const d=arr[i]-arr[i-1];return d===0?'':` ${d>0?'↑ +':'↓ '}${fmtM(Math.abs(d),true)}`;};
+  const dlt=(arr,i,inv=false)=>{if(i===0)return'';const d=arr[i]-arr[i-1];if(d===0)return'';const good=inv?d<0:d>0;return ` <span style="color:${good?'#10b981':'#ED1650'};font-size:10px">${d>0?'↑ +':'↓ '}${fmtM(Math.abs(d),true)}</span>`;};
   const tooltipFn=makeExternalTooltip(i=>labelsFmt[i],i=>[
     {color:'#10b981',label:`Ingreso${dlt(ingresos,i)}`,val:fmtM(ingresos[i])},
-    {color:'#f43f5e',label:`Gasto${dlt(gastos,i)}`,val:fmtM(gastos[i])},
-    {color:'#f59e0b',label:`TC${dlt(tcs,i)}`,val:fmtM(tcs[i])},
+    {color:'#f43f5e',label:`Gasto${dlt(gastos,i,true)}`,val:fmtM(gastos[i])},
+    {color:'#f59e0b',label:`Tarjeta Crédito${dlt(tcs,i,true)}`,val:fmtM(tcs[i])},
   ]);
   destroyChart('evo');
   charts.evo=new Chart(document.getElementById('chartEvo'),{type:'line',
@@ -815,50 +796,17 @@ function renderDetalle(prevMes){
 }
 
 function renderDist(){
-  const segs=buildDistSegs(selMonth);
+  const segs=buildDistSegs(selMonth).sort((a,b)=>b.amt-a.amt);
   const ing=sumsFor(selMonth).ing;
   const totalGasto=segs.reduce((a,s)=>a+s.amt,0);
   const disponible=ing-totalGasto;
   const dispColor=disponible>=0?'#10b981':'#f43f5e';
-  const allSegs=[...segs,{label:disponible>=0?'Disponible':'Déficit',color:dispColor,amt:Math.abs(disponible)}]
-    .sort((a,b)=>b.amt-a.amt);
-  const pctGasto=ing>0?Math.round(totalGasto/ing*100):0;
+  const allSegs=[...segs];
+  if(Math.abs(disponible)>0) allSegs.push({label:disponible>=0?'Disponible':'Déficit',color:dispColor,amt:Math.abs(disponible)});
   const total=allSegs.reduce((s,x)=>s+x.amt,0);
-  // Plugin: etiqueta central del donut
-  const donutCenter={id:'donutCenter',afterDraw(chart){
-    const{ctx,chartArea:{top,bottom,left,right}}=chart;
-    const cx=(left+right)/2,cy=(top+bottom)/2;
-    ctx.save();
-    ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.font=`800 17px ${SF}`;ctx.fillStyle='#0F004F';
-    ctx.fillText(fmtM(totalGasto,true),cx,cy-9);
-    ctx.font=`600 10px ${SF}`;ctx.fillStyle='#6b6a8a';
-    ctx.fillText(`${pctGasto}% del ingreso`,cx,cy+10);
-    ctx.restore();
-  }};
-  requestAnimationFrame(()=>{
-    const canvas=document.getElementById('dist-bar-chart');
-    if(!canvas) return;
-    destroyChart('distBar');
-    charts.distBar=new Chart(canvas,{type:'doughnut',plugins:[donutCenter],
-      data:{labels:allSegs.map(s=>s.label),datasets:[{data:allSegs.map(s=>s.amt),
-        backgroundColor:allSegs.map(s=>s.color+'dd'),
-        hoverBackgroundColor:allSegs.map(s=>s.color),
-        borderWidth:2,borderColor:'#fff',hoverOffset:5}]},
-      options:{responsive:true,maintainAspectRatio:false,animation:{duration:400},cutout:'62%',
-        plugins:{
-          legend:{display:true,position:'bottom',labels:{
-            font:{family:SF,size:10},padding:6,usePointStyle:true,pointStyleWidth:7,color:'#6b6a8a',
-            generateLabels:chart=>chart.data.labels.map((l,i)=>({
-              text:`${l}  ${Math.round(allSegs[i].amt/total*100)}%`,
-              fillStyle:chart.data.datasets[0].backgroundColor[i],
-              strokeStyle:'transparent',pointStyle:'circle',index:i
-            }))
-          }},
-          tooltip:{callbacks:{label:ctx=>`${fmtM(ctx.raw)} · ${Math.round(ctx.raw/total*100)}%`}}
-        }
-      }});
-  });
+  destroyChart('distBar');
+  const wrap=document.getElementById('dist-bar-wrap');
+  if(wrap) wrap.innerHTML=UI.distBar(allSegs,total);
 }
 
 function setTcMes(v){tcFiltroMes=v;renderTC();}
@@ -1014,6 +962,13 @@ function renderCreditos(){
   const totalCuotaMes=activos.reduce((a,c)=>a+c.valorCuota,0);
   const totalPendiente=activos.reduce((a,c)=>a+c.valorCuota*c.pendientes,0);
   const ACCENT='#634dd2';
+  // Meta ahorro ITAU Consumo
+  const itauConsumo=activos.find(c=>c.detalle.toLowerCase().includes('itau')&&c.detalle.toLowerCase().includes('consumo'));
+  const pendienteItau=itauConsumo?itauConsumo.valorCuota*itauConsumo.pendientes:0;
+  const metaAhorro=Math.round(pendienteItau*0.1);
+  const ahorroActualRaw=otrosData['_get']?otrosData['_get']('credito','ahorro'):null;
+  const ahorroActual=ahorroActualRaw!=null?parseMonto(ahorroActualRaw):0;
+  const pctAhorro=metaAhorro>0?Math.min(Math.round(ahorroActual/metaAhorro*100),100):0;
 
   function cardHTML(c){
     const esActivo=c.pendientes>0,pct=c.cuotas>0?Math.round(c.pagadas/c.cuotas*100):0;
@@ -1021,7 +976,6 @@ function renderCreditos(){
     const barGrad=esActivo?`linear-gradient(90deg,${ACCENT},#a855f7)`:`linear-gradient(90deg,#059669,#22c55e)`;
     const pctColor=esActivo?ACCENT:'#059669',mesFinal=esActivo?c.mesFin:c.mesFinPagado;
     return`<div class="card" style="position:relative;overflow:hidden;padding:10px 14px">
-      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:${pctColor}"></div>
       <div style="margin-bottom:8px">
         <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:2px">${esc(c.detalle)}</div>
         <div style="font-size:10px;color:var(--muted);font-weight:600">Desde ${fmtFecha(c.fecha,true)}</div>
@@ -1064,9 +1018,21 @@ function renderCreditos(){
 
   document.getElementById('page-content').innerHTML=`
 ${UI.hero('Créditos',fmtM(totalPendiente),'pendiente','Resumen de créditos')}
-<div class="kpi-strip" style="grid-template-columns:repeat(2,1fr);margin-bottom:20px">
-  ${UI.kpiCard('Cuota mensual total',fmtM(totalCuotaMes))}
-  ${UI.kpiCard('Créditos activos',`${activos.length} de ${todos.length}`)}
+<div style="display:grid;grid-template-columns:1fr 2fr;gap:var(--gap);margin-bottom:20px;align-items:stretch">
+  <div class="kpi-card"><div class="kpi-label">Cuota mensual total</div><div class="kpi-val">${fmtM(totalCuotaMes)}</div><div class="kpi-delta"></div></div>
+  ${itauConsumo?`<div class="card" style="padding:14px 16px">
+    <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">Meta de ahorro · ${esc(itauConsumo.detalle)}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-size:12px;font-weight:700;color:var(--muted)">Objetivo <strong style="color:var(--text)">${fmtM(metaAhorro)}</strong> · 10% del pendiente</div>
+      <div style="font-size:18px;font-weight:800;color:${pctAhorro>=100?'#059669':ACCENT}">${pctAhorro}%</div>
+    </div>
+    <div style="height:10px;background:rgba(99,77,210,.07);border-radius:6px;overflow:hidden;margin-bottom:4px">
+      <div style="height:100%;width:${pctAhorro}%;background:linear-gradient(90deg,${ACCENT},#a855f7);border-radius:6px;transition:width .5s"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:var(--muted)">
+      <span>Acumulado ${fmtM(ahorroActual)}</span><span>${fmtM(metaAhorro,true)}</span>
+    </div>
+  </div>`:`<div></div>`}
 </div>
 ${UI.sectionLabel('Créditos Activos')}
 <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:var(--gap);margin-bottom:20px">
@@ -1224,86 +1190,59 @@ function renderPendientes(){
       <td class="tc-td" style="text-align:right;color:#ED1650;font-weight:700">${fmtM(it.montoPendiente)}</td>
       <td class="tc-td" style="text-align:right;color:var(--muted)">${fmtM(it.valorCuota)}</td>
       <td class="tc-td" style="text-align:center;color:${isUlt?'#007a72':'var(--muted)'};font-weight:${isUlt?700:400}">${it.cuotas>0?`${it.pagadas}/${it.cuotas}`:'—'}</td>
+      <td class="tc-td" style="text-align:center;color:${isUlt?'#007a72':'var(--muted)'};white-space:nowrap">${it.mesFin?fmtMesCorto(it.mesFin):'—'}</td>
     </tr>`;
   }).join('');
 
+  const proyColor=pendDistFiltro?(respColorMap[pendDistFiltro]||'#00b89e'):'#00b89e';
+
   document.getElementById('page-content').innerHTML=`
 ${UI.hero('Pendientes',fmtM(totalPend),'pendiente','Compromisos y deudas')}
-${UI.sectionLabel('Distribución · Detalle')}
-<div style="display:grid;grid-template-columns:25fr 75fr;gap:var(--gap);margin-bottom:var(--gap);align-items:start">
-  <div class="card" style="padding:14px 12px">
-    <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">Por responsable</div>
-    <div style="position:relative;height:${Math.max(140,activos.length*38+60)}px" id="pend-dist-wrap"><canvas id="pend-dist-chart"></canvas></div>
-    ${pendDistFiltro?`<div style="margin-top:8px"><button class="btn-clear" onclick="setPendFiltro('')">✕ ${esc(pendDistFiltro)}</button></div>`:''}
+${UI.sectionLabel('Distribución por responsable')}
+<div class="card" style="margin-bottom:var(--gap)">
+  ${UI.distBar(distSegs,totalDist,'setPendFiltro')}
+  ${pendDistFiltro?`<div style="margin-top:8px"><button class="btn-clear" onclick="setPendFiltro('')">✕ ${esc(pendDistFiltro)}</button></div>`:''}
+</div>
+${UI.sectionLabel('Detalle de compromisos')}
+<div class="card" style="margin-bottom:var(--gap)">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <div style="font-size:13px;font-weight:800;color:var(--text)">Compromisos activos</div>
+    <div style="font-size:11px;color:var(--muted)">${filteredItems.length} ítems${pendDistFiltro?' · '+pendDistFiltro:''}</div>
   </div>
-  <div class="card" style="padding:14px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div style="font-size:13px;font-weight:800;color:var(--text)">Detalle de compromisos</div>
-      <div style="font-size:11px;color:var(--muted)">${filteredItems.length} ítems${pendDistFiltro?' · '+pendDistFiltro:''}</div>
-    </div>
-    <div style="overflow-x:auto;max-height:${Math.max(140,activos.length*38+60)}px;overflow-y:auto">
-    <table style="border-collapse:collapse;font-size:12px;width:100%">
-      <thead><tr style="border-bottom:2px solid var(--border)">
-        <th class="tc-th" style="text-align:left;position:sticky;top:0;background:#fff;z-index:1">Responsable</th>
-        <th class="tc-th" style="text-align:center;position:sticky;top:0;background:#fff;z-index:1">Fecha</th>
-        <th class="tc-th" style="text-align:left;position:sticky;top:0;background:#fff;z-index:1">Detalle</th>
-        <th class="tc-th" style="text-align:right;position:sticky;top:0;background:#fff;z-index:1">$ Total</th>
-        <th class="tc-th" style="text-align:right;position:sticky;top:0;background:#fff;z-index:1">$ Pagado</th>
-        <th class="tc-th" style="text-align:right;position:sticky;top:0;background:#fff;z-index:1">$ Pendiente</th>
-        <th class="tc-th" style="text-align:right;position:sticky;top:0;background:#fff;z-index:1">$ Cuota</th>
-        <th class="tc-th" style="text-align:center;position:sticky;top:0;background:#fff;z-index:1"># Cuotas</th>
-      </tr></thead>
-      <tbody>${tableRows}</tbody>
-      <tfoot><tr style="border-top:2px solid var(--border);background:rgba(0,0,0,.015)">
-        <td colspan="4" style="padding:9px;font-weight:700;color:var(--text)">Total</td>
-        <td style="padding:9px 8px;text-align:right;font-weight:800;color:#059669">${fmtM(filteredItems.reduce((a,i)=>a+(i.total>0?i.total-i.montoPendiente:i.pagadas*i.valorCuota),0))}</td>
-        <td style="padding:9px 8px;text-align:right;font-weight:800;color:#ED1650;font-size:13px">${fmtM(totalPend)}</td>
-        <td style="padding:9px 8px;text-align:right;font-weight:800;color:var(--muted)">${fmtM(filteredItems.reduce((a,i)=>a+i.valorCuota,0))}</td>
-        <td></td>
-      </tr></tfoot>
-    </table></div>
-  </div>
+  <div style="overflow-x:auto">
+  <table style="border-collapse:collapse;font-size:12px;width:100%">
+    <thead><tr style="border-bottom:2px solid var(--border)">
+      <th class="tc-th" style="text-align:left;position:sticky;top:0;background:#fff;z-index:1">Responsable</th>
+      <th class="tc-th" style="text-align:center;position:sticky;top:0;background:#fff;z-index:1">Fecha</th>
+      <th class="tc-th" style="text-align:left;position:sticky;top:0;background:#fff;z-index:1">Detalle</th>
+      <th class="tc-th" style="text-align:right;position:sticky;top:0;background:#fff;z-index:1">$ Total</th>
+      <th class="tc-th" style="text-align:right;position:sticky;top:0;background:#fff;z-index:1">$ Pagado</th>
+      <th class="tc-th" style="text-align:right;position:sticky;top:0;background:#fff;z-index:1">$ Pendiente</th>
+      <th class="tc-th" style="text-align:right;position:sticky;top:0;background:#fff;z-index:1">$ Cuota</th>
+      <th class="tc-th" style="text-align:center;position:sticky;top:0;background:#fff;z-index:1"># Cuotas</th>
+      <th class="tc-th" style="text-align:center;position:sticky;top:0;background:#fff;z-index:1">Mes Fin</th>
+    </tr></thead>
+    <tbody>${tableRows}</tbody>
+    <tfoot><tr style="border-top:2px solid var(--border);background:rgba(0,0,0,.015)">
+      <td colspan="4" style="padding:9px;font-weight:700;color:var(--text)">Total</td>
+      <td style="padding:9px 8px;text-align:right;font-weight:800;color:#059669">${fmtM(filteredItems.reduce((a,i)=>a+(i.total>0?i.total-i.montoPendiente:i.pagadas*i.valorCuota),0))}</td>
+      <td style="padding:9px 8px;text-align:right;font-weight:800;color:#ED1650;font-size:13px">${fmtM(totalPend)}</td>
+      <td style="padding:9px 8px;text-align:right;font-weight:800;color:var(--muted)">${fmtM(filteredItems.reduce((a,i)=>a+i.valorCuota,0))}</td>
+      <td colspan="2"></td>
+    </tr></tfoot>
+  </table></div>
 </div>
 ${UI.sectionLabel('Proyección de pagos')}
 ${UI.card('',`<div style="font-size:11px;color:var(--muted)">${proy.length} meses</div>`,`<div style="position:relative;height:240px"><canvas id="pend-proy"></canvas></div>`,'margin-bottom:var(--gap)')}`;
 
   requestAnimationFrame(()=>{
-    const distCanvas=document.getElementById('pend-dist-chart');
-    if(distCanvas&&distSegs.length){
-      destroyChart('pendDist');
-      const hBarLabels={id:'hBarLabels',afterDatasetsDraw(chart){
-        const{ctx}=chart; ctx.save();
-        chart.getDatasetMeta(0).data.forEach((bar,i)=>{
-          const barW=bar.width; if(barW<36) return;
-          ctx.font=`700 10px ${SF}`;
-          ctx.fillStyle='rgba(255,255,255,.95)';
-          ctx.textAlign='right';ctx.textBaseline='middle';
-          ctx.fillText(fmtM(distSegs[i].amt,true), bar.x-6, bar.y);
-        });
-        ctx.restore();
-      }};
-      const bgColors=distSegs.map(s=>pendDistFiltro&&pendDistFiltro!==s.label?s.color+'33':s.color+'ee');
-      charts.pendDist=new Chart(distCanvas,{type:'bar',plugins:[hBarLabels],
-        data:{labels:distSegs.map(s=>s.label),datasets:[{data:distSegs.map(s=>s.amt),
-          backgroundColor:bgColors,hoverBackgroundColor:distSegs.map(s=>s.color),
-          borderWidth:0,borderRadius:6,borderSkipped:false}]},
-        options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:{duration:350},
-          plugins:{legend:{display:false},tooltip:{enabled:false,
-            external:makeExternalTooltip(i=>distSegs[i].label,i=>[{color:distSegs[i].color,label:'Pendiente',val:fmtM(distSegs[i].amt)}])}},
-          onClick:(e,els)=>{if(els.length){const s=distSegs[els[0].index];setPendFiltro(pendDistFiltro===s.label?'':s.label);}},
-          layout:{padding:{right:6}},
-          scales:{
-            x:{display:false,grid:{display:false},border:{display:false}},
-            y:{grid:{display:false},border:{display:false},ticks:{font:{family:SF,size:11,weight:'700'},color:'#0F004F',padding:4}}
-          }}});
-    }
     const canvas=document.getElementById('pend-proy');
     if(!canvas||!proy.length) return;
     destroyChart('pendProy');
-    const ttProy=makeExternalTooltip(i=>fmtMesLabel(proy[i][0]),i=>[{color:'#634dd2',label:'Cuotas',val:fmtM(proy[i][1])}]);
+    const ttProy=makeExternalTooltip(i=>fmtMesLabel(proy[i][0]),i=>[{color:proyColor,label:'Cuotas',val:fmtM(proy[i][1])}]);
     charts.pendProy=new Chart(canvas,{type:'bar',plugins:[makeBarLabelPlugin('blPend')],
       data:{labels:proy.map(([mes])=>{const[m,y]=mes.split('-');return[m.slice(0,3).toUpperCase(),y];}),
-        datasets:[{data:proy.map(([,v])=>v),backgroundColor:'#634dd2bb',hoverBackgroundColor:'#634dd2',borderWidth:0,borderRadius:7,borderSkipped:false}]},
+        datasets:[{data:proy.map(([,v])=>v),backgroundColor:proyColor+'bb',hoverBackgroundColor:proyColor,borderWidth:0,borderRadius:7,borderSkipped:false}]},
       options:{...stdBarOptions(ttProy),layout:{padding:{top:22}}}});
   });
 }
@@ -1400,50 +1339,47 @@ function renderVarios(){
   const fechaMetaGold=millasAct<GOLD_META?addMeses(mesesHastaMeta(GOLD_META)):null;
   const fechaMetaSilver=millasAct<SILVER_META?addMeses(mesesHastaMeta(SILVER_META)):null;
 
+  const deltaDiario=diarioManana-diario;
+
   document.getElementById('page-content').innerHTML=`
 ${UI.hero('Métricas & Seguimiento','Varios','datos',hoy)}
 
 ${UI.sectionLabel('Liquidez · Cuenta Corriente')}
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--gap);margin-bottom:20px;max-width:640px">
+<div style="display:grid;grid-template-columns:1fr 1fr 2fr;gap:var(--gap);margin-bottom:20px">
   <div class="card">
     <div class="widget-title">Disponible</div>
-    <div style="font-size:24px;font-weight:800;color:#059669;line-height:1.1;margin-bottom:4px">${fmtM(totalDisp)}</div>
-    <div style="font-size:11px;font-weight:600;color:var(--muted)">${finDate?`Saldo hasta ${finLabel} · ${diasRest} días`:'Saldo cuenta corriente'}</div>
+    <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px">
+      <div style="font-size:24px;font-weight:800;color:#059669;line-height:1.1">${fmtM(totalDisp)}</div>
+      ${finDate?`<div style="font-size:11px;font-weight:600;color:var(--muted)">${finLabel} · ${diasRest} días</div>`:''}
+    </div>
     ${finDate?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div>
         <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Disponible hoy</div>
         <div style="font-size:18px;font-weight:800;color:var(--accent)">${fmtM(diario)}</div>
-        <div style="font-size:10px;font-weight:600;color:var(--muted);margin-top:1px">por día restante</div>
       </div>
       <div style="border-left:1px solid var(--border);padding-left:10px">
         <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Disponible mañana</div>
         <div style="font-size:18px;font-weight:800;color:#634dd2">${fmtM(diarioManana)}</div>
-        <div style="font-size:10px;font-weight:600;color:var(--muted);margin-top:1px">si no gastas hoy</div>
+        ${deltaDiario>0?`<div style="font-size:11px;font-weight:700;color:#059669;margin-top:2px">↑ +${fmtM(deltaDiario,true)}</div>`:''}
       </div>
     </div>`:''}
   </div>
   <div class="card">
     <div class="widget-title">Variación IPC</div>
-    <div style="font-size:24px;font-weight:800;color:#f59e0b;line-height:1.1;margin-bottom:4px">${ipcLabel}</div>
-    <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <div style="font-size:24px;font-weight:800;color:#f59e0b;line-height:1.1;margin-bottom:10px">${ipcLabel}</div>
+    <div style="padding-top:10px;border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <div>
-        <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px">Base anterior</div>
+        <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px">Líquido Actual</div>
         <div style="font-size:15px;font-weight:800;color:var(--text)">${liquidoOld?fmtM(liquidoOld):'—'}</div>
-        <div style="font-size:10px;color:var(--muted);font-weight:600">Base Old</div>
       </div>
       <div style="border-left:1px solid var(--border);padding-left:8px">
-        <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px">Líquido ajustado</div>
+        <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px">Líquido Nuevo</div>
         <div style="font-size:15px;font-weight:800;color:var(--text)">${liquidoNew?fmtM(liquidoNew):'—'}</div>
-        <div style="font-size:10px;color:var(--muted);font-weight:600">Base Old × (1 + IPC)</div>
       </div>
     </div>
     ${aumento?`<div style="margin-top:8px;font-size:13px;font-weight:800;color:${aumento>0?'#059669':'#ED1650'}">${aumento>0?'↑ +':'↓ '}${fmtM(Math.abs(aumento))} de aumento</div>`:''}
   </div>
-</div>
-
-${millasAct>0?`
-${UI.sectionLabel('LATAM Pass')}
-<div class="card" style="margin-bottom:20px">
+  ${millasAct>0?`<div class="card">
   <!-- Header: millas + badges -->
   <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px">
     <div>
@@ -1508,7 +1444,8 @@ ${UI.sectionLabel('LATAM Pass')}
       }
     </div>
   </div>
-</div>`:''}`;
+</div>`:`<div class="card" style="display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;font-weight:600">Sin datos LATAM Pass</div>`}
+</div>`;
 }
 // ── NAV ──
 function openSidebar(){document.getElementById('sidebar').classList.add('open');document.getElementById('overlay').classList.add('active');}
