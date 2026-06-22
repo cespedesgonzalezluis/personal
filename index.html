@@ -269,8 +269,12 @@ tbody tr:hover td{background:rgba(99,77,210,.02)}
         Varios
       </button>
       <div class="nav-section">Familia</div>
-      <button class="nav-item" onclick="setTab('mama',this)">
+      <button class="nav-item" onclick="setTab('ahorroMama',this)">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        Ahorro Mamá
+      </button>
+      <button class="nav-item" onclick="setTab('mama',this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         Mamá
       </button>
     </nav>
@@ -306,8 +310,8 @@ const CAT_DEF = [
 let otrosData={};
 const TIPO_COLOR_POOL={};
 
-let rawData=[], tcData=[], credData=[], mamaData=[], pendientesData=[];
-let months=[], selMonth='', evoRange=12, mamaEvoRange=12;
+let rawData=[], tcData=[], credData=[], mamaData=[], mamaTransData=[], pendientesData=[];
+let months=[], selMonth='', evoRange=12, mamaEvoRange=12, newMamaEvoRange=12;
 let charts={}, tcFiltroMes='', tcFiltroMov='';
 let ahorroCredito=0, inicioAhorro='';
 let detCatFiltro='', prevMesGlobal=null;
@@ -591,9 +595,9 @@ async function fetchSheet(sheet){
 async function loadData(){
   try{
     Object.keys(TIPO_COLOR_POOL).forEach(k=>delete TIPO_COLOR_POOL[k]);
-    const[rowsMensual,rowsTC,rowsCred,rowsMama,rowsOtros,rowsPend]=await Promise.all([
+    const[rowsMensual,rowsTC,rowsCred,rowsMama,rowsNewMama,rowsOtros,rowsPend]=await Promise.all([
       fetchSheet('mensual'),fetchSheet('Tarjeta Credito'),fetchSheet('Creditos'),
-      fetchSheet('Mama'),fetchSheet('Otros'),fetchSheet('Pendientes')
+      fetchSheet('AhorroMama'),fetchSheet('Mama'),fetchSheet('Otros'),fetchSheet('Pendientes')
     ]);
     rawData=rowsMensual.map(r=>({
       detalle:String(r.c[0]?.v||''),tipo:String(r.c[1]?.v||'').toLowerCase().trim(),
@@ -616,6 +620,12 @@ async function loadData(){
 
     mamaData=rowsMama.map(r=>({
       mes:parseMesMama(r.c[0]),tipo:String(r.c[1]?.v||'').toLowerCase().trim(),
+      detalle:String(r.c[2]?.v||'').trim(),monto:parseMonto(r.c[3]?.v)
+    })).filter(r=>r.mes&&r.detalle);
+
+    mamaTransData=rowsNewMama.map(r=>({
+      fecha:String(r.c[0]?.v||''),mes:parseMesMama(r.c[0]),
+      tipo:String(r.c[1]?.v||'').toLowerCase().trim(),
       detalle:String(r.c[2]?.v||'').trim(),monto:parseMonto(r.c[3]?.v)
     })).filter(r=>r.mes&&r.detalle);
 
@@ -1070,8 +1080,8 @@ ${UI.sectionLabel('Créditos Pagados')}
 </div>`;
 }
 
-// ── PÁGINA: MAMÁ ──
-function calcMamaSaldos(){
+// ── PÁGINA: AHORRO MAMÁ ──
+function calcAhorroMamaSaldos(){
   const meses=[...new Set(mamaData.map(r=>r.mes))].sort((a,b)=>monthKey(a)-monthKey(b));
   let acum=0;
   return meses.map(mes=>{
@@ -1082,16 +1092,16 @@ function calcMamaSaldos(){
     return{mes,ingresos,gastos,neto:ingresos-gastos,saldo:acum};
   });
 }
-function setMamaRange(n,btn){
+function setAhorroMamaRange(n,btn){
   mamaEvoRange=n;
-  document.querySelectorAll('[data-scope="mama"] .period-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('[data-scope="ahorroMama"] .period-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  renderMamaChart(calcMamaSaldos());
+  renderAhorroMamaChart(calcAhorroMamaSaldos());
 }
-function renderMama(){
+function renderAhorroMama(){
   hideTooltip();
-  if(!mamaData.length){document.getElementById('page-content').innerHTML=`<div class="error-box">No se encontraron datos en la pestaña <strong>Mama</strong>.</div>`;return;}
-  const saldoPorMes=calcMamaSaldos();
+  if(!mamaData.length){document.getElementById('page-content').innerHTML=`<div class="error-box">No se encontraron datos en la pestaña <strong>AhorroMama</strong>.</div>`;return;}
+  const saldoPorMes=calcAhorroMamaSaldos();
   const saldoActual=saldoPorMes[saldoPorMes.length-1]?.saldo||0;
   const prevSaldo=saldoPorMes.length>1?saldoPorMes[saldoPorMes.length-2]:null;
   const diff=prevSaldo!=null?saldoActual-prevSaldo.saldo:null;
@@ -1134,7 +1144,7 @@ ${diffHtml}
 ${UI.sectionLabel('Ahorro Mamá')}
 <div class="mama-grid" style="margin-bottom:24px">
   ${UI.card('Ingresos · Gastos · Saldo acumulado',
-    UI.periodToggle(mamaEvoRange,[{val:12,label:'12M',fn:'setMamaRange(12,this)'},{val:0,label:'Todo',fn:'setMamaRange(0,this)'}],'mama'),
+    UI.periodToggle(mamaEvoRange,[{val:12,label:'12M',fn:'setAhorroMamaRange(12,this)'},{val:0,label:'Todo',fn:'setAhorroMamaRange(0,this)'}],'ahorroMama'),
     `<div style="position:relative;height:340px"><canvas id="mama-chart"></canvas></div>${UI.chartLegend([{color:'#059669',label:'Ingresos'},{color:'#ED1650',label:'Gastos'},{color:'#00e5c8',label:'Acumulado'}])}`)}
   ${UI.card('Movimientos por Mes','',`<div class="tbl-scroll" style="max-height:380px"><table style="width:100%">
     <thead><tr style="border-bottom:2px solid var(--border)">
@@ -1142,9 +1152,9 @@ ${UI.sectionLabel('Ahorro Mamá')}
       <th style="padding:8px 10px;font-size:10px;font-weight:800;color:var(--accent);text-align:right;position:sticky;top:0;background:var(--card);z-index:1">Monto</th>
     </tr></thead>${tablaRows}</table></div>`)}
 </div>`;
-  renderMamaChart(saldoPorMes);
+  renderAhorroMamaChart(saldoPorMes);
 }
-function renderMamaChart(saldoPorMes){
+function renderAhorroMamaChart(saldoPorMes){
   const slice=mamaEvoRange===0?saldoPorMes:saldoPorMes.slice(-mamaEvoRange);
   const canvas=document.getElementById('mama-chart');
   if(!canvas) return;
@@ -1156,6 +1166,108 @@ function renderMamaChart(saldoPorMes){
     return[{color:'#00e5c8',label:'Acumulado',val:fmtS(s.saldo)},{color:'#059669',label:'Ingresos',val:fmtM(s.ingresos)},{color:'#ED1650',label:'Gastos',val:fmtM(s.gastos)},{color:'#6b6a8a',label:'Neto mes',val:fmtS(s.neto)}];
   });
   charts.mama=new Chart(canvas,{type:'bar',plugins:[MAMA_BAR_LABELS],
+    data:{labels,datasets:[
+      {label:'Ingresos',data:slice.map(s=>s.ingresos),backgroundColor:'rgba(5,150,105,.6)',borderColor:'rgba(5,150,105,.85)',borderWidth:1,borderRadius:{topLeft:4,topRight:4,bottomLeft:0,bottomRight:0},stack:'stack',order:2},
+      {label:'Gastos',data:slice.map(s=>-s.gastos),backgroundColor:'rgba(237,22,80,.5)',borderColor:'rgba(237,22,80,.75)',borderWidth:1,borderRadius:{topLeft:0,topRight:0,bottomLeft:4,bottomRight:4},stack:'stack',order:2},
+      {label:'Acumulado',data:slice.map(s=>s.saldo),type:'line',borderColor:'#00e5c8',borderWidth:2.5,pointRadius:3.5,pointHoverRadius:6,pointBackgroundColor:'#00e5c8',pointBorderColor:'#fff',pointBorderWidth:2,fill:false,tension:.3,order:1,yAxisID:'ySaldo'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,events:['mousemove','mouseout','click'],interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:false},tooltip:{enabled:false,external:tooltipFn}},
+      scales:{
+        x:{grid:{display:false},ticks:{font:{family:SF,size:10},color:'#9CA3AF',maxRotation:0}},
+        y:{stacked:true,grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{family:SF,size:10},color:'#9CA3AF',callback:v=>fmtM(v,true)}},
+        ySaldo:{position:'right',grid:{display:false},ticks:{font:{family:SF,size:10},color:'#00876a',callback:v=>fmtM(v,true)}}
+      }}});
+}
+
+// ── PÁGINA: MAMÁ ──
+function calcMamaTransSaldos(){
+  const mesMap={};
+  mamaTransData.forEach(r=>{
+    if(!mesMap[r.mes]) mesMap[r.mes]={mes:r.mes,ingresos:0,gastos:0,rows:[]};
+    mesMap[r.mes].rows.push(r);
+    if(r.tipo==='ingreso') mesMap[r.mes].ingresos+=r.monto;
+    else mesMap[r.mes].gastos+=r.monto;
+  });
+  const meses=Object.keys(mesMap).sort((a,b)=>monthKey(a)-monthKey(b));
+  let acum=0;
+  return meses.map(mes=>{
+    const d=mesMap[mes];
+    acum+=d.ingresos-d.gastos;
+    return{mes,ingresos:d.ingresos,gastos:d.gastos,neto:d.ingresos-d.gastos,saldo:acum,rows:d.rows};
+  });
+}
+function setNewMamaRange(n,btn){
+  newMamaEvoRange=n;
+  document.querySelectorAll('[data-scope="newMama"] .period-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderNewMamaChart(calcMamaTransSaldos());
+}
+function renderMama(){
+  hideTooltip();
+  if(!mamaTransData.length){document.getElementById('page-content').innerHTML=`<div class="error-box">No se encontraron datos en la pestaña <strong>Mama</strong>.</div>`;return;}
+  const saldoPorMes=calcMamaTransSaldos();
+  const saldoActual=saldoPorMes[saldoPorMes.length-1]?.saldo||0;
+  const prevSaldo=saldoPorMes.length>1?saldoPorMes[saldoPorMes.length-2]:null;
+  const diff=prevSaldo!=null?saldoActual-prevSaldo.saldo:null;
+
+  const tablaRows=[...saldoPorMes].reverse().map(sp=>{
+    const netColor=sp.neto>=0?'#059669':'#ED1650';
+    const grupoMap={};
+    sp.rows.forEach(r=>{const key=r.detalle.trim();if(!grupoMap[key])grupoMap[key]={detalle:key,monto:0,tipo:r.tipo};grupoMap[key].monto+=r.monto;});
+    const rowsHTML=Object.values(grupoMap)
+      .sort((a,b)=>{const d=(a.tipo==='ingreso'?0:1)-(b.tipo==='ingreso'?0:1);return d!==0?d:a.detalle.localeCompare(b.detalle,'es');})
+      .map(g=>{const ing=g.tipo==='ingreso',color=ing?'#059669':'#ED1650';
+        return`<tr><td style="padding:5px 10px;font-size:12px;color:var(--muted);font-weight:600;padding-left:22px"><span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:${color};margin-right:5px;vertical-align:middle"></span>${esc(g.detalle)}</td><td style="padding:5px 10px;text-align:right;font-size:12px;font-weight:800;color:${color}">${ing?'+':'-'}${fmtM(g.monto)}</td></tr>`;
+      }).join('');
+    const gastoRatio=sp.ingresos>0?Math.min(Math.round(sp.gastos/sp.ingresos*100),100):0;
+    const barClr=gastoRatio<80?'#059669':gastoRatio<100?'#f59e0b':'#ED1650';
+    return`<tbody><tr style="background:rgba(27,0,136,.03);border-top:2px solid var(--border)">
+      <td style="padding:7px 10px;font-size:12px;font-weight:800;color:var(--text)">
+        ${fmtMesLabel(sp.mes)}
+        <div style="margin-top:4px;height:4px;background:rgba(27,0,136,.07);border-radius:4px;overflow:hidden;min-width:80px">
+          <div style="height:100%;width:${gastoRatio}%;background:${barClr};border-radius:4px;transition:width .4s"></div>
+        </div>
+        <div style="font-size:9px;font-weight:700;color:${barClr};margin-top:2px">${gastoRatio}% gastado</div>
+      </td>
+      <td style="padding:7px 10px;text-align:right;font-size:12px;font-weight:800;color:${netColor}">${(sp.neto>=0?'+':'-')+fmtM(Math.abs(sp.neto))}</td>
+    </tr>${rowsHTML}</tbody>`;
+  }).join('');
+
+  const diffHtml=diff!=null
+    ?`<div style="display:inline-flex;align-items:center;gap:8px;background:${diff>=0?'rgba(5,150,105,.07)':'rgba(237,22,80,.07)'};border:1px solid ${diff>=0?'rgba(5,150,105,.18)':'rgba(237,22,80,.18)'};border-radius:9px;padding:7px 14px;margin-bottom:20px">
+        <span style="font-size:12px;font-weight:700;color:var(--muted)">vs mes anterior</span>
+        <span style="font-size:17px;font-weight:800;color:${diff>=0?'#059669':'#ED1650'}">${diff>=0?'↑':'↓'} ${fmtM(Math.abs(diff),true)}</span>
+      </div>`:'';
+
+  document.getElementById('page-content').innerHTML=`
+${UI.hero('Mamá',fmtM(Math.abs(saldoActual)),saldoActual>=0?'disponible':'déficit')}
+${diffHtml}
+${UI.sectionLabel('Movimientos Mamá')}
+<div class="mama-grid" style="margin-bottom:24px">
+  ${UI.card('Ingresos · Gastos · Saldo acumulado',
+    UI.periodToggle(newMamaEvoRange,[{val:12,label:'12M',fn:'setNewMamaRange(12,this)'},{val:0,label:'Todo',fn:'setNewMamaRange(0,this)'}],'newMama'),
+    `<div style="position:relative;height:340px"><canvas id="new-mama-chart"></canvas></div>${UI.chartLegend([{color:'#059669',label:'Ingresos'},{color:'#ED1650',label:'Gastos'},{color:'#00e5c8',label:'Acumulado'}])}`)}
+  ${UI.card('Movimientos por Mes','',`<div class="tbl-scroll" style="max-height:380px"><table style="width:100%">
+    <thead><tr style="border-bottom:2px solid var(--border)">
+      <th style="padding:8px 10px;font-size:10px;font-weight:800;color:var(--accent);text-align:left;position:sticky;top:0;background:var(--card);z-index:1">Detalle</th>
+      <th style="padding:8px 10px;font-size:10px;font-weight:800;color:var(--accent);text-align:right;position:sticky;top:0;background:var(--card);z-index:1">Monto</th>
+    </tr></thead>${tablaRows}</table></div>`)}
+</div>`;
+  renderNewMamaChart(saldoPorMes);
+}
+function renderNewMamaChart(saldoPorMes){
+  const slice=newMamaEvoRange===0?saldoPorMes:saldoPorMes.slice(-newMamaEvoRange);
+  const canvas=document.getElementById('new-mama-chart');
+  if(!canvas) return;
+  destroyChart('newMama');
+  const labels=slice.map(s=>{const[m,y]=s.mes.split('-');return[m.slice(0,3).toUpperCase(),y];});
+  const labelsFmt=slice.map(s=>fmtMesLabel(s.mes));
+  const tooltipFn=makeExternalTooltip(i=>labelsFmt[i],i=>{
+    const s=slice[i],fmtS=v=>v<0?`-${fmtM(Math.abs(v))}`:fmtM(v);
+    return[{color:'#00e5c8',label:'Acumulado',val:fmtS(s.saldo)},{color:'#059669',label:'Ingresos',val:fmtM(s.ingresos)},{color:'#ED1650',label:'Gastos',val:fmtM(s.gastos)},{color:'#6b6a8a',label:'Neto mes',val:fmtS(s.neto)}];
+  });
+  charts.newMama=new Chart(canvas,{type:'bar',plugins:[MAMA_BAR_LABELS],
     data:{labels,datasets:[
       {label:'Ingresos',data:slice.map(s=>s.ingresos),backgroundColor:'rgba(5,150,105,.6)',borderColor:'rgba(5,150,105,.85)',borderWidth:1,borderRadius:{topLeft:4,topRight:4,bottomLeft:0,bottomRight:0},stack:'stack',order:2},
       {label:'Gastos',data:slice.map(s=>-s.gastos),backgroundColor:'rgba(237,22,80,.5)',borderColor:'rgba(237,22,80,.75)',borderWidth:1,borderRadius:{topLeft:0,topRight:0,bottomLeft:4,bottomRight:4},stack:'stack',order:2},
@@ -1503,13 +1615,13 @@ ${UI.sectionLabel('Liquidez · Cuenta Corriente')}
 // ── NAV ──
 function openSidebar(){document.getElementById('sidebar').classList.add('open');document.getElementById('overlay').classList.add('active');}
 function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('active');}
-const TAB_TITLES={mensual:'Mensual',tc:'Tarjeta Crédito',creditos:'Créditos',pendientes:'Pendientes',varios:'Varios',mama:'Mamá'};
+const TAB_TITLES={mensual:'Mensual',tc:'Tarjeta Crédito',creditos:'Créditos',pendientes:'Pendientes',varios:'Varios',ahorroMama:'Ahorro Mamá',mama:'Mamá'};
 function setTab(tab,btn){
   document.querySelectorAll('.nav-item').forEach(b=>{b.classList.remove('active');b.dataset.tab='';});
   btn.classList.add('active');btn.dataset.tab=tab;
   document.title=`Mi Portal · ${TAB_TITLES[tab]||tab}`;
   closeSidebar();
-  const pages={varios:renderVarios,tc:renderTC,mensual:renderPage,creditos:renderCreditos,mama:renderMama,pendientes:renderPendientes};
+  const pages={varios:renderVarios,tc:renderTC,mensual:renderPage,creditos:renderCreditos,ahorroMama:renderAhorroMama,mama:renderMama,pendientes:renderPendientes};
   if(pages[tab]) pages[tab]();
   else{hideTooltip();document.getElementById('page-content').innerHTML=`<div class="loading-state"><div class="loading-text">Próximamente…</div></div>`;}
 }
