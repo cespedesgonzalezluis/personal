@@ -597,7 +597,7 @@ async function loadData(){
     Object.keys(TIPO_COLOR_POOL).forEach(k=>delete TIPO_COLOR_POOL[k]);
     const[rowsMensual,rowsTC,rowsCred,rowsMama,rowsNewMama,rowsOtros,rowsPend]=await Promise.all([
       fetchSheet('mensual'),fetchSheet('Tarjeta Credito'),fetchSheet('Creditos'),
-      fetchSheet('AhorroMama'),fetchSheet('Mama'),fetchSheet('Otros'),fetchSheet('Pendientes')
+      fetchSheet('Ahorro Mama'),fetchSheet('Mama'),fetchSheet('Otros'),fetchSheet('Pendientes')
     ]);
     rawData=rowsMensual.map(r=>({
       detalle:String(r.c[0]?.v||''),tipo:String(r.c[1]?.v||'').toLowerCase().trim(),
@@ -1100,7 +1100,7 @@ function setAhorroMamaRange(n,btn){
 }
 function renderAhorroMama(){
   hideTooltip();
-  if(!mamaData.length){document.getElementById('page-content').innerHTML=`<div class="error-box">No se encontraron datos en la pestaña <strong>AhorroMama</strong>.</div>`;return;}
+  if(!mamaData.length){document.getElementById('page-content').innerHTML=`<div class="error-box">No se encontraron datos en la pestaña <strong>Ahorro Mama</strong>.</div>`;return;}
   const saldoPorMes=calcAhorroMamaSaldos();
   const saldoActual=saldoPorMes[saldoPorMes.length-1]?.saldo||0;
   const prevSaldo=saldoPorMes.length>1?saldoPorMes[saldoPorMes.length-2]:null;
