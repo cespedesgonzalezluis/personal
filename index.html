@@ -875,15 +875,6 @@ function renderTC(){
   const proyMap={};
   tcData.filter(r=>ESTADO_PENDIENTE.has(r.estado)&&filteredKeys.has(r.movimiento+'|'+r.fecha))
     .forEach(r=>{proyMap[r.mes]=(proyMap[r.mes]||0)+r.valorCuota;});
-  // Si la hoja Varios tiene TC > Total, ese valor reemplaza el mes más próximo del proyMap
-  const _tcTotal=otrosData['_get']?otrosData['_get']('tc','total'):null;
-  if(_tcTotal!=null&&_tcTotal>0){
-    const _now=new Date();
-    const _mesClave=`${MESES[_now.getMonth()]}-${_now.getFullYear()}`;
-    // Busca el mes actual en el proyMap; si no existe, lo crea
-    const _mesProy=proyMap[_mesClave]!=null?_mesClave:Object.keys(proyMap).sort((a,b)=>monthKey(a)-monthKey(b))[0];
-    if(_mesProy) proyMap[_mesProy]=_tcTotal;
-  }
   const proyMeses=Object.entries(proyMap).sort((a,b)=>monthKey(a[0])-monthKey(b[0]));
 
   // Debug
