@@ -4,30 +4,30 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mi Portal</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%230F004F'/%3E%3Cpolyline points='22 12 18 12 15 21 9 3 6 12 2 12' fill='none' stroke='%2300e5c8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%23111111'/%3E%3Cpolyline points='22 12 18 12 15 21 9 3 6 12 2 12' fill='none' stroke='%2300D2BE' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Sofia+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#f0eff8;--card:#fff;--border:#e2e0f0;--text:#0F004F;--muted:#6b6a8a;
-  --accent:#634dd2;--navy:#1B0088;--green:#059669;--red:#ED1650;--teal:#00b89e;
-  --shadow:0 1px 4px rgba(15,0,79,.06),0 4px 16px rgba(15,0,79,.04);
-  --shadow-md:0 4px 20px rgba(74,44,168,.12);
+  --bg:#0d0d0d;--card:#1a1a1a;--border:rgba(255,255,255,.09);--text:#e8e8e8;--muted:#8899aa;
+  --accent:#00D2BE;--navy:#009b8d;--green:#10b981;--red:#ED1650;--teal:#00D2BE;
+  --shadow:0 1px 4px rgba(0,0,0,.35),0 4px 16px rgba(0,0,0,.25);
+  --shadow-md:0 4px 20px rgba(0,210,190,.18);
   --radius:14px;--gap:16px;--sidebar:220px;--font:'Sofia Sans',sans-serif;
 }
 html,body{height:100%;font-family:var(--font)}
 body{background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
 ::-webkit-scrollbar{width:4px;height:4px}
-::-webkit-scrollbar-thumb{background:#c4c0e0;border-radius:999px}
+::-webkit-scrollbar-thumb{background:#333;border-radius:999px}
 .app{display:flex;flex:1;min-height:100vh}
 .main{margin-left:var(--sidebar);flex:1;display:flex;flex-direction:column;min-width:0}
 .content{padding:24px 28px;flex:1}
 
 /* SIDEBAR */
-.sidebar{width:var(--sidebar);background:#0F004F;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:200;transition:transform .25s;border-right:1px solid rgba(255,255,255,.06)}
+.sidebar{width:var(--sidebar);background:#111111;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:200;transition:transform .25s;border-right:1px solid rgba(255,255,255,.06)}
 .sidebar-logo{padding:20px 16px 16px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:10px}
-.logo-mark{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#00e5c8,#a855f7);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-mark{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#00D2BE,#009b8d);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .logo-mark svg{width:16px;height:16px;stroke:#fff}
 .sidebar-logo-title{font-size:15px;font-weight:800;color:#fff;letter-spacing:-.2px;line-height:1.1}
 .sidebar-logo-sub{font-size:10px;font-weight:600;color:rgba(255,255,255,.3);margin-top:1px}
@@ -35,27 +35,27 @@ body{background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-d
 .nav-section{font-size:9px;font-weight:800;color:rgba(255,255,255,.2);text-transform:uppercase;letter-spacing:.14em;padding:10px 8px 4px;margin-top:4px}
 .nav-item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:9px;font-size:13px;font-weight:700;color:rgba(255,255,255,.5);cursor:pointer;border:none;background:transparent;font-family:var(--font);text-align:left;width:100%;transition:all .15s;position:relative}
 .nav-item:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.8)}
-.nav-item.active{background:linear-gradient(135deg,rgba(0,184,158,.2),rgba(0,184,158,.08));color:#00e5c8}
-.nav-item.active::before{content:'';position:absolute;left:0;top:20%;bottom:20%;width:2px;background:#00e5c8;border-radius:2px}
+.nav-item.active{background:linear-gradient(135deg,rgba(0,210,190,.18),rgba(0,210,190,.07));color:#00D2BE}
+.nav-item.active::before{content:'';position:absolute;left:0;top:20%;bottom:20%;width:2px;background:#00D2BE;border-radius:2px}
 .nav-icon{width:16px;height:16px;flex-shrink:0;opacity:.7}
 .nav-item.active .nav-icon{opacity:1}
 .sidebar-footer{padding:12px 16px;border-top:1px solid rgba(255,255,255,.07);font-size:10px;font-weight:600;color:rgba(255,255,255,.2);line-height:1.6}
 .sidebar-footer span{display:block;color:rgba(255,255,255,.4);font-weight:700;font-size:11px}
 
 /* HAMBURGER */
-.hamburger{display:none;position:fixed;top:12px;left:12px;z-index:300;flex-direction:column;gap:4px;background:#fff;border:1px solid var(--border);border-radius:9px;cursor:pointer;padding:8px 9px;box-shadow:var(--shadow)}
-.hamburger span{display:block;width:18px;height:2px;background:var(--text);border-radius:2px}
-.overlay{display:none;position:fixed;inset:0;background:rgba(15,0,79,.45);z-index:150;backdrop-filter:blur(2px)}
+.hamburger{display:none;position:fixed;top:12px;left:12px;z-index:300;flex-direction:column;gap:4px;background:#1a1a1a;border:1px solid rgba(255,255,255,.09);border-radius:9px;cursor:pointer;padding:8px 9px;box-shadow:var(--shadow)}
+.hamburger span{display:block;width:18px;height:2px;background:#e8e8e8;border-radius:2px}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:150;backdrop-filter:blur(2px)}
 
 /* HERO */
-.hero{background:linear-gradient(135deg,#0F004F 0%,#1a0080 50%,#2d1a6e 100%);border-radius:18px;padding:26px 30px 28px;position:relative;overflow:hidden;margin-bottom:20px;box-shadow:0 12px 40px rgba(15,0,79,.18)}
+.hero{background:linear-gradient(135deg,#111111 0%,#0d1d1b 55%,#0f2421 100%);border-radius:18px;padding:26px 30px 28px;position:relative;overflow:hidden;margin-bottom:20px;box-shadow:0 12px 40px rgba(0,0,0,.5)}
 .orb{position:absolute;border-radius:50%;pointer-events:none}
-.orb-1{top:-50px;right:-50px;width:240px;height:240px;background:radial-gradient(circle,rgba(168,85,247,.25) 0%,transparent 70%)}
-.orb-2{bottom:-30px;left:38%;width:160px;height:160px;background:radial-gradient(circle,rgba(0,229,200,.1) 0%,transparent 70%)}
+.orb-1{top:-50px;right:-50px;width:240px;height:240px;background:radial-gradient(circle,rgba(0,210,190,.18) 0%,transparent 70%)}
+.orb-2{bottom:-30px;left:38%;width:160px;height:160px;background:radial-gradient(circle,rgba(0,210,190,.12) 0%,transparent 70%)}
 .hero-inner{position:relative;z-index:1}
 .hero-eyebrow{font-size:10px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.16em;margin-bottom:5px}
 .hero-title{font-size:30px;font-weight:800;color:#fff;line-height:1.08;letter-spacing:-.4px}
-.hero-title span{background:linear-gradient(90deg,#00e5c8,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-title span{background:linear-gradient(90deg,#00D2BE,#C0C0C0);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 .hero-sub{font-size:12px;color:rgba(255,255,255,.3);font-weight:500;margin-top:5px}
 
 /* KPI */
@@ -77,7 +77,7 @@ body{background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-d
 
 /* BADGES */
 .badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:6px;font-size:10px;font-weight:800;white-space:nowrap}
-.badge-navy{background:rgba(27,0,136,.08);color:#1B0088}
+.badge-navy{background:rgba(0,210,190,.12);color:#00D2BE}
 .badge-green{background:rgba(5,150,105,.1);color:#065f46}
 .badge-red{background:rgba(237,22,80,.08);color:#ED1650}
 .badge-teal{background:rgba(0,184,158,.1);color:#007a72}
@@ -86,7 +86,7 @@ body{background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-d
 /* PERIOD TOGGLE */
 .period-toggle{display:inline-flex;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:2px;gap:2px}
 .period-btn{border:none;background:transparent;color:var(--muted);font-family:var(--font);font-size:11px;font-weight:700;padding:4px 12px;border-radius:5px;cursor:pointer;transition:all .15s}
-.period-btn.active{background:var(--navy);color:#fff;box-shadow:0 2px 6px rgba(27,0,136,.25)}
+.period-btn.active{background:var(--navy);color:#fff;box-shadow:0 2px 6px rgba(0,155,141,.4)}
 
 /* FILTER DROPDOWN */
 .filter-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:18px}
@@ -94,25 +94,25 @@ body{background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-d
 .filter-label{font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.12em}
 .filter-trigger{display:flex;align-items:center;justify-content:space-between;gap:20px;background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:9px 14px;cursor:pointer;min-width:220px;transition:border-color .15s,box-shadow .15s;user-select:none}
 .filter-trigger:hover{border-color:var(--accent)}
-.filter-trigger.open{border-color:var(--accent);box-shadow:0 0 0 3px rgba(99,77,210,.1)}
+.filter-trigger.open{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,210,190,.12)}
 .filter-trigger-left{display:flex;flex-direction:column;gap:2px}
 .filter-trigger-val{font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
 .filter-trigger-amt{font-size:10px;font-weight:700;color:var(--muted)}
 .filter-trigger-val.placeholder{color:var(--muted);font-weight:600}
 .filter-chevron{width:16px;height:16px;flex-shrink:0;color:var(--muted);transition:transform .2s}
 .filter-trigger.open .filter-chevron{transform:rotate(180deg)}
-.filter-dropdown{position:absolute;top:calc(100% + 6px);left:0;z-index:100;background:var(--card);border:1.5px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(15,0,79,.12);min-width:100%;max-height:260px;overflow-y:auto;display:none;scrollbar-width:thin;scrollbar-color:#c4c0e0 transparent}
+.filter-dropdown{position:absolute;top:calc(100% + 6px);left:0;z-index:100;background:var(--card);border:1.5px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.5);min-width:100%;max-height:260px;overflow-y:auto;display:none;scrollbar-width:thin;scrollbar-color:#333 transparent}
 .filter-dropdown.open{display:block}
 .filter-option{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;cursor:pointer;transition:background .1s;border-bottom:1px solid rgba(0,0,0,.04)}
 .filter-option:last-child{border-bottom:none}
-.filter-option:hover{background:rgba(99,77,210,.04)}
-.filter-option.selected{background:rgba(99,77,210,.06)}
+.filter-option:hover{background:rgba(0,210,190,.07)}
+.filter-option.selected{background:rgba(0,210,190,.1)}
 .filter-option-name{font-size:12px;font-weight:600;color:var(--text)}
 .filter-option-amt{font-size:11px;font-weight:800;color:var(--muted);white-space:nowrap}
-.filter-option.selected .filter-option-name{color:var(--accent);font-weight:700}
-.filter-option.selected .filter-option-amt{color:var(--accent)}
+.filter-option.selected .filter-option-name{color:#00D2BE;font-weight:700}
+.filter-option.selected .filter-option-amt{color:#00D2BE}
 .filter-option-check{width:14px;height:14px;border-radius:4px;border:1.5px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center}
-.filter-option.selected .filter-option-check{background:var(--accent);border-color:var(--accent)}
+.filter-option.selected .filter-option-check{background:#00D2BE;border-color:#00D2BE}
 .filter-option.selected .filter-option-check::after{content:'';width:7px;height:5px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg) translateY(-1px);display:block}
 /* Botón limpiar — fuera del dropdown, al lado del filtro */
 .btn-clear{display:inline-flex;align-items:center;gap:5px;padding:9px 12px;border:1.5px solid rgba(237,22,80,.25);background:rgba(237,22,80,.06);border-radius:10px;font-family:var(--font);font-size:11px;font-weight:700;color:var(--red);cursor:pointer;transition:all .15s;white-space:nowrap}
@@ -122,7 +122,7 @@ body{background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-d
 .cat-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
 .cat-btn{border:1.5px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font);font-size:11px;font-weight:700;padding:4px 11px;border-radius:6px;cursor:pointer;transition:all .15s}
 .cat-btn:hover{border-color:var(--accent);color:var(--accent)}
-.cat-btn.active{background:var(--navy);color:#fff;border-color:var(--navy);box-shadow:0 2px 6px rgba(27,0,136,.25)}
+.cat-btn.active{background:var(--navy);color:#fff;border-color:var(--navy);box-shadow:0 2px 6px rgba(0,155,141,.4)}
 .cat-btn.active[data-cat]:not([data-cat=""]){background:var(--cat-c,var(--navy));border-color:var(--cat-c,var(--navy))}
 @media(hover:none){.chart-tooltip{pointer-events:none}}
 
@@ -131,10 +131,10 @@ body{background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-d
 table{width:100%;border-collapse:separate;border-spacing:0}
 thead th{padding:9px 12px;font-size:10px;font-weight:800;color:var(--accent);text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;position:sticky;top:0;background:var(--card);z-index:1;letter-spacing:.04em}
 thead th:last-child{text-align:right}
-tbody td{padding:9px 12px;font-size:12px;color:var(--text);border-bottom:1px solid rgba(0,0,0,.035);vertical-align:middle}
+tbody td{padding:9px 12px;font-size:12px;color:var(--text);border-bottom:1px solid rgba(255,255,255,.05);vertical-align:middle}
 tbody td:last-child{text-align:right;font-weight:800}
 tbody tr:last-child td{border-bottom:none}
-tbody tr:hover td{background:rgba(99,77,210,.02)}
+tbody tr:hover td{background:rgba(0,210,190,.05)}
 .tc-th{padding:8px;color:var(--muted);font-weight:700;white-space:nowrap;font-size:11px}
 .tc-td{padding:9px 8px;font-size:12px}
 
@@ -152,14 +152,14 @@ tbody tr:hover td{background:rgba(99,77,210,.02)}
 
 /* MISC */
 .loading-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:100px 20px;gap:12px}
-.spinner{width:28px;height:28px;border:2.5px solid var(--border);border-top-color:var(--navy);border-radius:50%;animation:spin .7s linear infinite}
+.spinner{width:28px;height:28px;border:2.5px solid rgba(255,255,255,.12);border-top-color:#00D2BE;border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .loading-text{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.12em}
 .error-box{background:rgba(237,22,80,.06);border:1px solid rgba(237,22,80,.18);border-radius:12px;padding:20px;text-align:center;font-size:13px;color:var(--red);font-weight:600}
 .debug-box{background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:12px 16px;font-size:12px;color:#92400e;font-weight:600;margin-bottom:14px;line-height:1.7}
 
 /* TOOLTIP */
-.chart-tooltip{position:fixed;z-index:9999;pointer-events:none;background:#150a40;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:10px 14px;min-width:180px;font-family:var(--font);box-shadow:0 8px 32px rgba(0,0,0,.35);display:none}
+.chart-tooltip{position:fixed;z-index:9999;pointer-events:none;background:#0d1d1b;border:1px solid rgba(0,210,190,.2);border-radius:10px;padding:10px 14px;min-width:180px;font-family:var(--font);box-shadow:0 8px 32px rgba(0,0,0,.35);display:none}
 .ct-header{font-size:11px;font-weight:800;color:#fff;margin-bottom:7px;text-transform:uppercase;letter-spacing:.06em}
 .ct-divider{height:1px;background:rgba(255,255,255,.08);margin-bottom:7px}
 .ct-row{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:4px}
@@ -187,7 +187,7 @@ tbody tr:hover td{background:rgba(99,77,210,.02)}
 .dist-ahorro-pct{font-size:11px;font-weight:800;color:var(--muted);min-width:36px;text-align:right;margin-right:10px}
 .dist-ahorro-monto{font-weight:800;color:var(--text)}
 .prog-bar-wrap{margin-top:8px}
-.prog-bar-track{height:6px;background:rgba(27,0,136,.07);border-radius:6px;overflow:hidden;margin-top:4px}
+.prog-bar-track{height:6px;background:rgba(255,255,255,.08);border-radius:6px;overflow:hidden;margin-top:4px}
 .prog-bar-fill{height:100%;border-radius:6px;transition:width .4s}
 .prog-label{display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:var(--muted);margin-top:4px}
 .millas-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;font-size:12px}
@@ -293,9 +293,9 @@ const SID  = '1nkQ4lsPoGXXzic_GLgkXR9qHlfcEe4j4q6XxheR2U3I';
 const BASE = `https://docs.google.com/spreadsheets/d/${SID}/gviz/tq?tqx=out:json`;
 const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 const ESTADO_PENDIENTE = new Set(['pendiente','por pagar','pending','activo','no pagado','debe','p']);
-const COLOR_MAP = {ahorro:'#10b981',casa:'#6366f1',deuda:'#634dd2',mamá:'#f43f5e',mama:'#f43f5e',transporte:'#0d9488',servicios:'#f59e0b',otros:'#94a3b8'};
+const COLOR_MAP = {ahorro:'#10b981',casa:'#6366f1',deuda:'#00D2BE',mamá:'#f43f5e',mama:'#f43f5e',transporte:'#0d9488',servicios:'#f59e0b',otros:'#94a3b8'};
 const COLOR_POOL = ['#f97316','#14b8a6','#ec4899','#84cc16','#6366f1','#f43f5e','#06b6d4','#f59e0b','#10b981','#8b5cf6','#0ea5e9','#a3e635'];
-const RESP_COLORS = ['#634dd2','#f43f5e','#0d9488','#6366f1','#f59e0b','#10b981','#8b5cf6','#14b8a6','#94a3b8'];
+const RESP_COLORS = ['#00D2BE','#f43f5e','#0d9488','#6366f1','#f59e0b','#10b981','#8b5cf6','#14b8a6','#94a3b8'];
 const CAT_DEF = [
   {key:'ahorro',label:'Ahorro',color:'#10b981',match:r=>r.tipo==='ahorro'},
   {key:'hip',label:'Hipotecario',color:'#6366f1',match:r=>r.tipo==='deuda'&&r.detalle.toLowerCase().includes('hipotecario')},
@@ -303,7 +303,7 @@ const CAT_DEF = [
   {key:'casa',label:'Casa',color:'#6366f1',match:r=>r.tipo==='casa'},
   {key:'mama',label:'Mamá',color:'#f43f5e',match:r=>r.tipo==='mamá'||r.tipo==='mama'},
   {key:'trans',label:'Transporte',color:'#0d9488',match:r=>r.tipo==='transporte'},
-  {key:'deuda',label:'Deuda',color:'#634dd2',match:r=>r.tipo==='deuda'},
+  {key:'deuda',label:'Deuda',color:'#00D2BE',match:r=>r.tipo==='deuda'},
   {key:'otros',label:'Otros',color:'#94a3b8',match:()=>false},
 ];
 
@@ -472,9 +472,9 @@ const UI = {
   // Progreso de cuotas (texto + barra)
   cuotasProg: (pagadas,total,isUlt) => {
     const pct=Math.round(pagadas/Math.max(total,1)*100);
-    const color=isUlt?'#00b89e':'#634dd2';
+    const color=isUlt?'#00D2BE':'#00D2BE';
     return `<div style="font-size:10px;font-weight:700;color:${isUlt?'#007a72':'var(--muted)'};margin-bottom:3px">${pagadas}/${total}</div>
-      <div style="height:3px;background:rgba(27,0,136,.07);border-radius:3px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${color};border-radius:3px"></div></div>`;
+      <div style="height:3px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${color};border-radius:3px"></div></div>`;
   },
 };
 
@@ -503,7 +503,7 @@ function stdBarOptions(tooltipFn){
     plugins:{legend:{display:false},tooltip:{enabled:false,external:tooltipFn}},
     scales:{
       x:{grid:{display:false},border:{display:false},ticks:{font:{family:SF,size:11,weight:'700'},color:'#9CA3AF',maxRotation:45}},
-      y:{grid:{color:'rgba(27,0,136,.04)',drawTicks:false},border:{display:false},
+      y:{grid:{color:'rgba(255,255,255,.06)',drawTicks:false},border:{display:false},
         ticks:{font:{family:SF,size:11},color:'#9CA3AF',padding:8,callback:v=>fmtM(v,true)}}
     }};
 }
@@ -720,7 +720,7 @@ ${UI.hero('Reporte Mensual',capFirst(mes),año)}
 ${UI.sectionLabel('Evolutivo mensual')}
 ${UI.card('Ingreso · Gasto · Tarjeta Crédito',
   UI.periodToggle(evoRange,[{val:12,label:'12M',fn:'setEvoRange(12,this)'},{val:0,label:'Todo',fn:'setEvoRange(0,this)'}],'evo'),
-  `<div style="height:230px"><canvas id="chartEvo"></canvas></div>${UI.chartLegend([{color:'#10b981',label:'Ingreso'},{color:'#f43f5e',label:'Gasto'},{color:'#f59e0b',label:'Tarjeta Crédito'}])}<div style="font-size:10px;color:var(--muted);margin-top:6px">* Excluye el mes en curso</div>`,
+  `<div style="height:230px"><canvas id="chartEvo"></canvas></div>${UI.chartLegend([{color:'#10b981',label:'Ingreso'},{color:'#f43f5e',label:'Gasto'},{color:'#f59e0b',label:'Tarjeta Crédito'}])}`,
   'margin-bottom:20px')}
 ${UI.sectionLabel('Distribución del mes')}
 ${UI.card('','',`<div id="dist-bar-wrap" style="margin-top:4px"></div>`,'margin-bottom:var(--gap)')}
@@ -734,10 +734,7 @@ ${UI.card('','',`<div class="tbl-scroll"><table>
 }
 
 function renderEvoChart(){
-  const _nowM=new Date();
-  const _mesActual=`${MESES[_nowM.getMonth()]}-${_nowM.getFullYear()}`;
-  const _months=months.filter(m=>m!==_mesActual);
-  const slice=evoRange===0?_months:_months.slice(-evoRange);
+  const slice=evoRange===0?months:months.slice(-evoRange);
   const labels=slice.map(m=>{const[mes,año]=m.split('-');return[mes.slice(0,3).toUpperCase(),año];});
   const labelsFmt=slice.map(m=>fmtMesLabel(m));
   const ingresos=slice.map(m=>sumsFor(m).ing);
@@ -952,12 +949,12 @@ ${UI.card('Movimientos Pendientes',`<div style="font-size:11px;color:var(--muted
     destroyChart('tc');
     const ctx=canvas.getContext('2d');
     const grad=ctx.createLinearGradient(0,0,0,260);
-    grad.addColorStop(0,'#00e5c8');grad.addColorStop(1,'#00b89e');
+    grad.addColorStop(0,'#00D2BE');grad.addColorStop(1,'#009b8d');
     const tcOpts={...stdBarOptions(tooltipFn),layout:{padding:{top:22}}};
     tcOpts.scales={...tcOpts.scales,y:{...tcOpts.scales.y,ticks:{...tcOpts.scales.y.ticks,callback:v=>{const a=Math.abs(v);if(a>=1e6)return`$${(a/1e6).toFixed(1).replace('.',',')}M`;if(a>=1e3)return`$${Math.round(a/1e3).toLocaleString('es-CL')}K`;return`$${Math.round(a).toLocaleString('es-CL')}`;}}}};
     charts.tc=new Chart(canvas,{type:'bar',plugins:[BAR_LABELS],
       data:{labels:proyMeses.map(([mes])=>{const[m,y]=mes.split('-');return[m.slice(0,3).toUpperCase(),y];}),
-        datasets:[{label:'Cuotas',data:proyMeses.map(([,v])=>v),backgroundColor:grad,hoverBackgroundColor:'#00e5c8',borderWidth:0,borderRadius:7,borderSkipped:false}]},
+        datasets:[{label:'Cuotas',data:proyMeses.map(([,v])=>v),backgroundColor:grad,hoverBackgroundColor:'#00D2BE',borderWidth:0,borderRadius:7,borderSkipped:false}]},
       options:tcOpts});
   });
 }
@@ -982,7 +979,7 @@ function renderCreditos(){
   const activos=todos.filter(c=>c.pendientes>0),pagados=todos.filter(c=>c.pendientes===0);
   const totalCuotaMes=activos.reduce((a,c)=>a+c.valorCuota,0);
   const totalPendiente=activos.reduce((a,c)=>a+c.valorCuota*c.pendientes,0);
-  const ACCENT='#634dd2';
+  const ACCENT='#00D2BE';
   // Meta ahorro ITAU Consumo
   const itauConsumo=activos.find(c=>c.detalle.toLowerCase().includes('itau')&&c.detalle.toLowerCase().includes('consumo'));
   const pendienteItau=itauConsumo?itauConsumo.valorCuota*itauConsumo.pendientes:0;
@@ -994,7 +991,7 @@ function renderCreditos(){
   function cardHTML(c){
     const esActivo=c.pendientes>0,pct=c.cuotas>0?Math.round(c.pagadas/c.cuotas*100):0;
     const montoTotal=c.valorCuota*c.cuotas,montoPendiente=c.valorCuota*c.pendientes;
-    const barGrad=esActivo?`linear-gradient(90deg,${ACCENT},#a855f7)`:`linear-gradient(90deg,#059669,#22c55e)`;
+    const barGrad=esActivo?`linear-gradient(90deg,${ACCENT},#009b8d)`:`linear-gradient(90deg,#059669,#22c55e)`;
     const pctColor=esActivo?ACCENT:'#059669',mesFinal=esActivo?c.mesFin:c.mesFinPagado;
     return`<div class="card" style="position:relative;overflow:hidden;padding:10px 14px">
       <div style="margin-bottom:8px">
@@ -1006,7 +1003,7 @@ function renderCreditos(){
           <span style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Progreso</span>
           <span style="font-size:14px;font-weight:800;color:${pctColor}">${pct}%</span>
         </div>
-        <div style="height:18px;background:rgba(99,77,210,.07);border-radius:9px;overflow:hidden;position:relative">
+        <div style="height:18px;background:rgba(0,210,190,.08);border-radius:9px;overflow:hidden;position:relative">
           <div style="height:100%;width:${pct}%;background:${barGrad};border-radius:9px;position:relative">
             ${pct>=20?`<span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:11px;font-weight:800;color:#fff;white-space:nowrap">${fmtM(montoTotal-montoPendiente,true)}</span>`:''}
           </div>
@@ -1019,7 +1016,7 @@ function renderCreditos(){
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:6px">
         ${[['Total cuotas',c.cuotas,'var(--text)'],['Pagadas',c.pagadas,'#059669'],['Restantes',c.pendientes,esActivo?'#ED1650':'#9CA3AF'],['Valor cuota',fmtM(c.valorCuota,true),'var(--text)']].map(([l,v,col])=>
-          `<div style="background:rgba(99,77,210,.04);border-radius:6px;padding:5px 8px">
+          `<div style="background:rgba(0,210,190,.06);border-radius:6px;padding:5px 8px">
             <div style="font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:1px">${l}</div>
             <div style="font-size:13px;font-weight:800;color:${col}">${v}</div>
           </div>`).join('')}
@@ -1111,10 +1108,10 @@ function renderAhorroMama(){
       }).join('');
     const gastoRatio=sp.ingresos>0?Math.min(Math.round(sp.gastos/sp.ingresos*100),100):0;
     const barClr=gastoRatio<80?'#059669':gastoRatio<100?'#f59e0b':'#ED1650';
-    return`<tbody><tr style="background:rgba(27,0,136,.03);border-top:2px solid var(--border)">
+    return`<tbody><tr style="background:rgba(255,255,255,.04);border-top:2px solid var(--border)">
       <td style="padding:7px 10px;font-size:12px;font-weight:800;color:var(--text)">
         ${fmtMesLabel(mes)}
-        <div style="margin-top:4px;height:4px;background:rgba(27,0,136,.07);border-radius:4px;overflow:hidden;min-width:80px">
+        <div style="margin-top:4px;height:4px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden;min-width:80px">
           <div style="height:100%;width:${gastoRatio}%;background:${barClr};border-radius:4px;transition:width .4s"></div>
         </div>
         <div style="font-size:9px;font-weight:700;color:${barClr};margin-top:2px">${gastoRatio}% gastado</div>
@@ -1320,7 +1317,7 @@ function renderPendientes(){
     const pagadoMonto=it.total>0?it.total-it.montoPendiente:it.pagadas*it.valorCuota;
     const isUlt=it.pendientesCount===1;
     const bg=i%2===0?'transparent':'rgba(0,0,0,.012)';
-    const color=respColorMap[it.responsable]||'#634dd2';
+    const color=respColorMap[it.responsable]||'#00D2BE';
     return`<tr style="border-bottom:1px solid var(--border);background:${bg}">
       <td class="tc-td" style="font-weight:700;white-space:nowrap"><span style="display:inline-block;width:6px;height:6px;border-radius:2px;background:${color};margin-right:5px;vertical-align:middle"></span><span style="color:${color}">${esc(it.responsable)}</span></td>
       <td class="tc-td" style="text-align:center;color:var(--muted);white-space:nowrap">${fmtFecha(it.fecha)}</td>
@@ -1511,7 +1508,7 @@ ${UI.sectionLabel('Liquidez · Cuenta Corriente')}
       </div>
       <div style="border-left:1px solid var(--border);padding-left:10px">
         <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Disponible mañana</div>
-        <div style="font-size:18px;font-weight:800;color:#634dd2">${fmtM(diarioManana)}</div>
+        <div style="font-size:18px;font-weight:800;color:#00D2BE">${fmtM(diarioManana)}</div>
       </div>
     </div>
     ${deltaDiario!==0?`<div style="margin-top:8px;font-size:13px;font-weight:800;color:${deltaDiario>0?'#059669':'#ED1650'}">${deltaDiario>0?'↑ +':'↓ '}${fmtM(Math.abs(deltaDiario))} por día</div>`:''}`:''}
@@ -1536,7 +1533,7 @@ ${UI.sectionLabel('Liquidez · Cuenta Corriente')}
   <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px">
     <div>
       <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px">Millas acumuladas</div>
-      <div style="font-size:28px;font-weight:800;color:#1B0088;line-height:1">${fmtNum(millasAct)}</div>
+      <div style="font-size:28px;font-weight:800;color:#00D2BE;line-height:1">${fmtNum(millasAct)}</div>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px">
       <span style="background:${nivelColor};color:#fff;font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px">${nivelLabel}</span>
@@ -1549,7 +1546,7 @@ ${UI.sectionLabel('Liquidez · Cuenta Corriente')}
     <div style="display:flex;justify-content:space-between;font-size:9px;font-weight:800;color:var(--muted);margin-bottom:5px">
       <span>0</span><span style="color:#d97706">GOLD 18.000</span><span style="color:#6b7280">SILVER 35.000</span>
     </div>
-    <div style="position:relative;height:16px;background:rgba(27,0,136,.07);border-radius:8px;overflow:hidden">
+    <div style="position:relative;height:16px;background:rgba(255,255,255,.08);border-radius:8px;overflow:hidden">
       <div style="position:absolute;left:0;top:0;height:100%;width:${pctTotal.toFixed(1)}%;background:${nivelBg};border-radius:8px;transition:width .5s;display:flex;align-items:center;justify-content:flex-end;padding-right:6px">
         ${pctTotal>12?`<span style="font-size:9px;font-weight:800;color:#fff;white-space:nowrap">${Math.min(Math.round(millasAct/metaActual*100),100)}%</span>`:''}
       </div>
