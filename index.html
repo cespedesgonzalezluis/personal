@@ -1583,7 +1583,7 @@ ${UI.sectionLabel('Liquidez · Cuenta Corriente')}
 </div>`:`<div class="card" style="display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;font-weight:600">Sin datos LATAM Pass</div>`}
   <div class="card">
     <div class="widget-title">Pago Tarjeta Crédito</div>
-    <div style="font-size:24px;font-weight:800;color:#ED1650;line-height:1.1;margin-bottom:10px">${tcObjetivo?fmtM(tcObjetivo):'—'}</div>
+    <div style="font-size:24px;font-weight:800;color:#00D2BE;line-height:1.1;margin-bottom:10px">${tcObjetivo?fmtM(tcObjetivo):'—'}</div>
     ${tcObjetivo?`
     <div style="display:flex;justify-content:flex-end;margin-bottom:6px">
       <span style="font-size:16px;font-weight:800;color:${pctTC>=100?'#00D2BE':'#ED1650'}">${pctTC}%</span>
@@ -1599,7 +1599,7 @@ ${UI.sectionLabel('Liquidez · Cuenta Corriente')}
     </div>
     <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;align-items:center;gap:6px">
       ${tcAvance>=tcObjetivo
-        ?`<span style="font-size:11px;font-weight:700;color:#059669">↑ A favor</span><span style="font-size:15px;font-weight:800;color:#059669">${fmtM(tcAvance-tcObjetivo)}</span>`
+        ?`<span style="font-size:11px;font-weight:700;color:#00D2BE">↑ A favor</span><span style="font-size:15px;font-weight:800;color:#00D2BE">${fmtM(tcAvance-tcObjetivo)}</span>`
         :`<span style="font-size:11px;font-weight:700;color:#ED1650">↓ Falta</span><span style="font-size:15px;font-weight:800;color:#ED1650">${fmtM(tcObjetivo-tcAvance)}</span>`
       }
     </div>`:`<div style="font-size:12px;color:var(--muted);font-weight:600">Sin datos</div>`}
