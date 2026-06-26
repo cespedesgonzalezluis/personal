@@ -726,7 +726,7 @@ ${UI.hero('Reporte Mensual',capFirst(mes),año)}
 ${UI.sectionLabel('Evolutivo mensual')}
 ${UI.card('Ingreso · Gasto · Tarjeta Crédito',
   UI.periodToggle(evoRange,[{val:12,label:'12M',fn:'setEvoRange(12,this)'},{val:0,label:'Todo',fn:'setEvoRange(0,this)'}],'evo'),
-  `<div style="height:230px"><canvas id="chartEvo"></canvas></div>${UI.chartLegend([{color:'#10b981',label:'Ingreso'},{color:'#f43f5e',label:'Gasto'},{color:'#f59e0b',label:'Tarjeta Crédito'}])}`,
+  `<div style="height:230px"><canvas id="chartEvo"></canvas></div>${UI.chartLegend([{color:'#00D2BE',label:'Ingreso'},{color:'#ED1650',label:'Gasto'},{color:'#C0C0C0',label:'Tarjeta Crédito'}])}`,
   'margin-bottom:20px')}
 ${UI.sectionLabel('Distribución del mes')}
 ${UI.card('','',`<div id="dist-bar-wrap" style="margin-top:4px"></div>`,'margin-bottom:var(--gap)')}
@@ -746,21 +746,21 @@ function renderEvoChart(){
   const ingresos=slice.map(m=>sumsFor(m).ing);
   const gastos=slice.map(m=>sumsFor(m).gasto);
   const tcs=slice.map(m=>sumsFor(m).tc);
-  const dlt=(arr,i,inv=false)=>{if(i===0)return'';const d=arr[i]-arr[i-1];if(d===0)return'';const good=inv?d<0:d>0;return ` <span style="color:${good?'#10b981':'#ED1650'};font-size:10px">${d>0?'↑ +':'↓ '}${fmtM(Math.abs(d),true)}</span>`;};
+  const dlt=(arr,i,inv=false)=>{if(i===0)return'';const d=arr[i]-arr[i-1];if(d===0)return'';const good=inv?d<0:d>0;return ` <span style="color:${good?'#00D2BE':'#ED1650'};font-size:10px">${d>0?'↑ +':'↓ '}${fmtM(Math.abs(d),true)}</span>`;};
   const tooltipFn=makeExternalTooltip(i=>labelsFmt[i],i=>[
-    {color:'#10b981',label:`Ingreso${dlt(ingresos,i)}`,val:fmtM(ingresos[i])},
-    {color:'#f43f5e',label:`Gasto${dlt(gastos,i,true)}`,val:fmtM(gastos[i])},
-    {color:'#f59e0b',label:`Tarjeta Crédito${dlt(tcs,i,true)}`,val:fmtM(tcs[i])},
+    {color:'#00D2BE',label:`Ingreso${dlt(ingresos,i)}`,val:fmtM(ingresos[i])},
+    {color:'#ED1650',label:`Gasto${dlt(gastos,i,true)}`,val:fmtM(gastos[i])},
+    {color:'#C0C0C0',label:`Tarjeta Crédito${dlt(tcs,i,true)}`,val:fmtM(tcs[i])},
   ]);
   destroyChart('evo');
   charts.evo=new Chart(document.getElementById('chartEvo'),{type:'line',
     data:{labels,datasets:[
       // Ingreso: área rellena semitransparente al fondo
-      {...lineDataset('Ingreso',ingresos,'#10b981'),fill:true,backgroundColor:'rgba(16,185,129,.1)',borderWidth:1.5,pointRadius:2.5,pointHoverRadius:5},
+      {...lineDataset('Ingreso',ingresos,'#00D2BE'),fill:true,backgroundColor:'rgba(0,210,190,.08)',borderWidth:1.5,pointRadius:2.5,pointHoverRadius:5},
       // Gasto: línea protagonista, más gruesa
-      {...lineDataset('Gasto',gastos,'#f43f5e'),borderWidth:3,pointRadius:4,pointHoverRadius:7},
+      {...lineDataset('Gasto',gastos,'#ED1650'),borderWidth:3,pointRadius:4,pointHoverRadius:7},
       // TC: dashed, mismo que antes
-      lineDataset('TC',tcs,'#f59e0b',[6,4]),
+      lineDataset('TC',tcs,'#C0C0C0',[6,4]),
     ]},
     options:stdLineOptions(tooltipFn,evoRange===0?20:evoRange)});
 }
@@ -796,7 +796,7 @@ function renderDistEvo(){
     :{stacked:true,grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{family:SF,size:10},color:'#9CA3AF',callback:v=>`${v}%`},min:0,max:100};
   destroyChart('dist');
   charts.dist=new Chart(document.getElementById('chartDist'),{type:'line',
-    data:{labels,datasets:pctData.map(cat=>({label:cat.label,data:cat.pcts,borderColor:cat.color,backgroundColor:cat.color+'33',borderWidth:2,pointRadius:2.5,pointHoverRadius:5,pointBackgroundColor:cat.color,pointBorderColor:'#fff',pointBorderWidth:1.5,fill:true,tension:.4,...(distCatFilter?{}:{stack:'area'})}))},
+    data:{labels,datasets:pctData.map(cat=>({label:cat.label,data:cat.pcts,borderColor:cat.color+'cc',backgroundColor:cat.color+'0d',borderWidth:1.5,pointRadius:2,pointHoverRadius:4,pointBackgroundColor:cat.color,pointBorderColor:'#fff',pointBorderWidth:1,fill:true,tension:.4,...(distCatFilter?{}:{stack:'area'})}))},
     options:{responsive:true,maintainAspectRatio:false,events:['mousemove','mouseout','click'],interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{enabled:false,external:tooltipFn}},scales:{x:{grid:{display:false},ticks:{font:{family:SF,size:10},color:'#9CA3AF',maxTicksLimit:evoRange===0?20:evoRange,maxRotation:0}},y:yScale}}});
   const legendEl=document.getElementById('dist-legend');
   if(legendEl) legendEl.innerHTML=UI.chartLegend(pctData.map(c=>({color:c.color,label:c.label})));
@@ -814,14 +814,14 @@ function renderDetalle(prevMes){
   const prevRows=prevMes?rawData.filter(r=>r.mes===prevMes):[];
   document.getElementById('tbody-detalle').innerHTML=rows.map(row=>{
     const prv=prevRows.find(p=>p.detalle===row.detalle);
-    let badge='<span style="color:#9CA3AF;font-size:11px;font-weight:700">—</span>';
+    let badge='<span style="color:#9CA3AF;font-size:13px;font-weight:700">—</span>';
     if(prv?.monto>0){
       const d=row.monto-prv.monto;
-      if(Math.abs(d)<1) badge=`<span class="badge badge-gray" style="font-size:10px;padding:2px 7px">≈ igual</span>`;
-      else{const good=row.tipo==='ingreso'?d>0:d<0;badge=`<span class="badge ${good?'badge-green':'badge-red'}" style="font-size:10px;padding:2px 7px">${d>0?'↑':'↓'} $${Math.round(Math.abs(d)).toLocaleString('es-CL')}</span>`;}
+      if(Math.abs(d)<1) badge=`<span class="badge badge-gray" style="font-size:11px;padding:2px 8px">≈ igual</span>`;
+      else{const good=row.tipo==='ingreso'?d>0:d<0;badge=`<span class="badge ${good?'badge-green':'badge-red'}" style="font-size:11px;padding:2px 8px">${d>0?'↑':'↓'} $${Math.round(Math.abs(d)).toLocaleString('es-CL')}</span>`;}
     }
     const tipoColor=getTypeColor(row.tipo,TIPO_COLOR_POOL);
-    return`<tr><td style="font-size:10px;font-weight:800;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:4px;color:${tipoColor}"><span style="width:6px;height:6px;border-radius:2px;background:${tipoColor};flex-shrink:0;display:inline-block"></span>${esc(capFirst(row.tipo))}</span></td><td style="font-size:12px">${esc(row.detalle)}</td><td style="text-align:center">${badge}</td><td>${fmtM(row.monto)}</td></tr>`;
+    return`<tr><td style="font-size:13px;font-weight:800;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:4px;color:${tipoColor}"><span style="width:7px;height:7px;border-radius:2px;background:${tipoColor};flex-shrink:0;display:inline-block"></span>${esc(capFirst(row.tipo))}</span></td><td style="font-size:13px">${esc(row.detalle)}</td><td style="text-align:center">${badge}</td><td style="font-size:13px">${fmtM(row.monto)}</td></tr>`;
   }).join('')||`<tr><td colspan="4" style="color:#9CA3AF;font-size:12px;padding:20px 0">Sin registros</td></tr>`;
 }
 
