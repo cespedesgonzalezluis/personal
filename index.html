@@ -65,7 +65,7 @@ body{background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-d
 .kpi-label{font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:7px}
 .kpi-val{font-size:21px;font-weight:800;color:var(--text);line-height:1;margin-bottom:5px}
 .kpi-delta{font-size:12px;font-weight:700;display:flex;align-items:center;gap:3px;min-height:16px}
-.delta-up{color:var(--green)}.delta-down{color:var(--red)}
+.delta-up{color:var(--teal)}.delta-down{color:var(--red)}
 
 /* SECTION / CARD */
 .sec-label{font-size:10px;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:12px;display:flex;align-items:center;gap:10px}
@@ -78,7 +78,7 @@ body{background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-d
 /* BADGES */
 .badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:6px;font-size:10px;font-weight:800;white-space:nowrap}
 .badge-navy{background:rgba(0,210,190,.12);color:#00D2BE}
-.badge-green{background:rgba(16,185,129,.12);color:#34d399}
+.badge-green{background:rgba(0,210,190,.12);color:#00D2BE}
 .badge-red{background:rgba(237,22,80,.08);color:#ED1650}
 .badge-teal{background:rgba(0,210,190,.12);color:#00D2BE}
 .badge-gray{background:rgba(255,255,255,.08);color:#bbb}
@@ -301,7 +301,7 @@ const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto'
 const ESTADO_PENDIENTE = new Set(['pendiente','por pagar','pending','activo','no pagado','debe','p']);
 const COLOR_MAP = {ahorro:'#10b981',casa:'#6366f1',deuda:'#00D2BE',mamá:'#f43f5e',mama:'#f43f5e',transporte:'#0d9488',servicios:'#f59e0b',otros:'#94a3b8'};
 const COLOR_POOL = ['#f97316','#14b8a6','#ec4899','#84cc16','#6366f1','#f43f5e','#06b6d4','#f59e0b','#10b981','#8b5cf6','#0ea5e9','#a3e635'];
-const RESP_COLORS = ['#00D2BE','#f43f5e','#0d9488','#6366f1','#f59e0b','#10b981','#8b5cf6','#14b8a6','#94a3b8'];
+const RESP_COLORS = ['#6366f1','#f97316','#0d9488','#f59e0b','#8b5cf6','#14b8a6','#84cc16','#94a3b8','#ec4899'];
 const CAT_DEF = [
   {key:'ahorro',label:'Ahorro',color:'#10b981',match:r=>r.tipo==='ahorro'},
   {key:'hip',label:'Hipotecario',color:'#6366f1',match:r=>r.tipo==='deuda'&&r.detalle.toLowerCase().includes('hipotecario')},
@@ -522,7 +522,7 @@ function makeBarLabelPlugin(id){
       if(!val) return;
       const bar=chart.getDatasetMeta(0).data[i];
       ctx.font=`700 10px ${SF}`;
-      ctx.fillStyle='rgba(0,0,0,.55)';
+      ctx.fillStyle='#00D2BE';
       ctx.textAlign='center';
       ctx.textBaseline='bottom';
       ctx.fillText(fmtM(val,true), bar.x, bar.y-3); // SHORT = true → 200K / 2,05M
@@ -721,7 +721,7 @@ ${UI.hero('Reporte Mensual',capFirst(mes),año)}
 <div class="kpi-strip">
   ${UI.kpiCard('Ingreso',fmtM(s.ing),deltaKpi(s.ing,prev?.ing))}
   ${UI.kpiCard('Gasto',fmtM(s.gasto),deltaKpi(s.gasto,prev?.gasto,true))}
-  ${UI.kpiCard('Tarjeta Crédito',fmtM(s.tc),deltaKpi(s.tc,prev?.tc,true))}
+  ${UI.kpiCard('Tarjeta Crédito','<span style="color:#C0C0C0">'+fmtM(s.tc)+'</span>',deltaKpi(s.tc,prev?.tc,true))}
 </div>
 ${UI.sectionLabel('Evolutivo mensual')}
 ${UI.card('Ingreso · Gasto · Tarjeta Crédito',
@@ -920,7 +920,7 @@ function renderTC(){
       <td class="tc-td" style="font-weight:600;color:var(--text);max-width:220px">${esc(m.movimiento)}${isUlt?UI.pillUltima():''}</td>
       <td class="tc-td" style="text-align:center;color:var(--muted);white-space:nowrap">${fmtFecha(m.fecha)}</td>
       <td class="tc-td" style="text-align:right;color:var(--muted)">${fmtM(m.total)}</td>
-      <td class="tc-td" style="text-align:right;color:#059669">${fmtM(pagadoMonto)}</td>
+      <td class="tc-td" style="text-align:right;color:#00D2BE">${fmtM(pagadoMonto)}</td>
       <td class="tc-td" style="text-align:right;color:#ED1650;font-weight:700">${fmtM(m.pendientesMonto)}</td>
       <td class="tc-td" style="text-align:right;color:var(--muted)">${fmtM(m.valorCuota)}</td>
       <td class="tc-td" style="text-align:center;min-width:80px">${UI.cuotasProg(m.pagadas,m.cuotas,isUlt)}</td>
@@ -997,8 +997,8 @@ function renderCreditos(){
   function cardHTML(c){
     const esActivo=c.pendientes>0,pct=c.cuotas>0?Math.round(c.pagadas/c.cuotas*100):0;
     const montoTotal=c.valorCuota*c.cuotas,montoPendiente=c.valorCuota*c.pendientes;
-    const barGrad=esActivo?`linear-gradient(90deg,${ACCENT},#009b8d)`:`linear-gradient(90deg,#059669,#22c55e)`;
-    const pctColor=esActivo?ACCENT:'#059669',mesFinal=esActivo?c.mesFin:c.mesFinPagado;
+    const barGrad=esActivo?`linear-gradient(90deg,${ACCENT},#009b8d)`:`linear-gradient(90deg,#C0C0C0,#a8a8a8)`;
+    const pctColor=esActivo?ACCENT:'#C0C0C0',mesFinal=esActivo?c.mesFin:c.mesFinPagado;
     return`<div class="card" style="position:relative;overflow:hidden;padding:10px 14px">
       <div style="margin-bottom:8px">
         <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:2px">${esc(c.detalle)}</div>
@@ -1030,11 +1030,11 @@ function renderCreditos(){
       <div style="display:flex;justify-content:space-between;align-items:center;padding-top:6px;border-top:1px solid var(--border)">
         <div>
           <div style="font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:1px">${esActivo?'Pendiente total':'Total pagado'}</div>
-          <div style="font-size:13px;font-weight:800;color:${esActivo?'#ED1650':'#059669'}">${fmtM(esActivo?montoPendiente:montoTotal)}</div>
+          <div style="font-size:13px;font-weight:800;color:${esActivo?'#ED1650':'#C0C0C0'}">${fmtM(esActivo?montoPendiente:montoTotal)}</div>
         </div>
         <div style="text-align:right">
           <div style="font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:1px">${esActivo?'Mes fin':'Terminó'}</div>
-          <div style="font-size:13px;font-weight:800;color:${esActivo?ACCENT:'#9CA3AF'}">${mesFinal?fmtMesCorto(mesFinal):'—'}</div>
+          <div style="font-size:13px;font-weight:800;color:${esActivo?ACCENT:'#C0C0C0'}">${mesFinal?fmtMesCorto(mesFinal):'—'}</div>
         </div>
       </div>
     </div>`;
@@ -1053,11 +1053,11 @@ ${UI.hero('Créditos',fmtM(totalPendiente),'pendiente')}
       <span style="font-size:11px;font-weight:700;color:var(--muted)">Acumulado <strong style="color:#059669">${fmtM(ahorroActual)}</strong></span>
       <span style="font-size:16px;font-weight:800;color:${pctAhorro>=100?'#059669':'#0d9488'}">${pctAhorro}%</span>
     </div>
-    <div style="height:18px;background:rgba(13,148,136,.1);border-radius:9px;overflow:hidden;position:relative">
-      <div style="height:100%;width:${pctAhorro}%;background:linear-gradient(90deg,#0d9488,#10b981);border-radius:9px;position:relative">
+    <div style="height:18px;background:rgba(0,210,190,.1);border-radius:9px;overflow:hidden;position:relative">
+      <div style="height:100%;width:${pctAhorro}%;background:linear-gradient(90deg,#00D2BE,#009b8d);border-radius:9px;position:relative">
         ${pctAhorro>=20?`<span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:11px;font-weight:800;color:#fff;white-space:nowrap">${fmtM(ahorroActual,true)}</span>`:''}
       </div>
-      ${pctAhorro<20?`<span style="position:absolute;left:${pctAhorro+2}%;top:50%;transform:translateY(-50%);font-size:10px;font-weight:800;color:#0d9488;white-space:nowrap">${fmtM(ahorroActual,true)}</span>`:''}
+      ${pctAhorro<20?`<span style="position:absolute;left:${pctAhorro+2}%;top:50%;transform:translateY(-50%);font-size:10px;font-weight:800;color:#00D2BE;white-space:nowrap">${fmtM(ahorroActual,true)}</span>`:''}
     </div>
     <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:10px;font-weight:600;color:var(--muted)">
       <span>$0</span><span>${fmtM(metaAhorro,true)}</span>
@@ -1113,7 +1113,7 @@ function renderAhorroMama(){
         return`<tr><td style="padding:5px 10px;font-size:12px;color:var(--muted);font-weight:600;padding-left:22px"><span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:${color};margin-right:5px;vertical-align:middle"></span>${esc(g.detalle)}</td><td style="padding:5px 10px;text-align:right;font-size:12px;font-weight:800;color:${color}">${ing?'+':'-'}${fmtM(g.monto)}</td></tr>`;
       }).join('');
     const gastoRatio=sp.ingresos>0?Math.min(Math.round(sp.gastos/sp.ingresos*100),100):0;
-    const barClr=gastoRatio<80?'#059669':gastoRatio<100?'#f59e0b':'#ED1650';
+    const barClr='#00D2BE';
     return`<tbody><tr style="background:rgba(255,255,255,.04);border-top:2px solid var(--border)">
       <td style="padding:7px 10px;font-size:12px;font-weight:800;color:var(--text)">
         ${fmtMesLabel(mes)}
@@ -1139,7 +1139,7 @@ ${UI.sectionLabel('Ahorro Mamá')}
 <div class="mama-grid" style="margin-bottom:24px">
   ${UI.card('Ingresos · Gastos · Saldo acumulado',
     UI.periodToggle(mamaEvoRange,[{val:12,label:'12M',fn:'setAhorroMamaRange(12,this)'},{val:0,label:'Todo',fn:'setAhorroMamaRange(0,this)'}],'ahorroMama'),
-    `<div style="position:relative;height:340px"><canvas id="mama-chart"></canvas></div>${UI.chartLegend([{color:'#059669',label:'Ingresos'},{color:'#ED1650',label:'Gastos'},{color:'#00e5c8',label:'Acumulado'}])}`)}
+    `<div style="position:relative;height:340px"><canvas id="mama-chart"></canvas></div>${UI.chartLegend([{color:'#00D2BE',label:'Ingresos'},{color:'#ED1650',label:'Gastos'},{color:'#00D2BE',label:'Acumulado'}])}`)}
   ${UI.card('Movimientos por Mes','',`<div class="tbl-scroll" style="max-height:380px"><table style="width:100%">
     <thead><tr style="border-bottom:2px solid var(--border)">
       <th style="padding:8px 10px;font-size:10px;font-weight:800;color:var(--accent);text-align:left;position:sticky;top:0;background:var(--card);z-index:1">Detalle</th>
@@ -1157,20 +1157,20 @@ function renderAhorroMamaChart(saldoPorMes){
   const labelsFmt=slice.map(s=>fmtMesLabel(s.mes));
   const tooltipFn=makeExternalTooltip(i=>labelsFmt[i],i=>{
     const s=slice[i],fmtS=v=>v<0?`-${fmtM(Math.abs(v))}`:fmtM(v);
-    return[{color:'#00e5c8',label:'Acumulado',val:fmtS(s.saldo)},{color:'#059669',label:'Ingresos',val:fmtM(s.ingresos)},{color:'#ED1650',label:'Gastos',val:fmtM(s.gastos)},{color:'#6b6a8a',label:'Neto mes',val:fmtS(s.neto)}];
+    return[{color:'#00D2BE',label:'Acumulado',val:fmtS(s.saldo)},{color:'#059669',label:'Ingresos',val:fmtM(s.ingresos)},{color:'#ED1650',label:'Gastos',val:fmtM(s.gastos)},{color:'#6b6a8a',label:'Neto mes',val:fmtS(s.neto)}];
   });
   charts.mama=new Chart(canvas,{type:'bar',plugins:[MAMA_BAR_LABELS],
     data:{labels,datasets:[
-      {label:'Ingresos',data:slice.map(s=>s.ingresos),backgroundColor:'rgba(5,150,105,.6)',borderColor:'rgba(5,150,105,.85)',borderWidth:1,borderRadius:{topLeft:4,topRight:4,bottomLeft:0,bottomRight:0},stack:'stack',order:2},
+      {label:'Ingresos',data:slice.map(s=>s.ingresos),backgroundColor:'rgba(0,210,190,.6)',borderColor:'rgba(0,210,190,.85)',borderWidth:1,borderRadius:{topLeft:4,topRight:4,bottomLeft:0,bottomRight:0},stack:'stack',order:2},
       {label:'Gastos',data:slice.map(s=>-s.gastos),backgroundColor:'rgba(237,22,80,.5)',borderColor:'rgba(237,22,80,.75)',borderWidth:1,borderRadius:{topLeft:0,topRight:0,bottomLeft:4,bottomRight:4},stack:'stack',order:2},
-      {label:'Acumulado',data:slice.map(s=>s.saldo),type:'line',borderColor:'#00e5c8',borderWidth:2.5,pointRadius:3.5,pointHoverRadius:6,pointBackgroundColor:'#00e5c8',pointBorderColor:'#fff',pointBorderWidth:2,fill:false,tension:.3,order:1,yAxisID:'ySaldo'}
+      {label:'Acumulado',data:slice.map(s=>s.saldo),type:'line',borderColor:'#00D2BE',borderWidth:2.5,pointRadius:3.5,pointHoverRadius:6,pointBackgroundColor:'#00D2BE',pointBorderColor:'#fff',pointBorderWidth:2,fill:false,tension:.3,order:1,yAxisID:'ySaldo'}
     ]},
     options:{responsive:true,maintainAspectRatio:false,events:['mousemove','mouseout','click'],interaction:{mode:'index',intersect:false},
       plugins:{legend:{display:false},tooltip:{enabled:false,external:tooltipFn}},
       scales:{
         x:{grid:{display:false},ticks:{font:{family:SF,size:10},color:'#9CA3AF',maxRotation:0}},
         y:{stacked:true,grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{family:SF,size:10},color:'#9CA3AF',callback:v=>fmtM(v,true)}},
-        ySaldo:{position:'right',grid:{display:false},ticks:{font:{family:SF,size:10},color:'#00876a',callback:v=>fmtM(v,true)}}
+        ySaldo:{position:'right',grid:{display:false},ticks:{font:{family:SF,size:10},color:'#00D2BE',callback:v=>fmtM(v,true)}}
       }}});
 }
 
@@ -1215,7 +1215,7 @@ function renderMama(){
         return`<tr><td style="padding:5px 10px;font-size:12px;color:var(--muted);font-weight:600;padding-left:22px"><span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:${color};margin-right:5px;vertical-align:middle"></span>${esc(g.detalle)}</td><td style="padding:5px 10px;text-align:right;font-size:12px;font-weight:800;color:${color}">${ing?'+':'-'}${fmtM(g.monto)}</td></tr>`;
       }).join('');
     const gastoRatio=sp.ingresos>0?Math.min(Math.round(sp.gastos/sp.ingresos*100),100):0;
-    const barClr=gastoRatio<80?'#059669':gastoRatio<100?'#f59e0b':'#ED1650';
+    const barClr='#00D2BE';
     return`<tbody><tr style="background:rgba(27,0,136,.03);border-top:2px solid var(--border)">
       <td style="padding:7px 10px;font-size:12px;font-weight:800;color:var(--text)">
         ${fmtMesLabel(sp.mes)}
@@ -1241,7 +1241,7 @@ ${UI.sectionLabel('Movimientos Mamá')}
 <div class="mama-grid" style="margin-bottom:24px">
   ${UI.card('Ingresos · Gastos · Saldo acumulado',
     UI.periodToggle(newMamaEvoRange,[{val:12,label:'12M',fn:'setNewMamaRange(12,this)'},{val:0,label:'Todo',fn:'setNewMamaRange(0,this)'}],'newMama'),
-    `<div style="position:relative;height:340px"><canvas id="new-mama-chart"></canvas></div>${UI.chartLegend([{color:'#059669',label:'Ingresos'},{color:'#ED1650',label:'Gastos'},{color:'#00e5c8',label:'Acumulado'}])}`)}
+    `<div style="position:relative;height:340px"><canvas id="new-mama-chart"></canvas></div>${UI.chartLegend([{color:'#00D2BE',label:'Ingresos'},{color:'#ED1650',label:'Gastos'},{color:'#00D2BE',label:'Acumulado'}])}`)}
   ${UI.card('Movimientos por Mes','',`<div class="tbl-scroll" style="max-height:380px"><table style="width:100%">
     <thead><tr style="border-bottom:2px solid var(--border)">
       <th style="padding:8px 10px;font-size:10px;font-weight:800;color:var(--accent);text-align:left;position:sticky;top:0;background:var(--card);z-index:1">Detalle</th>
@@ -1259,20 +1259,20 @@ function renderNewMamaChart(saldoPorMes){
   const labelsFmt=slice.map(s=>fmtMesLabel(s.mes));
   const tooltipFn=makeExternalTooltip(i=>labelsFmt[i],i=>{
     const s=slice[i],fmtS=v=>v<0?`-${fmtM(Math.abs(v))}`:fmtM(v);
-    return[{color:'#00e5c8',label:'Acumulado',val:fmtS(s.saldo)},{color:'#059669',label:'Ingresos',val:fmtM(s.ingresos)},{color:'#ED1650',label:'Gastos',val:fmtM(s.gastos)},{color:'#6b6a8a',label:'Neto mes',val:fmtS(s.neto)}];
+    return[{color:'#00D2BE',label:'Acumulado',val:fmtS(s.saldo)},{color:'#059669',label:'Ingresos',val:fmtM(s.ingresos)},{color:'#ED1650',label:'Gastos',val:fmtM(s.gastos)},{color:'#6b6a8a',label:'Neto mes',val:fmtS(s.neto)}];
   });
   charts.newMama=new Chart(canvas,{type:'bar',plugins:[MAMA_BAR_LABELS],
     data:{labels,datasets:[
-      {label:'Ingresos',data:slice.map(s=>s.ingresos),backgroundColor:'rgba(5,150,105,.6)',borderColor:'rgba(5,150,105,.85)',borderWidth:1,borderRadius:{topLeft:4,topRight:4,bottomLeft:0,bottomRight:0},stack:'stack',order:2},
+      {label:'Ingresos',data:slice.map(s=>s.ingresos),backgroundColor:'rgba(0,210,190,.6)',borderColor:'rgba(0,210,190,.85)',borderWidth:1,borderRadius:{topLeft:4,topRight:4,bottomLeft:0,bottomRight:0},stack:'stack',order:2},
       {label:'Gastos',data:slice.map(s=>-s.gastos),backgroundColor:'rgba(237,22,80,.5)',borderColor:'rgba(237,22,80,.75)',borderWidth:1,borderRadius:{topLeft:0,topRight:0,bottomLeft:4,bottomRight:4},stack:'stack',order:2},
-      {label:'Acumulado',data:slice.map(s=>s.saldo),type:'line',borderColor:'#00e5c8',borderWidth:2.5,pointRadius:3.5,pointHoverRadius:6,pointBackgroundColor:'#00e5c8',pointBorderColor:'#fff',pointBorderWidth:2,fill:false,tension:.3,order:1,yAxisID:'ySaldo'}
+      {label:'Acumulado',data:slice.map(s=>s.saldo),type:'line',borderColor:'#00D2BE',borderWidth:2.5,pointRadius:3.5,pointHoverRadius:6,pointBackgroundColor:'#00D2BE',pointBorderColor:'#fff',pointBorderWidth:2,fill:false,tension:.3,order:1,yAxisID:'ySaldo'}
     ]},
     options:{responsive:true,maintainAspectRatio:false,events:['mousemove','mouseout','click'],interaction:{mode:'index',intersect:false},
       plugins:{legend:{display:false},tooltip:{enabled:false,external:tooltipFn}},
       scales:{
         x:{grid:{display:false},ticks:{font:{family:SF,size:10},color:'#9CA3AF',maxRotation:0}},
         y:{stacked:true,grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{family:SF,size:10},color:'#9CA3AF',callback:v=>fmtM(v,true)}},
-        ySaldo:{position:'right',grid:{display:false},ticks:{font:{family:SF,size:10},color:'#00876a',callback:v=>fmtM(v,true)}}
+        ySaldo:{position:'right',grid:{display:false},ticks:{font:{family:SF,size:10},color:'#00D2BE',callback:v=>fmtM(v,true)}}
       }}});
 }
 
@@ -1329,15 +1329,15 @@ function renderPendientes(){
       <td class="tc-td" style="text-align:center;color:var(--muted);white-space:nowrap">${fmtFecha(it.fecha)}</td>
       <td class="tc-td" style="max-width:260px;font-weight:600">${esc(it.detalle)}${isUlt?UI.pillUltima():''}</td>
       <td class="tc-td" style="text-align:right;color:var(--muted)">${it.total>0?fmtM(it.total):'—'}</td>
-      <td class="tc-td" style="text-align:right;color:#059669">${fmtM(pagadoMonto)}</td>
+      <td class="tc-td" style="text-align:right;color:#00D2BE">${fmtM(pagadoMonto)}</td>
       <td class="tc-td" style="text-align:right;color:#ED1650;font-weight:700">${fmtM(it.montoPendiente)}</td>
       <td class="tc-td" style="text-align:right;color:var(--muted)">${fmtM(it.valorCuota)}</td>
-      <td class="tc-td" style="text-align:center;color:${isUlt?'#00D2BE':'var(--muted)'};font-weight:${isUlt?700:400}">${it.cuotas>0?`${it.pagadas}/${it.cuotas}`:'—'}</td>
+      <td class="tc-td" style="text-align:center;min-width:80px">${it.cuotas>0?UI.cuotasProg(it.pagadas,it.cuotas,isUlt):'—'}</td>
       <td class="tc-td" style="text-align:center;color:${isUlt?'#00D2BE':'var(--muted)'};white-space:nowrap">${it.mesFin?fmtMesCorto(it.mesFin):'—'}</td>
     </tr>`;
   }).join('');
 
-  const proyColor=pendDistFiltro?(respColorMap[pendDistFiltro]||'#00b89e'):'#00b89e';
+  const proyColor='#00D2BE';
 
   document.getElementById('page-content').innerHTML=`
 ${UI.hero('Pendientes',fmtM(totalPend),'pendiente')}
@@ -1355,15 +1355,15 @@ ${UI.sectionLabel('Detalle de compromisos')}
   <div style="overflow-x:auto">
   <table style="border-collapse:collapse;font-size:12px;width:100%">
     <thead><tr style="border-bottom:2px solid var(--border)">
-      <th class="tc-th" style="text-align:left;position:sticky;top:0;background:#fff;z-index:1">Responsable</th>
-      <th class="tc-th" style="text-align:center;position:sticky;top:0;background:#fff;z-index:1">Fecha</th>
-      <th class="tc-th" style="text-align:left;position:sticky;top:0;background:#fff;z-index:1">Detalle</th>
-      <th class="tc-th" style="text-align:right;position:sticky;top:0;background:#fff;z-index:1">$ Total</th>
-      <th class="tc-th" style="text-align:right;position:sticky;top:0;background:#fff;z-index:1">$ Pagado</th>
-      <th class="tc-th" style="text-align:right;position:sticky;top:0;background:#fff;z-index:1">$ Pendiente</th>
-      <th class="tc-th" style="text-align:right;position:sticky;top:0;background:#fff;z-index:1">$ Cuota</th>
-      <th class="tc-th" style="text-align:center;position:sticky;top:0;background:#fff;z-index:1"># Cuotas</th>
-      <th class="tc-th" style="text-align:center;position:sticky;top:0;background:#fff;z-index:1">Mes Fin</th>
+      <th class="tc-th" style="text-align:left;position:sticky;top:0;background:var(--card);z-index:1">Responsable</th>
+      <th class="tc-th" style="text-align:center;position:sticky;top:0;background:var(--card);z-index:1">Fecha</th>
+      <th class="tc-th" style="text-align:left;position:sticky;top:0;background:var(--card);z-index:1">Detalle</th>
+      <th class="tc-th" style="text-align:right;position:sticky;top:0;background:var(--card);z-index:1">$ Total</th>
+      <th class="tc-th" style="text-align:right;position:sticky;top:0;background:var(--card);z-index:1">$ Pagado</th>
+      <th class="tc-th" style="text-align:right;position:sticky;top:0;background:var(--card);z-index:1">$ Pendiente</th>
+      <th class="tc-th" style="text-align:right;position:sticky;top:0;background:var(--card);z-index:1">$ Cuota</th>
+      <th class="tc-th" style="text-align:center;position:sticky;top:0;background:var(--card);z-index:1"># Cuotas</th>
+      <th class="tc-th" style="text-align:center;position:sticky;top:0;background:var(--card);z-index:1">Mes Fin</th>
     </tr></thead>
     <tbody>${tableRows}</tbody>
     <tfoot><tr style="border-top:2px solid var(--border);background:rgba(0,0,0,.015)">
@@ -1474,8 +1474,8 @@ function renderVarios(){
   const esSilver=millasAct>=GOLD_META;
   const metaActual=esSilver?SILVER_META:GOLD_META;
   const nivelLabel=esSilver?'SILVER':'GOLD';
-  const nivelColor=esSilver?'#6b7280':'#d97706';
-  const nivelBg=esSilver?'linear-gradient(90deg,#6b7280,#9ca3af)':'linear-gradient(90deg,#f59e0b,#fbbf24)';
+  const nivelColor=esSilver?'#C0C0C0':'#00D2BE';
+  const nivelBg=esSilver?'linear-gradient(90deg,#C0C0C0,#a8a8a8)':'linear-gradient(90deg,#00D2BE,#009b8d)';
   const pctTotal=Math.min(millasAct/SILVER_META*100,100);
   const restantes=Math.max(0,metaActual-millasAct);
   const fechaMetaGold=millasAct<GOLD_META?addSemanas(semanasHastaMeta(GOLD_META)):null;
@@ -1504,7 +1504,7 @@ ${UI.sectionLabel('Liquidez · Cuenta Corriente')}
   <div class="card">
     <div class="widget-title">Disponible</div>
     <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px">
-      <div style="font-size:24px;font-weight:800;color:#059669;line-height:1.1">${fmtM(totalDisp)}</div>
+      <div style="font-size:24px;font-weight:800;color:#00D2BE;line-height:1.1">${fmtM(totalDisp)}</div>
       ${finDate?`<div style="font-size:11px;font-weight:600;color:var(--muted)">${finLabel} · ${diasRest} días</div>`:''}
     </div>
     ${finDate?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -1517,11 +1517,11 @@ ${UI.sectionLabel('Liquidez · Cuenta Corriente')}
         <div style="font-size:18px;font-weight:800;color:#00D2BE">${fmtM(diarioManana)}</div>
       </div>
     </div>
-    ${deltaDiario!==0?`<div style="margin-top:8px;font-size:13px;font-weight:800;color:${deltaDiario>0?'#059669':'#ED1650'}">${deltaDiario>0?'↑ +':'↓ '}${fmtM(Math.abs(deltaDiario))} por día</div>`:''}`:''}
+    ${deltaDiario!==0?`<div style="margin-top:8px;font-size:13px;font-weight:800;color:${deltaDiario>0?'#00D2BE':'#ED1650'}">${deltaDiario>0?'↑ +':'↓ '}${fmtM(Math.abs(deltaDiario))} por día</div>`:''}`:''}
   </div>
   <div class="card">
     <div class="widget-title">Variación IPC</div>
-    <div style="font-size:24px;font-weight:800;color:#f59e0b;line-height:1.1;margin-bottom:10px">${ipcLabel}</div>
+    <div style="font-size:24px;font-weight:800;color:#00D2BE;line-height:1.1;margin-bottom:10px">${ipcLabel}</div>
     <div style="padding-top:10px;border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <div>
         <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px">Líquido Actual</div>
@@ -1532,7 +1532,7 @@ ${UI.sectionLabel('Liquidez · Cuenta Corriente')}
         <div style="font-size:15px;font-weight:800;color:var(--text)">${liquidoNew?fmtM(liquidoNew):'—'}</div>
       </div>
     </div>
-    ${aumento?`<div style="margin-top:8px;font-size:13px;font-weight:800;color:${aumento>0?'#059669':'#ED1650'}">${aumento>0?'↑ +':'↓ '}${fmtM(Math.abs(aumento))} de aumento</div>`:''}
+    ${aumento?`<div style="margin-top:8px;font-size:13px;font-weight:800;color:${aumento>0?'#00D2BE':'#ED1650'}">${aumento>0?'↑ +':'↓ '}${fmtM(Math.abs(aumento))} de aumento</div>`:''}
   </div>
   ${millasAct>0?`<div class="card">
   <!-- Header: millas + badges -->
@@ -1543,7 +1543,7 @@ ${UI.sectionLabel('Liquidez · Cuenta Corriente')}
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px">
       <span style="background:${nivelColor};color:#fff;font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px">${nivelLabel}</span>
-      ${esSilver?`<span style="background:rgba(245,158,11,.12);color:#d97706;font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px">GOLD ✓</span>`:''}
+      ${esSilver?`<span style="background:rgba(0,210,190,.12);color:#00D2BE;font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px">GOLD ✓</span>`:''}
     </div>
   </div>
 
@@ -1586,10 +1586,10 @@ ${UI.sectionLabel('Liquidez · Cuenta Corriente')}
     <div style="font-size:24px;font-weight:800;color:#ED1650;line-height:1.1;margin-bottom:10px">${tcObjetivo?fmtM(tcObjetivo):'—'}</div>
     ${tcObjetivo?`
     <div style="display:flex;justify-content:flex-end;margin-bottom:6px">
-      <span style="font-size:16px;font-weight:800;color:${pctTC>=100?'#059669':'#ED1650'}">${pctTC}%</span>
+      <span style="font-size:16px;font-weight:800;color:${pctTC>=100?'#00D2BE':'#ED1650'}">${pctTC}%</span>
     </div>
-    <div style="height:18px;background:rgba(237,22,80,.1);border-radius:9px;overflow:hidden;position:relative">
-      <div style="height:100%;width:${pctTC}%;background:linear-gradient(90deg,#ED1650,#f97316);border-radius:9px;position:relative">
+    <div style="height:18px;background:rgba(0,210,190,.1);border-radius:9px;overflow:hidden;position:relative">
+      <div style="height:100%;width:${pctTC}%;background:linear-gradient(90deg,#00D2BE,#009b8d);border-radius:9px;position:relative">
         ${pctTC>=20?`<span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:11px;font-weight:800;color:#fff;white-space:nowrap">${fmtM(tcAvance,true)}</span>`:''}
       </div>
       ${pctTC<20?`<span style="position:absolute;left:${pctTC+2}%;top:50%;transform:translateY(-50%);font-size:10px;font-weight:800;color:#ED1650;white-space:nowrap">${fmtM(tcAvance,true)}</span>`:''}
